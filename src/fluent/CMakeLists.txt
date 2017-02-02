@@ -1,0 +1,16 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
+
+ADD_LIBRARY(fluent socket_cache.cc)
+TARGET_LINK_LIBRARIES(fluent zmq_util)
+
+MACRO(CREATE_FLUENT_TEST NAME)
+    CREATE_NAMED_TEST(fluent_${NAME} ${NAME})
+    TARGET_LINK_LIBRARIES(fluent_${NAME} fluent)
+ENDMACRO(CREATE_FLUENT_TEST)
+
+CREATE_FLUENT_TEST(channel_test)
+CREATE_FLUENT_TEST(driver_test)
+CREATE_FLUENT_TEST(scratch_test)
+CREATE_FLUENT_TEST(socket_cache_test)
+CREATE_FLUENT_TEST(table_test)
+TARGET_LINK_LIBRARIES(fluent_channel_test zmq_util)

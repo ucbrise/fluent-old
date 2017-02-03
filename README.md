@@ -1,2 +1,2 @@
-# The Project Formerly Known as LatticeFlow
+# Fluent: An Asynchronous Dataflow Framework
 TODO(mwhittaker): Write a README.

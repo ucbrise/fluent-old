@@ -17,5 +17,11 @@ ExternalProject_Add(googletest
 ExternalProject_Get_Property(googletest SOURCE_DIR)
 set(GTEST_INCLUDE_DIRS ${SOURCE_DIR}/googletest/include PARENT_SCOPE)
 
+ExternalProject_Get_Property(googletest SOURCE_DIR)
+set(GMOCK_INCLUDE_DIRS ${SOURCE_DIR}/googlemock/include PARENT_SCOPE)
+
 ExternalProject_Get_Property(googletest BINARY_DIR)
 set(GTEST_LIBS_DIR ${BINARY_DIR}/googlemock/gtest PARENT_SCOPE)
+
+ExternalProject_Get_Property(googletest BINARY_DIR)
+set(GMOCK_LIBS_DIR ${BINARY_DIR}/googlemock PARENT_SCOPE)

@@ -34,8 +34,6 @@ TEST(Driver, ClearScratches) {
 
   d.Tick([&](Scratch<int, int>* s) {
     EXPECT_EQ(s->Get().size(), static_cast<std::size_t>(0));
-    s->Add(std::make_tuple(42, 43));
-    EXPECT_EQ(s->Get().size(), static_cast<std::size_t>(1));
   });
 }
 

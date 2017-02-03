@@ -1,6 +1,7 @@
 #ifndef FLUENT_DRIVER_H_
 #define FLUENT_DRIVER_H_
 
+#include <cassert>
 #include <cstddef>
 
 #include <functional>
@@ -160,7 +161,11 @@ class Driver {
   // `collections_` and `parsers_`.
   template <typename C>
   Driver<Ts..., C> AddCollection(std::unique_ptr<C> c) {
-    // TODO(mwhittaker): Check that name isn't already taken.
+    // TODO(mwhittaker): Right now, we check that the name is not already taken
+    // with an assert. We should change return types around to use something
+    // like Google's `StatusOr` instead.
+    assert(parsers_.find(c->Name()) == parsers_.end());
+
     parsers_.insert(std::make_pair(c->Name(), c->GetParser()));
     std::tuple<std::unique_ptr<Ts>..., std::unique_ptr<C>> collections =
         std::tuple_cat(std::move(collections_), std::make_tuple(std::move(c)));
@@ -168,9 +173,19 @@ class Driver {
             std::move(socket_), std::move(socket_cache_)};
   }
 
-  // Call `TickCollections<0>` calls `Tick` on every collection in
-  // `collection_`. Since `collection_` is a tuple, we have to do a bit of
-  // metaprogramming.
+  // `TickCollections<0>` calls `Tick` on every collection in `collection_`.
+  //
+  // Since `collection_` is a tuple, we have to do a bit of metaprogramming.
+  //   - Invoking `TickCollections<I>` where `I > sizeof...(Ts)` will not
+  //     compile.
+  //   - Invoking `TickCollections<I>` where `I == sizeof...(Ts)` will invoke
+  //     the first definition.
+  //   - Invoking `TickCollections<I>` where `I < sizeof...(Ts)` will invoke the
+  //     second definition.
+  // `TickCollections<0>` invokes `TickCollections<1>` which invokes
+  // `TickCollections<2>` and so on until we hit
+  // `TickCollections<sizeof...(Ts)>` and return. Each `TickCollections<I>`
+  // call calls `Tick` on the `I`th collection in `collections_`.
   template <std::size_t I>
   typename std::enable_if<I == sizeof...(Ts)>::type TickCollections() {}
 

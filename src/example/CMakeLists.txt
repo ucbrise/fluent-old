@@ -1,4 +1,6 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
 CREATE_NAMED_TEST(example_count_test count_test)
+TARGET_LINK_LIBRARIES(example_count_test glog)
+
 CREATE_NAMED_BENCHMARK(example_count_bench count_bench)

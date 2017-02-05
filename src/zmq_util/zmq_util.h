@@ -10,6 +10,7 @@
 #include "zmq.hpp"
 
 namespace fluent {
+namespace zmq_util {
 
 // Converts the data within a `zmq::message_t` into a string.
 std::string message_to_string(const zmq::message_t& message);
@@ -29,6 +30,7 @@ void send_msgs(std::vector<zmq::message_t> msgs, zmq::socket_t* socket);
 // `recv` a multipart message.
 std::vector<zmq::message_t> recv_msgs(zmq::socket_t* socket);
 
+}  // namespace zmq_util
 }  // namespace fluent
 
 #endif  // ZMQ_UTIL_ZMQ_UTIL_H_

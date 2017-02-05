@@ -22,19 +22,19 @@ TEST(SocketCache, ThreeSockets) {
 
   SocketCache cache(&context);
   for (int i = 0; i < 2; ++i) {
-    send_string("foo", &cache[a_address]);
-    send_string("bar", &cache[b_address]);
-    send_string("baz", &cache[c_address]);
-    EXPECT_EQ("foo", recv_string(&a));
-    EXPECT_EQ("bar", recv_string(&b));
-    EXPECT_EQ("baz", recv_string(&c));
+    zmq_util::send_string("foo", &cache[a_address]);
+    zmq_util::send_string("bar", &cache[b_address]);
+    zmq_util::send_string("baz", &cache[c_address]);
+    EXPECT_EQ("foo", zmq_util::recv_string(&a));
+    EXPECT_EQ("bar", zmq_util::recv_string(&b));
+    EXPECT_EQ("baz", zmq_util::recv_string(&c));
 
-    send_string("foo", &a);
-    send_string("bar", &b);
-    send_string("baz", &c);
-    EXPECT_EQ("foo", recv_string(&cache[a_address]));
-    EXPECT_EQ("bar", recv_string(&cache[b_address]));
-    EXPECT_EQ("baz", recv_string(&cache[c_address]));
+    zmq_util::send_string("foo", &a);
+    zmq_util::send_string("bar", &b);
+    zmq_util::send_string("baz", &c);
+    EXPECT_EQ("foo", zmq_util::recv_string(&cache[a_address]));
+    EXPECT_EQ("bar", zmq_util::recv_string(&cache[b_address]));
+    EXPECT_EQ("baz", zmq_util::recv_string(&cache[c_address]));
   }
 }
 

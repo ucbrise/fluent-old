@@ -39,19 +39,19 @@ TEST(Channel, SimpleTest) {
   c.Add(tb);
   EXPECT_THAT(c.Get(), UnorderedElementsAreArray(TupleSet{}));
 
-  std::vector<zmq::message_t> a_messages = recv_msgs(&a);
+  std::vector<zmq::message_t> a_messages = zmq_util::recv_msgs(&a);
   ASSERT_EQ(a_messages.size(), static_cast<std::size_t>(4));
-  EXPECT_EQ("c", message_to_string(a_messages[0]));
-  EXPECT_EQ(a_address, message_to_string(a_messages[1]));
-  EXPECT_EQ("1", message_to_string(a_messages[2]));
-  EXPECT_EQ("1", message_to_string(a_messages[3]));
+  EXPECT_EQ("c", zmq_util::message_to_string(a_messages[0]));
+  EXPECT_EQ(a_address, zmq_util::message_to_string(a_messages[1]));
+  EXPECT_EQ("1", zmq_util::message_to_string(a_messages[2]));
+  EXPECT_EQ("1", zmq_util::message_to_string(a_messages[3]));
 
-  std::vector<zmq::message_t> b_messages = recv_msgs(&b);
+  std::vector<zmq::message_t> b_messages = zmq_util::recv_msgs(&b);
   ASSERT_EQ(b_messages.size(), static_cast<std::size_t>(4));
-  EXPECT_EQ("c", message_to_string(b_messages[0]));
-  EXPECT_EQ(b_address, message_to_string(b_messages[1]));
-  EXPECT_EQ("2", message_to_string(b_messages[2]));
-  EXPECT_EQ("2", message_to_string(b_messages[3]));
+  EXPECT_EQ("c", zmq_util::message_to_string(b_messages[0]));
+  EXPECT_EQ(b_address, zmq_util::message_to_string(b_messages[1]));
+  EXPECT_EQ("2", zmq_util::message_to_string(b_messages[2]));
+  EXPECT_EQ("2", zmq_util::message_to_string(b_messages[3]));
 
   // TODO(mwhittaker): Test Tick. It's a bit annoying to do because I have to
   // first force some tuples into the Channel.

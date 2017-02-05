@@ -44,11 +44,11 @@ class Channel : public Collection<T, Ts...> {
     zmq::socket_t& socket = socket_cache_->At(std::get<0>(t));
     std::vector<std::string> strings = {ToString(std::get<Is>(t))...};
     std::vector<zmq::message_t> msgs;
-    msgs.push_back(string_to_message(this->Name()));
+    msgs.push_back(zmq_util::string_to_message(this->Name()));
     for (const std::string& s : strings) {
-      msgs.push_back(string_to_message(s));
+      msgs.push_back(zmq_util::string_to_message(s));
     }
-    send_msgs(std::move(msgs), &socket);
+    zmq_util::send_msgs(std::move(msgs), &socket);
   }
 
   // Whenever a tuple with address `a` is added to a Channel, the socket

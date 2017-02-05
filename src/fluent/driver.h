@@ -110,14 +110,14 @@ class Driver {
   // (Potentially) block and receive messages sent by other Fluent nodes.
   // Receiving a message will insert it into the appropriate channel.
   void Receive() {
-    std::vector<zmq::message_t> msgs = recv_msgs(socket_.get());
+    std::vector<zmq::message_t> msgs = zmq_util::recv_msgs(socket_.get());
     std::vector<std::string> strings;
     for (std::size_t i = 1; i < msgs.size(); ++i) {
-      strings.push_back(message_to_string(msgs[i]));
+      strings.push_back(zmq_util::message_to_string(msgs[i]));
     }
-    // TODO(mwhittaker): Check to see if message_to_string(msgs[0]) is in
-    // parsers_, logging a warning or something if it is not.
-    parsers_[message_to_string(msgs[0])](strings);
+    // TODO(mwhittaker): Check to see if zmq_util::message_to_string(msgs[0])
+    // is in parsers_, logging a warning or something if it is not.
+    parsers_[zmq_util::message_to_string(msgs[0])](strings);
   }
 
   // Runs a fluent program.

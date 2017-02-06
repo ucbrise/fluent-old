@@ -8,7 +8,10 @@
 #include <utility>
 #include <vector>
 
+#include "range/v3/all.hpp"
+
 #include "fluent/serialization.h"
+#include "ra/iterable.h"
 
 namespace fluent {
 
@@ -63,10 +66,32 @@ class Collection {
 
   const std::set<std::tuple<Ts...>>& Get() const { return ts_; }
 
+  ra::Iterable<std::set<std::tuple<Ts...>>> Iterable() {
+    return ra::make_iterable(&ts_);
+  }
+
   // - Table:   merge (<=) operation.
   // - Scratch: merge (<=) operation.
   // - Channel: asynchronous merge (<~) operation.
   virtual void Add(const std::tuple<Ts...>& t) = 0;
+
+  // `AddRelalg(q)` executes `q` and calls `Add(t)` on every tuple `t` in the
+  // result.
+  template <typename T>
+  void AddRelalg(T query) {
+    // If query includes an iterable over ts_, then inserting into ts_ might
+    // invalidate the iterator. Thus, we first write into a temprorary vector
+    // and then into the ts_.
+    // TODO(mwhittaker): Figure out if this is necessary.
+    std::vector<std::tuple<Ts...>> buf;
+    auto rng = query.ToRange();
+    for (auto iter = ranges::begin(rng); iter != ranges::end(rng); ++iter) {
+      buf.push_back(*iter);
+    }
+    for (std::tuple<Ts...> t : buf) {
+      ts_.insert(std::move(t));
+    }
+  }
 
   // Tick should be invoked after each iteration of computation. The behavior
   // depends on the collection type.

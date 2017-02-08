@@ -8,11 +8,21 @@ SET(TOBENAMED_VERSION_PATCH 0)
 INCLUDE(cmake/benchmarking.cmake NO_POLICY_SCOPE)
 INCLUDE(cmake/testing.cmake NO_POLICY_SCOPE)
 
+# Clang provides four sanitizers. Add them with the following flags:
+#   -fsanitize=address
+#   -fsanitize=thread
+#   -fsanitize=memory
+#   -fsanitize=undefined
+# Note that some sanitizers are mutually exclusive. For example, clang will
+# reject using -fsanitize=address and -fsanitize=thread simultaneously
+# simultaneously.
 SET(CMAKE_CXX_FLAGS_COMMON
     "-std=c++14 \
      -Wall \
      -Wextra \
-     -Werror")
+     -Werror \
+     -fsanitize=address \
+     -fsanitize=undefined")
 SET(CMAKE_CXX_FLAGS_DEBUG
     "${CMAKE_CXX_FLAGS_DEBUG} \
      ${CMAKE_CXX_FLAGS_COMMON}")

@@ -7,6 +7,8 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include "ra/all.h"
+
 namespace fluent {
 
 using ::testing::UnorderedElementsAreArray;
@@ -29,6 +31,43 @@ TEST(Table, SimpleTest) {
   EXPECT_THAT(t.Get(), UnorderedElementsAreArray(TupleSet{x1, x2, x3}));
   t.Tick();
   EXPECT_THAT(t.Get(), UnorderedElementsAreArray(TupleSet{x1, x2, x3}));
+}
+
+TEST(Table, SimpleQuery) {
+  using Tuple = std::tuple<int, int, int>;
+  using TupleSet = std::set<Tuple>;
+
+  Table<int, int, int> t("t");
+  for (int i = 0; i < 10; ++i) {
+    t.Add({i, i, i});
+  }
+
+  auto all_eq = [](const Tuple& t) {
+    return std::get<0>(t) == std::get<1>(t) && std::get<1>(t) == std::get<2>(t);
+  };
+  auto times_two = [](const Tuple& t) {
+    int doubled = std::get<0>(t) * 2;
+    return Tuple{doubled, doubled, doubled};
+  };
+  auto not_too_big = [](const Tuple& t) {
+    return std::get<0>(t) + std::get<1>(t) + std::get<2>(t) < 50;
+  };
+  // clang-format off
+  t.AddRelalg(t.Iterable()
+    | ra::filter(std::move(all_eq))
+    | ra::map(std::move(times_two))
+    | ra::filter(std::move(not_too_big)));
+  // clang-format on
+
+  TupleSet expected;
+  for (int i = 0; i < 10; ++i) {
+    expected.insert({i, i, i});
+    const int doubled = i * 2;
+    if (doubled * 3 < 50) {
+      expected.insert({doubled, doubled, doubled});
+    }
+  }
+  EXPECT_THAT(t.Get(), UnorderedElementsAreArray(expected));
 }
 
 }  // namespace fluent

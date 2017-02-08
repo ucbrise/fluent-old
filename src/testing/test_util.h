@@ -1,6 +1,8 @@
 #ifndef TESTING_TEST_UTIL_H_
 #define TESTING_TEST_UTIL_H_
 
+#include <set>
+
 #include "gtest/gtest.h"
 #include "range/v3/all.hpp"
 
@@ -22,6 +24,16 @@ void ExpectRngsEqual(Rng1 actual, Rng2 expected) {
   }
   EXPECT_EQ(a_iter, a_end);
   EXPECT_EQ(e_iter, e_end);
+}
+
+// `ExpectRngsUnorderedEqual(x, y)` uses `EXPECT_THAT` and
+// `UnorderedElementsAreArray` to check that
+//   (a) `x` and `y` have the same length and
+//   (b) `x` and `y` are equal (modulo ordering).
+template <typename Rng, typename Container>
+void ExpectRngsUnorderedEqual(Rng actual, const Container& expected) {
+  auto container = actual | ranges::to_<std::set>();
+  EXPECT_THAT(actual, UnorderedElementsAreArray(expected));
 }
 
 }  // namespace fluent

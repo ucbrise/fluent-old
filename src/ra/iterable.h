@@ -29,18 +29,18 @@ PhysicalIterable<typename std::decay<Rng>::type> make_physical_iterable(
 template <typename T>
 class Iterable {
  public:
-  explicit Iterable(T* iterable) : iterable_(iterable) {}
+  explicit Iterable(const T* iterable) : iterable_(iterable) {}
 
   auto ToPhysical() const {
     return make_physical_iterable(ranges::view::all(*iterable_));
   }
 
  private:
-  T* iterable_;
+  const T* iterable_;
 };
 
 template <typename T>
-Iterable<T> make_iterable(T* iterable) {
+Iterable<T> make_iterable(const T* iterable) {
   return Iterable<T>(iterable);
 }
 

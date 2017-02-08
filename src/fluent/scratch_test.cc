@@ -12,10 +12,10 @@ namespace fluent {
 using ::testing::UnorderedElementsAreArray;
 
 TEST(Scratch, SimpleTest) {
-  Scratch<int, int, int> s("s");
-
   using Tuple = std::tuple<int, int, int>;
   using TupleSet = std::set<Tuple>;
+
+  Scratch<int, int, int> s("s");
   Tuple x1{1, 1, 1};
   Tuple x2{2, 2, 2};
   Tuple x3{3, 3, 3};

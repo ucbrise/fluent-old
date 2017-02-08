@@ -9,9 +9,9 @@
 
 #include "ra/all.h"
 
-namespace fluent {
-
 using ::testing::UnorderedElementsAreArray;
+
+namespace fluent {
 
 TEST(Table, SimpleTest) {
   Table<int, int, int> t("t");

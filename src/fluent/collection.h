@@ -39,34 +39,21 @@ std::tuple<Ts...> parse_tuple(const std::vector<std::string>& columns) {
 // which these terms were taken [1].
 //
 // [1]: http://db.cs.berkeley.edu/papers/cidr11-bloom.pdf
-//
-// TODO(mwhittaker): Implement other basic methods like delete, deferred add,
-// deferred delete, etc..
-// TODO(mwhittaker): Eventually, we'll want to perform more complex operations
-// over the collections (e.g. relation operators). Figure out a nice way to tie
-// our existing work on relational operators into this code. We might, for
-// example, have a method to return a range which would allow users to chain
-// together complicated relational operators. Then, we could have a method that
-// takes a range and merges it into the table (making sure not to invalidate
-// any iterators).
-// TODO(mwhittaker): We never use anything of type `Collection*` or
-// `Collection&`. The driver does sufficient metaprogramming to deal explicitly
-// with Tables, Scrathes, and Collections. So, we could remove the Collection
-// type and replace it with a concept.
 template <typename... Ts>
 class Collection {
  public:
-  // All Collections across all communicating programs must be uniquely named.
-  //
-  // TODO(mwhittaker): Think about if it's possible to enforce this in any sane
-  // way.
   explicit Collection(const std::string& name) : name_(name) {}
 
   const std::string& Name() const { return name_; }
 
   const std::set<std::tuple<Ts...>>& Get() const { return ts_; }
 
-  ra::Iterable<std::set<std::tuple<Ts...>>> Iterable() {
+  template <typename Rhs>
+  std::pair<Collection<Ts...>*, Rhs> operator<=(Rhs rhs) {
+    return {this, std::move(rhs)};
+  }
+
+  ra::Iterable<std::set<std::tuple<Ts...>>> Iterable() const {
     return ra::make_iterable(&ts_);
   }
 
@@ -79,10 +66,13 @@ class Collection {
   // result.
   template <typename T>
   void AddRelalg(T query) {
-    // If query includes an iterable over ts_, then inserting into ts_ might
-    // invalidate the iterator. Thus, we first write into a temprorary vector
-    // and then into the ts_.
-    // TODO(mwhittaker): Figure out if this is necessary.
+    // If `query` includes an iterable over `ts_`, then inserting into `ts_`
+    // might invalidate the iterator. Thus, we first write into a temprorary
+    // vector and then copy the contents of the vector into the `ts_`.
+    // TODO(mwhittaker): If the underlying collection is a channel, then
+    // calling `Add` won't actually add anything, so we won't be invalidating
+    // any iterators. In that case, we can optimize out the intermediate
+    // buffering and write straing into the channel.
     std::vector<std::tuple<Ts...>> buf;
     auto physical = query.ToPhysical();
     auto rng = physical.ToRange();
@@ -94,13 +84,8 @@ class Collection {
     }
   }
 
-  // Tick should be invoked after each iteration of computation. The behavior
-  // depends on the collection type.
-  //
-  // - Table:   no-op.
-  // - Scratch: clears the collection.
-  // - Channel: clears the collection.
-  virtual void Tick() = 0;
+  // TODO(mwhittaker): Implement other basic methods like delete, deferred add,
+  // deferred delete, etc..
 
   // `Collection<T1, ..., Tn>.GetParser()(columns)` parses a vector of `n`
   // strings into a tuple of type `std::tuple<T1, ..., Tn>` and inserts it into
@@ -112,6 +97,14 @@ class Collection {
       this->ts_.insert(detail::parse_tuple<Ts...>(columns));
     };
   }
+
+  // Tick should be invoked after each iteration of computation. The behavior
+  // depends on the collection type.
+  //
+  // - Table:   no-op.
+  // - Scratch: clears the collection.
+  // - Channel: clears the collection.
+  virtual void Tick() = 0;
 
  protected:
   std::set<std::tuple<Ts...>>& MutableGet() { return ts_; }

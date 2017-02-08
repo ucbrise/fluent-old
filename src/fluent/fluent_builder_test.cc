@@ -1,4 +1,4 @@
-#include "fluent/collection_builder.h"
+#include "fluent/fluent_builder.h"
 
 #include <cstddef>
 
@@ -11,7 +11,7 @@
 
 namespace fluent {
 
-TEST(CollectionBuilder, SimpleBuildCheck) {
+TEST(FluentBuilder, SimpleBuildCheck) {
   // clang-format off
   auto f = fluent("inproc://yolo")
     .table<int>("t")

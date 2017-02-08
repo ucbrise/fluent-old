@@ -1,5 +1,5 @@
-#ifndef FLUENT_COLLECTION_BUILDER_H_
-#define FLUENT_COLLECTION_BUILDER_H_
+#ifndef FLUENT_FLUENT_BUILDER_H_
+#define FLUENT_FLUENT_BUILDER_H_
 
 #include <cstddef>
 
@@ -24,12 +24,12 @@
 namespace fluent {
 
 // # Overview
-// A CollectionBuilder is a class that you can use to build up a
-// FluentExecutor. It is best explained through an example.
+// A FluentBuilder is a class that you can use to build up a FluentExecutor. It
+// is best explained through an example.
 //
 //   // Each FluentExecutor contains a socket which listens for messages from
 //   // other Fluent nodes. Here, our FluentExecutor will listen on
-//   // "tcp://*:8000", so we pass that address to the CollectionBuilder.
+//   // "tcp://*:8000", so we pass that address to the FluentBuilder.
 //   const std::string address = "tcp://*:8000";
 //
 //   // This FluentExecutor will have four collections:
@@ -50,46 +50,42 @@ namespace fluent {
 //
 // # Implementation details
 // In order to support the nice `.table`, `.scratch`, and `.channel` syntax,
-// CollectionBuilder requires quite a bit of metaprogramming. Here, we briefly
-// explain CollectionBuilder's implementation.
+// FluentBuilder requires quite a bit of metaprogramming. Here, we briefly
+// explain FluentBuilder's implementation.
 //
-// A CollectionBuilder<T1, ..., Tn> corresponds to a Fluent program with n
+// A FluentBuilder<T1, ..., Tn> corresponds to a Fluent program with n
 // collections.  Each Ti is either a Table<Us...>, Scratch<Us...>, or
 // Channel<Us...>.  Pointers to the collections are stored `collections_` which
 // is of type `std::tuple<std::unique_ptr<T1>, ..., std::unique_ptr<Tn>>`.
 //
 // Imagine we call `f.table<int>("foo")` where `f` is of type
-// `CollectionBuilder<T1, ..., Tn>`. Calling `table` will return a new
-// CollectionBuilder of type `CollectionBuilder<T1, ...., Tn, Table<int>>`.
+// `FluentBuilder<T1, ..., Tn>`. Calling `table` will return a new
+// FluentBuilder of type `FluentBuilder<T1, ...., Tn, Table<int>>`.
 // `collections_` (along with all other fields) are moved into the new
-// CollectionBuilder.
+// FluentBuilder.
 //
 // Similar to `collections_`, we also incrementally build `parsers_`: a map
 // from a collection's name to a function which can parse messages into it.
-//
-// TODO(mwhittaker): Rename to FluentBuilder?
 template <typename... Ts>
-class CollectionBuilder {
+class FluentBuilder {
  public:
   // Create a table, scratch, and channel. Note the `&&` at the end of the
   // declaration. This means that these methods can only be invoked on an
   // rvalue-reference, which is necessary since the methods move their contents.
   template <typename U, typename... Us>
-  CollectionBuilder<Ts..., Table<U, Us...>> table(const std::string& name) && {
+  FluentBuilder<Ts..., Table<U, Us...>> table(const std::string& name) && {
     LOG(INFO) << "Adding a table named " << name << ".";
     return AddCollection(std::make_unique<Table<U, Us...>>(name));
   }
 
   template <typename U, typename... Us>
-  CollectionBuilder<Ts..., Scratch<U, Us...>> scratch(
-      const std::string& name) && {
+  FluentBuilder<Ts..., Scratch<U, Us...>> scratch(const std::string& name) && {
     LOG(INFO) << "Adding a scratch named " << name << ".";
     return AddCollection(std::make_unique<Scratch<U, Us...>>(name));
   }
 
   template <typename U, typename... Us>
-  CollectionBuilder<Ts..., Channel<U, Us...>> channel(
-      const std::string& name) && {
+  FluentBuilder<Ts..., Channel<U, Us...>> channel(const std::string& name) && {
     LOG(INFO) << "Adding a channel named " << name << ".";
     return AddCollection(std::make_unique<Channel<U, Us...>>(
         name, &network_state_->socket_cache));
@@ -107,10 +103,10 @@ class CollectionBuilder {
   //     });
   //
   // `f` is a function which takes in a reference to each of the collections
-  // registered with the CollectionBuilder in the order they are registered. It
+  // registered with the FluentBuilder in the order they are registered. It
   // outputs a tuple of rules where each rule is a pair of the form (lhs, rhs)
   // where
-  //   - lhs is a pointer to a collection in the CollectionBuilder, and
+  //   - lhs is a pointer to a collection in the FluentBuilder, and
   //   - rhs is a relational algebra expression.
   // Note that `t <= ra` is syntactic sugar for `std::make_pair(t, ra)`
   // implemented by Collection's `<=` operator. `RegisterRules` will execute
@@ -125,27 +121,27 @@ class CollectionBuilder {
  private:
   using Parser = std::function<void(const std::vector<std::string>& columns)>;
 
-  // Constructs an empty CollectionBuilder. Note that this constructor should
+  // Constructs an empty FluentBuilder. Note that this constructor should
   // only be called when Ts is empty (i.e. sizeof...(Ts) == 0).
-  CollectionBuilder(const std::string& address)
+  FluentBuilder(const std::string& address)
       : network_state_(std::make_unique<NetworkState>(address)) {
     static_assert(sizeof...(Ts) == 0,
-                  "The CollectionBuilder(const std::string& address) "
+                  "The FluentBuilder(const std::string& address) "
                   "constructor should only be called when Ts is empty.");
   }
 
-  // Moves the guts of one CollectionBuilder into another.
-  CollectionBuilder(std::tuple<std::unique_ptr<Ts>...> collections,
-                    std::map<std::string, Parser> parsers,
-                    std::unique_ptr<NetworkState> network_state)
+  // Moves the guts of one FluentBuilder into another.
+  FluentBuilder(std::tuple<std::unique_ptr<Ts>...> collections,
+                std::map<std::string, Parser> parsers,
+                std::unique_ptr<NetworkState> network_state)
       : collections_(std::move(collections)),
         parsers_(std::move(parsers)),
         network_state_(std::move(network_state)) {}
 
-  // Return a new CollectionBuilder with `c` and `c->GetParser()` appended to
+  // Return a new FluentBuilder with `c` and `c->GetParser()` appended to
   // `collections_` and `parsers_`.
   template <typename C>
-  CollectionBuilder<Ts..., C> AddCollection(std::unique_ptr<C> c) {
+  FluentBuilder<Ts..., C> AddCollection(std::unique_ptr<C> c) {
     CHECK(parsers_.find(c->Name()) == parsers_.end())
         << "The collection name '" << c->Name()
         << "' is used multiple times. Collection names must be unique.";
@@ -167,7 +163,7 @@ class CollectionBuilder {
   }
 
   // TODO(mwhittaker): Right now, I made things unique_ptr because I was
-  // paranoid that as data was being moved from one CollectionBuilder to
+  // paranoid that as data was being moved from one FluentBuilder to
   // another, pointers to fields would be invalidated. Maybe we don't need the
   // unique_ptr, but I'd need to think harder about it.
   std::tuple<std::unique_ptr<Ts>...> collections_;
@@ -175,16 +171,16 @@ class CollectionBuilder {
   std::unique_ptr<NetworkState> network_state_;
 
   template <typename...>
-  friend class CollectionBuilder;
+  friend class FluentBuilder;
 
-  friend CollectionBuilder<> fluent(const std::string& address);
+  friend FluentBuilder<> fluent(const std::string& address);
 };
 
-// Create an empty CollectionBuilder listening on ZeroMQ address `address`.
-inline CollectionBuilder<> fluent(const std::string& address) {
-  return CollectionBuilder<>(address);
+// Create an empty FluentBuilder listening on ZeroMQ address `address`.
+inline FluentBuilder<> fluent(const std::string& address) {
+  return FluentBuilder<>(address);
 }
 
 }  // namespace fluent
 
-#endif  // FLUENT_COLLECTION_BUILDER_H_
+#endif  // FLUENT_FLUENT_BUILDER_H_

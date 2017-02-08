@@ -8,7 +8,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-#include "fluent/collection_builder.h"
+#include "fluent/fluent_builder.h"
 #include "ra/all.h"
 
 using ::testing::UnorderedElementsAreArray;

@@ -27,7 +27,7 @@ class FluentExecutor;
 
 // # Overview
 // A FluentExecutor runs a Fluent program. You build up a Fluent program using
-// a CollectionBuilder and then use it to execute the program. It is best
+// a FluentBuilder and then use it to execute the program. It is best
 // explained through an example.
 //
 //   // This Fluent program will have four collections:
@@ -66,9 +66,9 @@ class FluentExecutor;
 //   - sizeof...(Lhss) == sizeof...(Rhss). Lhss are pointers to collections and
 //     represent the left-hand sides of rules. Rhss are relational algebra
 //     expressions and represent the right-hand sides of rules. Rules are
-//     stored in `rules_`. See `CollectionBuilder` for an example of how these
+//     stored in `rules_`. See `FluentBuilder` for an example of how these
 //     rules are built.
-//   - A FluentExecutor steals most of its guts from a CollectionBuilder.
+//   - A FluentExecutor steals most of its guts from a FluentBuilder.
 template <typename... Cs, typename... Lhss, typename... Rhss>
 class FluentExecutor<std::tuple<std::unique_ptr<Cs>...>,
                      std::tuple<std::pair<Lhss, Rhss>...>> {

@@ -15,13 +15,13 @@ namespace fluent {
 TEST(Relalg, EmptyIterable) {
   std::vector<std::tuple<int>> xs = {};
   auto iter = ra::make_iterable(&xs);
-  ExpectRngsEqual(iter.ToRange(), ranges::view::all(xs));
+  ExpectRngsEqual(iter.ToPhysical().ToRange(), ranges::view::all(xs));
 }
 
 TEST(Relalg, SimpleIterable) {
   std::vector<std::tuple<int>> xs = {{1}, {2}, {3}};
   auto iter = ra::make_iterable(&xs);
-  ExpectRngsEqual(iter.ToRange(), ranges::view::all(xs));
+  ExpectRngsEqual(iter.ToPhysical().ToRange(), ranges::view::all(xs));
 }
 
 }  // namespace fluent

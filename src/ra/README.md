@@ -1,6 +1,6 @@
 # Relational Algebra
-This directory implements the relational algebra. For example, given a
-single-column relation `xs` of integers, the following SQL query returns the
+This directory implements the relational algebra. For example, given a relation
+`xs` with a single integer column `x`, the following SQL query returns the
 doubled value of all odd integers:
 
 ```
@@ -21,12 +21,20 @@ auto relalg = ra::make_iterable(&xs)
 
 This relational algebra expression `relalg` is **logical** in the sense that it
 doesn't have any `GetNext` or `Reset` methods or anything like that. Instead,
-it has a single method `ToRange` which returns a [range-v3][] range which
-produces the result of the relational algebra expression. For example, the
-following code would print out `2` and then `6`:
+it has a single method `ToPhysical` method which returns a **physical**
+relational algebra expression.
 
 ```c++
-ranges::for_each(relalg.ToRange(), [](int x) {
+auto physical = relalg.ToPhysical();
+```
+
+This physical relational algebra expression has a single `ToRange` method which
+returns a [range-v3][] range. The returned range produces the result of the
+relational algebra expression. For example, the following code would print out
+`2` and then `6`:
+
+```c++
+ranges::for_each(physical.ToRange(), [](int x) {
     std::cout << x << std::endl;
 });
 ```

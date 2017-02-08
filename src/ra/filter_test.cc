@@ -19,7 +19,7 @@ TEST(Filter, SimpleFilter) {
       ra::make_iterable(&xs),
       [](const std::tuple<int>& t) { return std::get<0>(t) % 2 == 1; });
   std::vector<std::tuple<int>> expected = {{1}, {3}};
-  ExpectRngsEqual(filter.ToRange(), ranges::view::all(expected));
+  ExpectRngsEqual(filter.ToPhysical().ToRange(), ranges::view::all(expected));
 }
 
 TEST(Filter, SimplePipedFilter) {
@@ -29,7 +29,7 @@ TEST(Filter, SimplePipedFilter) {
         return std::get<0>(t) % 2 == 1;
       });
   std::vector<std::tuple<int>> expected = {{1}, {3}};
-  ExpectRngsEqual(filter.ToRange(), ranges::view::all(expected));
+  ExpectRngsEqual(filter.ToPhysical().ToRange(), ranges::view::all(expected));
 }
 
 }  // namespace fluent

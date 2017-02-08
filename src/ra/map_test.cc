@@ -20,7 +20,7 @@ TEST(Map, SimpleMap) {
     return std::tuple<int, int>(x, x);
   });
   std::vector<std::tuple<int, int>> expected = {{1, 1}, {2, 2}, {3, 3}};
-  ExpectRngsEqual(map.ToRange(), ranges::view::all(expected));
+  ExpectRngsEqual(map.ToPhysical().ToRange(), ranges::view::all(expected));
 }
 
 TEST(Map, SimplePipedMap) {
@@ -30,7 +30,7 @@ TEST(Map, SimplePipedMap) {
                return std::tuple<int, int>(x, x);
              });
   std::vector<std::tuple<int, int>> expected = {{1, 1}, {2, 2}, {3, 3}};
-  ExpectRngsEqual(map.ToRange(), ranges::view::all(expected));
+  ExpectRngsEqual(map.ToPhysical().ToRange(), ranges::view::all(expected));
 }
 
 }  // namespace fluent

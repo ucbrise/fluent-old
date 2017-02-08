@@ -84,7 +84,8 @@ class Collection {
     // and then into the ts_.
     // TODO(mwhittaker): Figure out if this is necessary.
     std::vector<std::tuple<Ts...>> buf;
-    auto rng = query.ToRange();
+    auto physical = query.ToPhysical();
+    auto rng = physical.ToRange();
     for (auto iter = ranges::begin(rng); iter != ranges::end(rng); ++iter) {
       buf.push_back(*iter);
     }

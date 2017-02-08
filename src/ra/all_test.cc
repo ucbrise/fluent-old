@@ -25,7 +25,7 @@ TEST(All, SimpleAll) {
   // clang-format on
 
   std::vector<int> expected = {2, 6};
-  ExpectRngsEqual(relalg.ToRange(), ranges::view::all(expected));
+  ExpectRngsEqual(relalg.ToPhysical().ToRange(), ranges::view::all(expected));
 }
 
 }  // namespace fluent

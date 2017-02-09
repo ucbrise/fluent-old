@@ -18,9 +18,12 @@ INCLUDE(cmake/testing.cmake NO_POLICY_SCOPE)
 # simultaneously.
 SET(CMAKE_CXX_FLAGS_COMMON
     "-std=c++14 \
+     -O0 \
      -Wall \
      -Wextra \
      -Werror \
+     -pedantic \
+     -g \
      -fsanitize=address \
      -fsanitize=undefined")
 SET(CMAKE_CXX_FLAGS_DEBUG

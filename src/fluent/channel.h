@@ -7,6 +7,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "glog/logging.h"
+
 #include "fluent/collection.h"
 #include "fluent/serialization.h"
 #include "fluent/socket_cache.h"
@@ -41,6 +43,8 @@ class Channel : public Collection<T, Ts...> {
   // name of the Channel. Then, we sent one part for each column.
   template <std::size_t... Is>
   void AddImpl(const std::tuple<T, Ts...>& t, std::index_sequence<Is...>) {
+    VLOG(1) << "Channel " << this->Name() << " sending tuple to "
+            << std::get<0>(t) << ".";
     zmq::socket_t& socket = socket_cache_->At(std::get<0>(t));
     std::vector<std::string> strings = {ToString(std::get<Is>(t))...};
     std::vector<zmq::message_t> msgs;

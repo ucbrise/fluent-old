@@ -13,9 +13,9 @@ TEST(SocketCache, ThreeSockets) {
   const std::string c_address = "inproc://c";
 
   zmq::context_t context(1);
-  zmq::socket_t a(context, ZMQ_REP);
-  zmq::socket_t b(context, ZMQ_REP);
-  zmq::socket_t c(context, ZMQ_REP);
+  zmq::socket_t a(context, ZMQ_PULL);
+  zmq::socket_t b(context, ZMQ_PULL);
+  zmq::socket_t c(context, ZMQ_PULL);
   a.bind(a_address);
   b.bind(b_address);
   c.bind(c_address);
@@ -28,13 +28,6 @@ TEST(SocketCache, ThreeSockets) {
     EXPECT_EQ("foo", zmq_util::recv_string(&a));
     EXPECT_EQ("bar", zmq_util::recv_string(&b));
     EXPECT_EQ("baz", zmq_util::recv_string(&c));
-
-    zmq_util::send_string("foo", &a);
-    zmq_util::send_string("bar", &b);
-    zmq_util::send_string("baz", &c);
-    EXPECT_EQ("foo", zmq_util::recv_string(&cache[a_address]));
-    EXPECT_EQ("bar", zmq_util::recv_string(&cache[b_address]));
-    EXPECT_EQ("baz", zmq_util::recv_string(&cache[c_address]));
   }
 }
 

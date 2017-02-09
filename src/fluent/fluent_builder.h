@@ -123,8 +123,8 @@ class FluentBuilder {
 
   // Constructs an empty FluentBuilder. Note that this constructor should
   // only be called when Ts is empty (i.e. sizeof...(Ts) == 0).
-  FluentBuilder(const std::string& address)
-      : network_state_(std::make_unique<NetworkState>(address)) {
+  FluentBuilder(const std::string& address, zmq::context_t* const context)
+      : network_state_(std::make_unique<NetworkState>(address, context)) {
     static_assert(sizeof...(Ts) == 0,
                   "The FluentBuilder(const std::string& address) "
                   "constructor should only be called when Ts is empty.");
@@ -173,12 +173,14 @@ class FluentBuilder {
   template <typename...>
   friend class FluentBuilder;
 
-  friend FluentBuilder<> fluent(const std::string& address);
+  friend FluentBuilder<> fluent(const std::string& address,
+                                zmq::context_t* const context);
 };
 
 // Create an empty FluentBuilder listening on ZeroMQ address `address`.
-inline FluentBuilder<> fluent(const std::string& address) {
-  return FluentBuilder<>(address);
+inline FluentBuilder<> fluent(const std::string& address,
+                              zmq::context_t* const context) {
+  return FluentBuilder<>(address, context);
 }
 
 }  // namespace fluent

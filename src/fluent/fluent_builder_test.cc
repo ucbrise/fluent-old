@@ -6,14 +6,16 @@
 #include <utility>
 
 #include "gtest/gtest.h"
+#include "zmq.hpp"
 
 #include "ra/all.h"
 
 namespace fluent {
 
 TEST(FluentBuilder, SimpleBuildCheck) {
+  zmq::context_t context(1);
   // clang-format off
-  auto f = fluent("inproc://yolo")
+  auto f = fluent("inproc://yolo", &context)
     .table<int>("t")
     .scratch<int, int, float>("s")
     .channel<std::string, float, char>("c")

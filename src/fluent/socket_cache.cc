@@ -9,8 +9,7 @@ zmq::socket_t& SocketCache::At(const std::string& addr) {
   if (iter != cache_.end()) {
     return iter->second;
   }
-  // See the TODO in the header file discussing which socket type to use.
-  zmq::socket_t socket(*context_, ZMQ_REQ);
+  zmq::socket_t socket(*context_, ZMQ_PUSH);
   socket.connect(addr);
   auto p = cache_.insert(std::make_pair(addr, std::move(socket)));
   return p.first->second;

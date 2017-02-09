@@ -7,7 +7,9 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "zmq.hpp"
 
+#include "fluent/channel.h"
 #include "fluent/fluent_builder.h"
 #include "ra/all.h"
 
@@ -16,8 +18,10 @@ using ::testing::UnorderedElementsAreArray;
 namespace fluent {
 
 TEST(FluentExecutor, SimpleProgram) {
+  zmq::context_t context(1);
+
   // clang-format off
-  auto f = fluent("inproc://yolo")
+  auto f = fluent("inproc://yolo", &context)
     .table<int>("t")
     .scratch<int, int, float>("s")
     .channel<std::string, float, char>("c")
@@ -51,8 +55,10 @@ TEST(FluentExecutor, SimpleProgram) {
 }
 
 TEST(FluentExecutor, ClearScrathes) {
+  zmq::context_t context(1);
+
   // clang-format off
-  auto f = fluent("inproc://yolo")
+  auto f = fluent("inproc://yolo", &context)
     .table<int>("t")
     .scratch<int>("s")
     .RegisterRules([](auto& t, auto& s) {
@@ -70,14 +76,46 @@ TEST(FluentExecutor, ClearScrathes) {
 }
 
 TEST(FluentExecutor, SimpleCommunication) {
+  auto reroute = [](const std::string& s) {
+    return [s](const std::tuple<std::string, int>& t) {
+      return std::make_tuple(s, std::get<1>(t));
+    };
+  };
+
+  zmq::context_t context(1);
   // clang-format off
-  auto f = fluent("inproc://yolo")
-    .table<int>("t")
-    .RegisterRules([](auto& t) { return std::make_tuple(t <= t.Iterable()); });
+  auto ping = fluent("inproc://ping", &context)
+    .channel<std::string, int>("c")
+    .RegisterRules([&reroute](auto& c) {
+      return std::make_tuple(
+        c <= (c.Iterable() | ra::map(reroute("inproc://pong")))
+      );
+    });
+  auto pong = fluent("inproc://pong", &context)
+    .channel<std::string, int>("c")
+    .RegisterRules([&reroute](auto& c) {
+      return std::make_tuple(
+        c <= (c.Iterable() | ra::map(reroute("inproc://ping")))
+      );
+    });
   // clang-format on
 
-  // TODO(mwhittaker): Add a test in which two fluent programs communicate with
-  // one another using channels.
+  using C = std::set<std::tuple<std::string, int>>;
+  ping.MutableGet<0>().Add(std::make_tuple("inproc://pong", 42));
+
+  for (int i = 0; i < 3; ++i) {
+    pong.Receive();
+    EXPECT_THAT(pong.Get<0>().Get(),
+                UnorderedElementsAreArray(C{{"inproc://pong", 42}}));
+    pong.Tick();
+    EXPECT_THAT(pong.Get<0>().Get(), UnorderedElementsAreArray(C{}));
+
+    ping.Receive();
+    EXPECT_THAT(ping.Get<0>().Get(),
+                UnorderedElementsAreArray(C{{"inproc://ping", 42}}));
+    ping.Tick();
+    EXPECT_THAT(ping.Get<0>().Get(), UnorderedElementsAreArray(C{}));
+  }
 }
 
 }  // namespace fluent

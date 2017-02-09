@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "glog/logging.h"
+#include "gtest/gtest.h"
 #include "zmq.hpp"
 
 #include "fluent/channel.h"
@@ -129,6 +130,13 @@ class FluentExecutor<std::tuple<std::unique_ptr<Cs>...>,
   }
 
  private:
+  // MutableGet<I>() returns a reference to the Ith collection. This should only
+  // really ever be used for unit testing.
+  template <std::size_t I>
+  auto& MutableGet() const {
+    return *std::get<I>(collections_);
+  }
+
   // `ExecuteRules<0>` executes every rule in `rules_`.
   template <std::size_t I>
   typename std::enable_if<I == sizeof...(Rhss)>::type ExecuteRules() {}
@@ -158,6 +166,8 @@ class FluentExecutor<std::tuple<std::unique_ptr<Cs>...>,
   std::map<std::string, Parser> parsers_;
   std::unique_ptr<NetworkState> network_state_;
   std::tuple<std::pair<Lhss, Rhss>...> rules_;
+
+  FRIEND_TEST(FluentExecutor, SimpleCommunication);
 };
 
 }  // namespace fluent

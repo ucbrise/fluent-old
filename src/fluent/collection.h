@@ -1,6 +1,8 @@
 #ifndef FLUENT_COLLECTION_H_
 #define FLUENT_COLLECTION_H_
 
+#include <iostream>
+
 #include <functional>
 #include <set>
 #include <string>
@@ -79,8 +81,8 @@ class Collection {
     for (auto iter = ranges::begin(rng); iter != ranges::end(rng); ++iter) {
       buf.push_back(*iter);
     }
-    for (std::tuple<Ts...> t : buf) {
-      ts_.insert(std::move(t));
+    for (const std::tuple<Ts...>& t : buf) {
+      Add(t);
     }
   }
 

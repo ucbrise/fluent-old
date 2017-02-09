@@ -23,8 +23,8 @@ TEST(Channel, SimpleTest) {
 
   const std::string a_address = "inproc://a";
   const std::string b_address = "inproc://b";
-  zmq::socket_t a(context, ZMQ_REP);
-  zmq::socket_t b(context, ZMQ_REP);
+  zmq::socket_t a(context, ZMQ_PULL);
+  zmq::socket_t b(context, ZMQ_PULL);
   a.bind(a_address);
   b.bind(b_address);
 

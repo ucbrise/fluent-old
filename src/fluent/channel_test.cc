@@ -11,13 +11,14 @@
 #include "zmq.hpp"
 
 #include "fluent/socket_cache.h"
+#include "ra/all.h"
 #include "zmq_util/zmq_util.h"
 
 namespace fluent {
 
 using ::testing::UnorderedElementsAreArray;
 
-TEST(Channel, SimpleTest) {
+TEST(Channel, SimpleMerge) {
   zmq::context_t context(1);
   SocketCache cache(&context);
   Channel<std::string, int, int> c("c", &cache);
@@ -29,33 +30,44 @@ TEST(Channel, SimpleTest) {
   a.bind(a_address);
   b.bind(b_address);
 
+  std::set<std::tuple<std::string, int, int>> empty = {};
+  std::set<std::tuple<std::string, int, int>> msgs = {
+      {a_address, 1, 1}, {b_address, 2, 2}, {a_address, 3, 3},
+      {b_address, 4, 4}, {a_address, 5, 5}, {b_address, 6, 6},
+      {a_address, 7, 7}, {b_address, 8, 8}};
+
+  EXPECT_THAT(c.Get(), UnorderedElementsAreArray(empty));
+  c.Merge(ra::make_iterable(&msgs));
+  EXPECT_THAT(c.Get(), UnorderedElementsAreArray(empty));
+
+  for (int i = 1; i < 9; ++i) {
+    std::vector<zmq::message_t> messages =
+        i % 2 == 0 ? zmq_util::recv_msgs(&b) : zmq_util::recv_msgs(&a);
+    ASSERT_EQ(messages.size(), static_cast<std::size_t>(4));
+    EXPECT_EQ("c", zmq_util::message_to_string(messages[0]));
+    EXPECT_EQ(i % 2 == 0 ? b_address : a_address,
+              zmq_util::message_to_string(messages[1]));
+    EXPECT_EQ(std::to_string(i), zmq_util::message_to_string(messages[2]));
+    EXPECT_EQ(std::to_string(i), zmq_util::message_to_string(messages[3]));
+  }
+}
+
+TEST(Channel, TickClearsChannel) {
   using Tuple = std::tuple<std::string, int, int>;
   using TupleSet = std::set<Tuple>;
-  Tuple ta{a_address, 1, 1};
-  Tuple tb{b_address, 2, 2};
 
+  zmq::context_t context(1);
+  SocketCache cache(&context);
+  Channel<std::string, int, int> c("c", &cache);
+
+  c.MutableGet().insert(Tuple("foo", 1, 1));
+  c.MutableGet().insert(Tuple("bar", 2, 2));
+  c.MutableGet().insert(Tuple("baz", 3, 3));
+
+  EXPECT_THAT(c.Get(), UnorderedElementsAreArray(TupleSet{
+                           {"foo", 1, 1}, {"bar", 2, 2}, {"baz", 3, 3}}));
+  c.Tick();
   EXPECT_THAT(c.Get(), UnorderedElementsAreArray(TupleSet{}));
-  c.Add(ta);
-  EXPECT_THAT(c.Get(), UnorderedElementsAreArray(TupleSet{}));
-  c.Add(tb);
-  EXPECT_THAT(c.Get(), UnorderedElementsAreArray(TupleSet{}));
-
-  std::vector<zmq::message_t> a_messages = zmq_util::recv_msgs(&a);
-  ASSERT_EQ(a_messages.size(), static_cast<std::size_t>(4));
-  EXPECT_EQ("c", zmq_util::message_to_string(a_messages[0]));
-  EXPECT_EQ(a_address, zmq_util::message_to_string(a_messages[1]));
-  EXPECT_EQ("1", zmq_util::message_to_string(a_messages[2]));
-  EXPECT_EQ("1", zmq_util::message_to_string(a_messages[3]));
-
-  std::vector<zmq::message_t> b_messages = zmq_util::recv_msgs(&b);
-  ASSERT_EQ(b_messages.size(), static_cast<std::size_t>(4));
-  EXPECT_EQ("c", zmq_util::message_to_string(b_messages[0]));
-  EXPECT_EQ(b_address, zmq_util::message_to_string(b_messages[1]));
-  EXPECT_EQ("2", zmq_util::message_to_string(b_messages[2]));
-  EXPECT_EQ("2", zmq_util::message_to_string(b_messages[3]));
-
-  // TODO(mwhittaker): Test Tick. It's a bit annoying to do because I have to
-  // first force some tuples into the Channel.
 }
 
 }  // namespace fluent

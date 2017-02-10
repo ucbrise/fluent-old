@@ -17,6 +17,7 @@
 
 #include "fluent/channel.h"
 #include "fluent/network_state.h"
+#include "fluent/rule_tags.h"
 #include "fluent/scratch.h"
 #include "fluent/socket_cache.h"
 #include "fluent/table.h"
@@ -64,32 +65,37 @@ class FluentExecutor;
 //   - Every C in Cs is of the form Table<Us...>, Scratch<Us...>, or
 //     Channel<Us...>. A FluentExecutor stores pointers to the collections in
 //     `collections_`.
-//   - sizeof...(Lhss) == sizeof...(Rhss). Lhss are pointers to collections and
-//     represent the left-hand sides of rules. Rhss are relational algebra
-//     expressions and represent the right-hand sides of rules. Rules are
-//     stored in `rules_`. See `FluentBuilder` for an example of how these
-//     rules are built.
+//   - sizeof...(Lhss) == sizeof...(RuleTags) == sizeof...(Rhss).
+//   - Lhss are pointers to collections and represent the left-hand sides of
+//     rules.
+//   - Every type in RuleTags is one of the rule tags in `rule_tags.h`.
+//   - Rhss are relational algebra expressions and represent the right-hand
+//     sides of rules.
 //   - A FluentExecutor steals most of its guts from a FluentBuilder.
-template <typename... Cs, typename... Lhss, typename... Rhss>
+template <typename... Cs, typename... Lhss, typename... RuleTags,
+          typename... Rhss>
 class FluentExecutor<std::tuple<std::unique_ptr<Cs>...>,
-                     std::tuple<std::pair<Lhss, Rhss>...>> {
+                     std::tuple<std::tuple<Lhss, RuleTags, Rhss>...>> {
  public:
   using Parser = std::function<void(const std::vector<std::string>& columns)>;
 
   FluentExecutor(std::tuple<std::unique_ptr<Cs>...> collections,
                  std::map<std::string, Parser> parsers,
                  std::unique_ptr<NetworkState> network_state,
-                 std::tuple<std::pair<Lhss, Rhss>...> rules)
+                 std::tuple<std::tuple<Lhss, RuleTags, Rhss>...> rules)
       : collections_(std::move(collections)),
         parsers_(std::move(parsers)),
         network_state_(std::move(network_state)),
         rules_(rules) {
-    static_assert(sizeof...(Lhss) == sizeof...(Rhss),
+    static_assert(sizeof...(Lhss) == sizeof...(RuleTags) &&
+                      sizeof...(RuleTags) == sizeof...(Rhss),
                   "The ith entry of Lhss corresponds to the left-hand side of "
-                  "the ith rule. The ith entry of Rhss corresponds to the "
-                  "right-hand side of the ith rule. Thus, the sizes of Lhss "
-                  "and Rhss must be equal");
-    LOG(INFO) << sizeof...(Lhss) << " rules registered.";
+                  "the ith rule. The ith entry of RuleTags corresponds to the "
+                  "type of the rule. The ith entry of Rhss corresponds to the "
+                  "right-hand side of the ith rule. Thus, the sizes of Lhss, "
+                  "RuleTags, and Rhss must be equal");
+    LOG(INFO) << sizeof...(Lhss)
+              << " rules registered with the FluentExecutor.";
   }
 
   // Get<I>() returns a const reference to the Ith collection.
@@ -114,9 +120,15 @@ class FluentExecutor<std::tuple<std::unique_ptr<Cs>...>,
     for (std::size_t i = 1; i < msgs.size(); ++i) {
       strings.push_back(zmq_util::message_to_string(msgs[i]));
     }
-    // TODO(mwhittaker): Check to see if zmq_util::message_to_string(msgs[0])
-    // is in parsers_, logging a warning or something if it is not.
-    parsers_[zmq_util::message_to_string(msgs[0])](strings);
+
+    const std::string channel_name = zmq_util::message_to_string(msgs[0]);
+    if (parsers_.find(channel_name) != std::end(parsers_)) {
+      parsers_[channel_name](strings);
+    } else {
+      LOG(WARNING) << "A message was received for a channel named "
+                   << channel_name
+                   << " but a parser for the channel was never registered.";
+    }
   }
 
   // Runs a fluent program.
@@ -129,12 +141,28 @@ class FluentExecutor<std::tuple<std::unique_ptr<Cs>...>,
     }
   }
 
- private:
-  // MutableGet<I>() returns a reference to the Ith collection. This should only
-  // really ever be used for unit testing.
+ protected:
+  // MutableGet<I>() returns a reference to the Ith collection. This should
+  // only really ever be used for unit testing.
   template <std::size_t I>
   auto& MutableGet() const {
     return *std::get<I>(collections_);
+  }
+
+ private:
+  template <typename Lhs, typename Rhs>
+  void ExecuteRule(Lhs* collection, MergeTag, const Rhs& ra) {
+    collection->Merge(ra);
+  }
+
+  template <typename Lhs, typename Rhs>
+  void ExecuteRule(Lhs* collection, DeferredMergeTag, const Rhs& ra) {
+    collection->DeferredMerge(ra);
+  }
+
+  template <typename Lhs, typename Rhs>
+  void ExecuteRule(Lhs* collection, DeferredDeleteTag, const Rhs& ra) {
+    collection->DeferredDelete(ra);
   }
 
   // `ExecuteRules<0>` executes every rule in `rules_`.
@@ -144,8 +172,9 @@ class FluentExecutor<std::tuple<std::unique_ptr<Cs>...>,
   template <std::size_t I>
   typename std::enable_if<I != sizeof...(Rhss)>::type ExecuteRules() {
     if (I != sizeof...(Rhss)) {
-      CHECK_NOTNULL(std::get<I>(rules_).first)
-          ->AddRelalg(std::get<I>(rules_).second);
+      ExecuteRule(CHECK_NOTNULL(std::get<0>(std::get<I>(rules_))),
+                  std::get<1>(std::get<I>(rules_)),
+                  std::get<2>(std::get<I>(rules_)));
       ExecuteRules<I + 1>();
     }
   }
@@ -165,7 +194,7 @@ class FluentExecutor<std::tuple<std::unique_ptr<Cs>...>,
   std::tuple<std::unique_ptr<Cs>...> collections_;
   std::map<std::string, Parser> parsers_;
   std::unique_ptr<NetworkState> network_state_;
-  std::tuple<std::pair<Lhss, Rhss>...> rules_;
+  std::tuple<std::tuple<Lhss, RuleTags, Rhss>...> rules_;
 
   FRIEND_TEST(FluentExecutor, SimpleCommunication);
 };

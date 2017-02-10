@@ -1,8 +1,6 @@
 #ifndef FLUENT_COLLECTION_H_
 #define FLUENT_COLLECTION_H_
 
-#include <iostream>
-
 #include <functional>
 #include <set>
 #include <string>
@@ -50,44 +48,9 @@ class Collection {
 
   const std::set<std::tuple<Ts...>>& Get() const { return ts_; }
 
-  template <typename Rhs>
-  std::pair<Collection<Ts...>*, Rhs> operator<=(Rhs rhs) {
-    return {this, std::move(rhs)};
-  }
-
   ra::Iterable<std::set<std::tuple<Ts...>>> Iterable() const {
     return ra::make_iterable(&ts_);
   }
-
-  // - Table:   merge (<=) operation.
-  // - Scratch: merge (<=) operation.
-  // - Channel: asynchronous merge (<~) operation.
-  virtual void Add(const std::tuple<Ts...>& t) = 0;
-
-  // `AddRelalg(q)` executes `q` and calls `Add(t)` on every tuple `t` in the
-  // result.
-  template <typename T>
-  void AddRelalg(T query) {
-    // If `query` includes an iterable over `ts_`, then inserting into `ts_`
-    // might invalidate the iterator. Thus, we first write into a temprorary
-    // vector and then copy the contents of the vector into the `ts_`.
-    // TODO(mwhittaker): If the underlying collection is a channel, then
-    // calling `Add` won't actually add anything, so we won't be invalidating
-    // any iterators. In that case, we can optimize out the intermediate
-    // buffering and write straing into the channel.
-    std::vector<std::tuple<Ts...>> buf;
-    auto physical = query.ToPhysical();
-    auto rng = physical.ToRange();
-    for (auto iter = ranges::begin(rng); iter != ranges::end(rng); ++iter) {
-      buf.push_back(*iter);
-    }
-    for (const std::tuple<Ts...>& t : buf) {
-      Add(t);
-    }
-  }
-
-  // TODO(mwhittaker): Implement other basic methods like delete, deferred add,
-  // deferred delete, etc..
 
   // `Collection<T1, ..., Tn>.GetParser()(columns)` parses a vector of `n`
   // strings into a tuple of type `std::tuple<T1, ..., Tn>` and inserts it into

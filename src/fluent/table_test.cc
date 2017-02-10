@@ -3,6 +3,7 @@
 #include <set>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include "glog/logging.h"
 #include "gmock/gmock.h"
@@ -14,50 +15,83 @@ using ::testing::UnorderedElementsAreArray;
 
 namespace fluent {
 
-TEST(Table, SimpleTest) {
-  Table<int, int, int> t("t");
+namespace {
 
-  using Tuple = std::tuple<int, int, int>;
-  using TupleSet = std::set<Tuple>;
-  Tuple x1{1, 1, 1};
-  Tuple x2{2, 2, 2};
-  Tuple x3{3, 3, 3};
-
-  EXPECT_THAT(t.Get(), UnorderedElementsAreArray(TupleSet{}));
-  t.Add(x1);
-  EXPECT_THAT(t.Get(), UnorderedElementsAreArray(TupleSet{x1}));
-  t.Add(x2);
-  EXPECT_THAT(t.Get(), UnorderedElementsAreArray(TupleSet{x1, x2}));
-  t.Add(x3);
-  EXPECT_THAT(t.Get(), UnorderedElementsAreArray(TupleSet{x1, x2, x3}));
-  t.Tick();
-  EXPECT_THAT(t.Get(), UnorderedElementsAreArray(TupleSet{x1, x2, x3}));
+template <typename A, typename B, typename C>
+const A& fst(const std::tuple<A, B, C>& t) {
+  return std::get<0>(t);
 }
 
-TEST(Table, SimpleQuery) {
+template <typename A, typename B, typename C>
+const B& snd(const std::tuple<A, B, C>& t) {
+  return std::get<1>(t);
+}
+
+template <typename A, typename B, typename C>
+const C& thd(const std::tuple<A, B, C>& t) {
+  return std::get<2>(t);
+}
+
+}  // namespace
+
+TEST(Table, SimpleMerge) {
+  Table<int, int> t("t");
+  std::set<std::tuple<int, int>> s1 = {{1, 1}, {2, 2}};
+  std::set<std::tuple<int, int>> s2 = {{2, 2}, {3, 3}};
+  std::set<std::tuple<int, int>> s3 = {{1, 1}, {2, 2}, {3, 3}};
+
+  t.Merge(ra::make_iterable(&s1));
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s1));
+  t.Merge(ra::make_iterable(&s2));
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s3));
+}
+
+TEST(Table, SimpleMergeWithVectors) {
+  Table<int, int> t("t");
+  std::vector<std::tuple<int, int>> s1 = {{1, 1}, {2, 2}};
+  std::vector<std::tuple<int, int>> s2 = {{2, 2}, {3, 3}};
+  std::vector<std::tuple<int, int>> s3 = {{1, 1}, {2, 2}, {3, 3}};
+
+  t.Merge(ra::make_iterable(&s1));
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s1));
+  t.Merge(ra::make_iterable(&s2));
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s3));
+}
+
+TEST(Table, SelfMerge) {
+  Table<int, int> t("t");
+  std::set<std::tuple<int, int>> s = {{1, 1}, {2, 2}};
+
+  t.Merge(ra::make_iterable(&s));
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s));
+  t.Merge(ra::make_iterable(&t.Get()));
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s));
+}
+
+TEST(Table, CompositeQueryMerge) {
   using Tuple = std::tuple<int, int, int>;
   using TupleSet = std::set<Tuple>;
 
-  Table<int, int, int> t("t");
+  std::set<Tuple> ts;
   for (int i = 0; i < 10; ++i) {
-    t.Add({i, i, i});
+    ts.insert(Tuple(i, i, i));
   }
 
-  auto all_eq = [](const Tuple& t) {
-    return std::get<0>(t) == std::get<1>(t) && std::get<1>(t) == std::get<2>(t);
-  };
-  auto times_two = [](const Tuple& t) {
-    int doubled = std::get<0>(t) * 2;
-    return Tuple{doubled, doubled, doubled};
-  };
-  auto not_too_big = [](const Tuple& t) {
-    return std::get<0>(t) + std::get<1>(t) + std::get<2>(t) < 50;
-  };
+  Table<int, int, int> t("t");
+  t.Merge(ra::make_iterable(&ts));
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(ts));
+
   // clang-format off
-  t.AddRelalg(t.Iterable()
-    | ra::filter(std::move(all_eq))
-    | ra::map(std::move(times_two))
-    | ra::filter(std::move(not_too_big)));
+  t.Merge(t.Iterable()
+    | ra::filter([](const auto& t) {
+        return fst(t) == snd(t) && snd(t) == thd(t);
+      })
+    | ra::map([](const auto& t) {
+        return Tuple(fst(t) * 2, fst(t) * 2, fst(t) * 2);
+      })
+    | ra::filter([](const auto& t) {
+        return fst(t) + snd(t) + thd(t) < 50;
+      }));
   // clang-format on
 
   TupleSet expected;
@@ -69,6 +103,65 @@ TEST(Table, SimpleQuery) {
     }
   }
   EXPECT_THAT(t.Get(), UnorderedElementsAreArray(expected));
+}
+
+TEST(Table, TickDoesntClearTable) {
+  Table<int, int> t("t");
+  std::set<std::tuple<int, int>> s = {{1, 1}, {2, 2}};
+  t.Merge(ra::make_iterable(&s));
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s));
+  t.Tick();
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s));
+}
+
+TEST(Table, SimpleDeferredMerge) {
+  Table<int, int> t("t");
+  std::set<std::tuple<int, int>> empty = {};
+  std::set<std::tuple<int, int>> s1 = {{1, 1}, {2, 2}};
+  std::set<std::tuple<int, int>> s2 = {{2, 2}, {3, 3}};
+  std::set<std::tuple<int, int>> s3 = {{1, 1}, {2, 2}, {3, 3}};
+
+  t.DeferredMerge(ra::make_iterable(&s1));
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(empty));
+  t.DeferredMerge(ra::make_iterable(&s2));
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(empty));
+  t.Tick();
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s3));
+}
+
+TEST(Table, SimpleDeferredDelete) {
+  Table<int, int> t("t");
+  std::set<std::tuple<int, int>> empty = {};
+  std::set<std::tuple<int, int>> s1 = {{1, 1}, {2, 2}};
+  std::set<std::tuple<int, int>> s2 = {{2, 2}, {3, 3}};
+  std::set<std::tuple<int, int>> s3 = {{1, 1}, {2, 2}, {3, 3}};
+
+  t.Merge(ra::make_iterable(&s1));
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s1));
+  t.Merge(ra::make_iterable(&s2));
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s3));
+
+  t.DeferredDelete(ra::make_iterable(&s1));
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s3));
+  t.DeferredDelete(ra::make_iterable(&s2));
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s3));
+  t.Tick();
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(empty));
+}
+
+TEST(Table, DeferredMergeAndDelete) {
+  Table<int, int> t("t");
+  std::set<std::tuple<int, int>> empty = {};
+  std::set<std::tuple<int, int>> s1 = {{1, 1}, {2, 2}};
+  std::set<std::tuple<int, int>> s2 = {{2, 2}, {3, 3}};
+  std::set<std::tuple<int, int>> s3 = {{1, 1}};
+
+  t.DeferredMerge(ra::make_iterable(&s1));
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(empty));
+  t.DeferredDelete(ra::make_iterable(&s2));
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(empty));
+  t.Tick();
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s3));
 }
 
 }  // namespace fluent

@@ -8,8 +8,11 @@
 #include <utility>
 
 #include "glog/logging.h"
+#include "gtest/gtest.h"
+#include "range/v3/all.hpp"
 
 #include "fluent/collection.h"
+#include "fluent/rule_tags.h"
 #include "fluent/serialization.h"
 #include "fluent/socket_cache.h"
 #include "zmq_util/zmq_util.h"
@@ -30,34 +33,47 @@ class Channel : public Collection<T, Ts...> {
   Channel(const std::string& name, SocketCache* socket_cache)
       : Collection<T, Ts...>(name), socket_cache_(socket_cache) {}
 
-  // This method assumes a `std::string ToString(const U&)` function exists for
-  // `U` in `T, Ts...`.
-  void Add(const std::tuple<T, Ts...>& t) override {
-    AddImpl(t, std::make_index_sequence<sizeof...(Ts) + 1>());
+  // Merge assumes a `std::string ToString(const U&)` function exists for `U`
+  // in `T, Ts...`.
+  template <typename RA>
+  void Merge(const RA& ra) {
+    MergeImpl(ra, std::make_index_sequence<sizeof...(Ts) + 1>());
+  }
+
+  template <typename Rhs>
+  std::tuple<Channel<T, Ts...>*, MergeTag, typename std::decay<Rhs>::type>
+  operator<=(Rhs&& rhs) {
+    return {this, MergeTag(), std::forward<Rhs>(rhs)};
   }
 
   void Tick() override { this->MutableGet().clear(); }
 
  private:
-  // Each tuple is sent as a multi-part ZeroMQ message. The first part is the
-  // name of the Channel. Then, we sent one part for each column.
-  template <std::size_t... Is>
-  void AddImpl(const std::tuple<T, Ts...>& t, std::index_sequence<Is...>) {
-    VLOG(1) << "Channel " << this->Name() << " sending tuple to "
-            << std::get<0>(t) << ".";
-    zmq::socket_t& socket = socket_cache_->At(std::get<0>(t));
-    std::vector<std::string> strings = {ToString(std::get<Is>(t))...};
-    std::vector<zmq::message_t> msgs;
-    msgs.push_back(zmq_util::string_to_message(this->Name()));
-    for (const std::string& s : strings) {
-      msgs.push_back(zmq_util::string_to_message(s));
-    }
-    zmq_util::send_msgs(std::move(msgs), &socket);
+  template <typename RA, std::size_t... Is>
+  void MergeImpl(const RA& ra, std::index_sequence<Is...>) {
+    auto physical = ra.ToPhysical();
+    auto rng = physical.ToRange();
+    ranges::for_each(rng, [this](const std::tuple<T, Ts...>& t) {
+      VLOG(1) << "Channel " << this->Name() << " sending tuple to "
+              << std::get<0>(t) << ".";
+
+      std::vector<std::string> strings = {ToString(std::get<Is>(t))...};
+      std::vector<zmq::message_t> msgs;
+      msgs.push_back(zmq_util::string_to_message(this->Name()));
+      for (const std::string& s : strings) {
+        msgs.push_back(zmq_util::string_to_message(s));
+      }
+
+      zmq::socket_t& socket = socket_cache_->At(std::get<0>(t));
+      zmq_util::send_msgs(std::move(msgs), &socket);
+    });
   }
 
   // Whenever a tuple with address `a` is added to a Channel, the socket
   // associated with `a` in `socket_cache_` is used to send the tuple.
   SocketCache* socket_cache_;
+
+  FRIEND_TEST(Channel, TickClearsChannel);
 };
 
 }  // namespace fluent

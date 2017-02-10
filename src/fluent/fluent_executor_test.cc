@@ -55,27 +55,6 @@ TEST(FluentExecutor, SimpleProgram) {
   EXPECT_THAT(f.Get<2>().Get(), UnorderedElementsAreArray(C{}));
 }
 
-TEST(FluentExecutor, ClearScrathes) {
-  zmq::context_t context(1);
-
-  // clang-format off
-  auto f = fluent("inproc://yolo", &context)
-    .table<int>("t")
-    .scratch<int>("s")
-    .RegisterRules([](auto& t, auto& s) {
-      return std::make_tuple(t <= (s.Iterable() | ra::count()));
-    });
-  // clang-format on
-
-  using T = std::set<std::tuple<int>>;
-  using S = std::set<std::tuple<int>>;
-  for (int i = 0; i < 3; ++i) {
-    f.Tick();
-    EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}}));
-    EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
-  }
-}
-
 TEST(FluentExecutor, SimpleCommunication) {
   auto reroute = [](const std::string& s) {
     return [s](const std::tuple<std::string, int>& t) {
@@ -102,7 +81,8 @@ TEST(FluentExecutor, SimpleCommunication) {
   // clang-format on
 
   using C = std::set<std::tuple<std::string, int>>;
-  ping.MutableGet<0>().Add(std::make_tuple("inproc://pong", 42));
+  C catalyst = {{"inproc://pong", 42}};
+  ping.MutableGet<0>().Merge(ra::make_iterable(&catalyst));
 
   for (int i = 0; i < 3; ++i) {
     pong.Receive();
@@ -117,6 +97,44 @@ TEST(FluentExecutor, SimpleCommunication) {
     ping.Tick();
     EXPECT_THAT(ping.Get<0>().Get(), UnorderedElementsAreArray(C{}));
   }
+}
+
+TEST(FluentExecutor, ComplexProgram) {
+  using Tuple = std::tuple<int>;
+  using T = std::set<Tuple>;
+  using S = std::set<Tuple>;
+
+  zmq::context_t context(1);
+
+  auto plus_one_times_two = [](const auto& t) {
+    return (1 + std::get<0>(t)) * 2;
+  };
+  auto is_even = [](const auto& t) { return std::get<0>(t) % 2 == 0; };
+  auto f = fluent("inproc://yolo", &context)
+               .table<int>("t")
+               .scratch<int>("s")
+               .RegisterRules([plus_one_times_two, is_even](auto& t, auto& s) {
+                 auto a = t += (s.Iterable() | ra::count());
+                 auto b = t <= (t.Iterable() | ra::map(plus_one_times_two));
+                 auto c = s <= t.Iterable();
+                 auto d = t -= (s.Iterable() | ra::filter(is_even));
+                 return std::make_tuple(a, b, c, d);
+               });
+
+  EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{}));
+  EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
+
+  f.Tick();
+  EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}}));
+  EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
+
+  f.Tick();
+  EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{}));
+  EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
+
+  f.Tick();
+  EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}}));
+  EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
 }
 
 }  // namespace fluent

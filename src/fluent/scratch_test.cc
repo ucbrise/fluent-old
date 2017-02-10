@@ -12,26 +12,37 @@ namespace fluent {
 
 using ::testing::UnorderedElementsAreArray;
 
-TEST(Scratch, SimpleTest) {
-  using Tuple = std::tuple<int, int, int>;
-  using TupleSet = std::set<Tuple>;
+TEST(Scratch, SimpleMerge) {
+  Scratch<int, int> s("s");
+  std::set<std::tuple<int, int>> s1 = {{1, 1}, {2, 2}};
+  std::set<std::tuple<int, int>> s2 = {{2, 2}, {3, 3}};
+  std::set<std::tuple<int, int>> s3 = {{1, 1}, {2, 2}, {3, 3}};
 
-  Scratch<int, int, int> s("s");
-  Tuple x1{1, 1, 1};
-  Tuple x2{2, 2, 2};
-  Tuple x3{3, 3, 3};
+  s.Merge(ra::make_iterable(&s1));
+  EXPECT_THAT(s.Get(), testing::UnorderedElementsAreArray(s1));
+  s.Merge(ra::make_iterable(&s2));
+  EXPECT_THAT(s.Get(), testing::UnorderedElementsAreArray(s3));
+}
 
-  EXPECT_THAT(s.Get(), UnorderedElementsAreArray(TupleSet{}));
-  s.Add(x1);
-  EXPECT_THAT(s.Get(), UnorderedElementsAreArray(TupleSet{x1}));
-  s.Add(x2);
-  EXPECT_THAT(s.Get(), UnorderedElementsAreArray(TupleSet{x1, x2}));
-  s.Add(x3);
-  EXPECT_THAT(s.Get(), UnorderedElementsAreArray(TupleSet{x1, x2, x3}));
+TEST(Scratch, SelfMerge) {
+  Scratch<int, int> s("s");
+  std::set<std::tuple<int, int>> ts = {{1, 1}, {2, 2}};
+
+  s.Merge(ra::make_iterable(&ts));
+  EXPECT_THAT(s.Get(), testing::UnorderedElementsAreArray(ts));
+  s.Merge(ra::make_iterable(&s.Get()));
+  EXPECT_THAT(s.Get(), testing::UnorderedElementsAreArray(ts));
+}
+
+TEST(Scratch, TickClearsScratches) {
+  Scratch<int, int> s("s");
+  std::set<std::tuple<int, int>> empty = {};
+  std::set<std::tuple<int, int>> ts = {{1, 1}, {2, 2}};
+
+  s.Merge(ra::make_iterable(&ts));
+  EXPECT_THAT(s.Get(), testing::UnorderedElementsAreArray(ts));
   s.Tick();
-  EXPECT_THAT(s.Get(), UnorderedElementsAreArray(TupleSet{}));
-  s.Add(x1);
-  EXPECT_THAT(s.Get(), UnorderedElementsAreArray(TupleSet{x1}));
+  EXPECT_THAT(s.Get(), testing::UnorderedElementsAreArray(empty));
 }
 
 }  // namespace fluent

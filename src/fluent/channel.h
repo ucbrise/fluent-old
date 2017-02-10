@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "glog/logging.h"
+#include "gtest/gtest.h"
 #include "range/v3/all.hpp"
 
 #include "fluent/collection.h"
@@ -71,6 +72,8 @@ class Channel : public Collection<T, Ts...> {
   // Whenever a tuple with address `a` is added to a Channel, the socket
   // associated with `a` in `socket_cache_` is used to send the tuple.
   SocketCache* socket_cache_;
+
+  FRIEND_TEST(Channel, TickClearsChannel);
 };
 
 }  // namespace fluent

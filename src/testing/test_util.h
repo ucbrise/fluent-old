@@ -33,7 +33,7 @@ void ExpectRngsEqual(Rng1 actual, Rng2 expected) {
 template <typename Rng, typename Container>
 void ExpectRngsUnorderedEqual(Rng actual, const Container& expected) {
   auto container = actual | ranges::to_<std::set>();
-  EXPECT_THAT(actual, UnorderedElementsAreArray(expected));
+  EXPECT_THAT(container, testing::UnorderedElementsAreArray(expected));
 }
 
 }  // namespace fluent

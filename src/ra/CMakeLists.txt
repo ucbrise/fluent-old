@@ -10,6 +10,4 @@ CREATE_RA_TEST(cross_test)
 CREATE_RA_TEST(filter_test)
 CREATE_RA_TEST(iterable_test)
 CREATE_RA_TEST(map_test)
-
-#ADD_SUBDIRECTORY(logical)
-#ADD_SUBDIRECTORY(physical)
+CREATE_RA_TEST(project_test)

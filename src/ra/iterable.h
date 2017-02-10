@@ -9,21 +9,20 @@
 namespace fluent {
 namespace ra {
 
-template <typename Rng>
+template <typename T>
 class PhysicalIterable {
  public:
-  explicit PhysicalIterable(Rng r) : r_(std::move(r)) {}
+  explicit PhysicalIterable(const T* iterable) : iterable_(iterable) {}
 
-  auto ToRange() const { return r_; }
+  auto ToRange() const { return ranges::view::all(*iterable_); }
 
  private:
-  Rng r_;
+  const T* iterable_;
 };
 
-template <typename Rng>
-PhysicalIterable<typename std::decay<Rng>::type> make_physical_iterable(
-    Rng&& r) {
-  return PhysicalIterable<typename std::decay<Rng>::type>(std::forward<Rng>(r));
+template <typename T>
+PhysicalIterable<T> make_physical_iterable(const T* iterable) {
+  return PhysicalIterable<T>(iterable);
 }
 
 template <typename T>
@@ -31,9 +30,7 @@ class Iterable {
  public:
   explicit Iterable(const T* iterable) : iterable_(iterable) {}
 
-  auto ToPhysical() const {
-    return make_physical_iterable(ranges::view::all(*iterable_));
-  }
+  auto ToPhysical() const { return make_physical_iterable(iterable_); }
 
  private:
   const T* iterable_;

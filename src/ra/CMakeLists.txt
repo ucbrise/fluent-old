@@ -6,6 +6,7 @@ ENDMACRO(CREATE_RA_TEST)
 
 CREATE_RA_TEST(all_test)
 CREATE_RA_TEST(count_test)
+CREATE_RA_TEST(cross_test)
 CREATE_RA_TEST(filter_test)
 CREATE_RA_TEST(iterable_test)
 CREATE_RA_TEST(map_test)

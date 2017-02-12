@@ -3,6 +3,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 CREATE_NAMED_TEST(relalg_cross_test cross_test)
 CREATE_NAMED_TEST(relalg_project_test project_test)
 CREATE_NAMED_TEST(relalg_select_test select_test)
+CREATE_NAMED_TEST(relalg_groupby_test groupby_test)
 
 CREATE_NAMED_BENCHMARK(relalg_cross_bench cross_bench)
 CREATE_NAMED_BENCHMARK(relalg_project_bench project_bench)

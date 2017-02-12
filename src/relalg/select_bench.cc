@@ -46,40 +46,13 @@ void SelectAllBench(benchmark::State& state) {
 }
 BENCHMARK(SelectAllBench)->Range(10, 10 << 10);
 
-void ManualEvensBench(benchmark::State& state) {
-  while (state.KeepRunning()) {
-    state.PauseTiming();
-    std::vector<int> xs(state.range_x());
-    state.ResumeTiming();
-    for (int x : xs) {
-      if (detail::IsPrime(x)) {
-        benchmark::DoNotOptimize(x);
-      } else {
-        benchmark::DoNotOptimize(x);
-      }
-    }
-  }
-}
-BENCHMARK(ManualEvensBench)->Range(10, 10 << 10);
-
-void SelectEvensBench(benchmark::State& state) {
-  while (state.KeepRunning()) {
-    state.PauseTiming();
-    std::vector<int> xs(state.range_x());
-    state.ResumeTiming();
-    auto selected = xs | select(detail::IsPrime);
-    ranges::for_each(selected, [](int x) { benchmark::DoNotOptimize(x); });
-  }
-}
-BENCHMARK(SelectEvensBench)->Range(10, 10 << 10);
-
 void ManualPrimesBench(benchmark::State& state) {
   while (state.KeepRunning()) {
     state.PauseTiming();
     std::vector<int> xs(state.range_x());
     state.ResumeTiming();
     for (int x : xs) {
-      if (x % 2 == 0) {
+      if (detail::IsPrime(x)) {
         benchmark::DoNotOptimize(x);
       } else {
         benchmark::DoNotOptimize(x);
@@ -94,11 +67,38 @@ void SelectPrimesBench(benchmark::State& state) {
     state.PauseTiming();
     std::vector<int> xs(state.range_x());
     state.ResumeTiming();
-    auto selected = xs | select([](int x) { return x % 2 == 0; });
+    auto selected = xs | select(detail::IsPrime);
     ranges::for_each(selected, [](int x) { benchmark::DoNotOptimize(x); });
   }
 }
 BENCHMARK(SelectPrimesBench)->Range(10, 10 << 10);
+
+void ManualEvensBench(benchmark::State& state) {
+  while (state.KeepRunning()) {
+    state.PauseTiming();
+    std::vector<int> xs(state.range_x());
+    state.ResumeTiming();
+    for (int x : xs) {
+      if (x % 2 == 0) {
+        benchmark::DoNotOptimize(x);
+      } else {
+        benchmark::DoNotOptimize(x);
+      }
+    }
+  }
+}
+BENCHMARK(ManualEvensBench)->Range(10, 10 << 10);
+
+void SelectEvensBench(benchmark::State& state) {
+  while (state.KeepRunning()) {
+    state.PauseTiming();
+    std::vector<int> xs(state.range_x());
+    state.ResumeTiming();
+    auto selected = xs | select([](int x) { return x % 2 == 0; });
+    ranges::for_each(selected, [](int x) { benchmark::DoNotOptimize(x); });
+  }
+}
+BENCHMARK(SelectEvensBench)->Range(10, 10 << 10);
 
 }  // namespace fluent
 

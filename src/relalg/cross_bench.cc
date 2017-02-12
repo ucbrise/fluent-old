@@ -7,7 +7,8 @@
 
 namespace fluent {
 
-void ManualSimpleBench(benchmark::State& state) {
+
+void ManualTupleBench(benchmark::State& state) {
   while (state.KeepRunning()) {
     state.PauseTiming();
     std::vector<int> xs(state.range_x());
@@ -15,13 +16,12 @@ void ManualSimpleBench(benchmark::State& state) {
     state.ResumeTiming();
     for (int x : xs) {
       for (int y : ys) {
-        benchmark::DoNotOptimize(x);
-        benchmark::DoNotOptimize(y);
+        std::make_tuple(x, y);
       }
     }
   }
 }
-BENCHMARK(ManualSimpleBench)->Range(10, 10 << 5);
+BENCHMARK(ManualTupleBench)->Range(10, 10 << 5);
 
 void CrossSimpleBench(benchmark::State& state) {
   while (state.KeepRunning()) {

@@ -19,6 +19,30 @@ TEST(Cross, Simple) {
   ExpectRngsEqual(crossed, ranges::view::all(zs));
 }
 
+TEST(Cross, EmptyXs) {
+  std::vector<std::string> xs = {};
+  std::vector<int> ys = {0, 1, 2};
+  std::vector<std::pair<std::string, int>> zs = {};
+  auto crossed = cross(ranges::view::all(xs), ranges::view::all(ys));
+  ExpectRngsEqual(crossed, ranges::view::all(zs));
+}
+
+TEST(Cross, EmptyYs) {
+  std::vector<std::string> xs = {"a", "b"};
+  std::vector<int> ys = {};
+  std::vector<std::pair<std::string, int>> zs = {};
+  auto crossed = cross(ranges::view::all(xs), ranges::view::all(ys));
+  ExpectRngsEqual(crossed, ranges::view::all(zs));
+}
+
+TEST(Cross, EmptyXsYs) {
+  std::vector<std::string> xs = {};
+  std::vector<int> ys = {};
+  std::vector<std::pair<std::string, int>> zs = {};
+  auto crossed = cross(ranges::view::all(xs), ranges::view::all(ys));
+  ExpectRngsEqual(crossed, ranges::view::all(zs));
+}
+
 }  // namespace fluent
 
 int main(int argc, char **argv) {

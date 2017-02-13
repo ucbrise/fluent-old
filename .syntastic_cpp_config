@@ -1,6 +1,10 @@
 -std=c++14
+-Wall
+-Wextra
+-Werror
+-pedantic
 -Ibuild
--I.
+-Isrc
 -Ibuild/vendor/googlebenchmark/src/googlebenchmark/include
 -Ibuild/vendor/googlelog/src/googlelog/src
 -Ibuild/vendor/googletest/src/googletest/googlemock/include

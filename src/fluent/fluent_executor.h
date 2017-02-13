@@ -20,6 +20,7 @@
 #include "fluent/rule_tags.h"
 #include "fluent/scratch.h"
 #include "fluent/socket_cache.h"
+#include "fluent/stdin.h"
 #include "fluent/table.h"
 
 namespace fluent {
@@ -82,11 +83,13 @@ class FluentExecutor<std::tuple<std::unique_ptr<Cs>...>,
   FluentExecutor(std::tuple<std::unique_ptr<Cs>...> collections,
                  std::map<std::string, Parser> parsers,
                  std::unique_ptr<NetworkState> network_state,
-                 std::tuple<std::tuple<Lhss, RuleTags, Rhss>...> rules)
+                 std::tuple<std::tuple<Lhss, RuleTags, Rhss>...> rules,
+                 Stdin* stdin)
       : collections_(std::move(collections)),
         parsers_(std::move(parsers)),
         network_state_(std::move(network_state)),
-        rules_(rules) {
+        rules_(rules),
+        stdin_(stdin) {
     static_assert(sizeof...(Lhss) == sizeof...(RuleTags) &&
                       sizeof...(RuleTags) == sizeof...(Rhss),
                   "The ith entry of Lhss corresponds to the left-hand side of "
@@ -114,20 +117,34 @@ class FluentExecutor<std::tuple<std::unique_ptr<Cs>...>,
   // (Potentially) block and receive messages sent by other Fluent nodes.
   // Receiving a message will insert it into the appropriate channel.
   void Receive() {
-    std::vector<zmq::message_t> msgs =
-        zmq_util::recv_msgs(&network_state_->socket);
-    std::vector<std::string> strings;
-    for (std::size_t i = 1; i < msgs.size(); ++i) {
-      strings.push_back(zmq_util::message_to_string(msgs[i]));
+    std::vector<zmq::pollitem_t> pollitems = {
+        {network_state_->socket, 0, ZMQ_POLLIN, 0}};
+    if (stdin_ != nullptr) {
+      pollitems.push_back(stdin_->Pollitem());
     }
 
-    const std::string channel_name = zmq_util::message_to_string(msgs[0]);
-    if (parsers_.find(channel_name) != std::end(parsers_)) {
-      parsers_[channel_name](strings);
-    } else {
-      LOG(WARNING) << "A message was received for a channel named "
-                   << channel_name
-                   << " but a parser for the channel was never registered.";
+    zmq_util::poll(-1, &pollitems);
+
+    if (pollitems[0].revents & ZMQ_POLLIN) {
+      std::vector<zmq::message_t> msgs =
+          zmq_util::recv_msgs(&network_state_->socket);
+      std::vector<std::string> strings;
+      for (std::size_t i = 1; i < msgs.size(); ++i) {
+        strings.push_back(zmq_util::message_to_string(msgs[i]));
+      }
+
+      const std::string channel_name = zmq_util::message_to_string(msgs[0]);
+      if (parsers_.find(channel_name) != std::end(parsers_)) {
+        parsers_[channel_name](strings);
+      } else {
+        LOG(WARNING) << "A message was received for a channel named "
+                     << channel_name
+                     << " but a parser for the channel was never registered.";
+      }
+    }
+
+    if (stdin_ != nullptr && pollitems[1].revents & ZMQ_POLLIN) {
+      stdin_->GetLine();
     }
   }
 
@@ -195,6 +212,7 @@ class FluentExecutor<std::tuple<std::unique_ptr<Cs>...>,
   std::map<std::string, Parser> parsers_;
   std::unique_ptr<NetworkState> network_state_;
   std::tuple<std::tuple<Lhss, RuleTags, Rhss>...> rules_;
+  Stdin* const stdin_;
 
   FRIEND_TEST(FluentExecutor, SimpleCommunication);
 };

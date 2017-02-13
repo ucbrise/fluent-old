@@ -14,7 +14,7 @@ class PhysicalProject {
  public:
   PhysicalProject(PhysicalChild child) : child_(std::move(child)) {}
 
-  auto ToRange() const {
+  auto ToRange() {
     return child_.ToRange() | ranges::view::transform([](const auto& t) {
              return std::tuple_cat(std::make_tuple(std::get<Is>(t))...);
            });

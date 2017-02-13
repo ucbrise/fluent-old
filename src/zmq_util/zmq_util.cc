@@ -50,5 +50,9 @@ std::vector<zmq::message_t> recv_msgs(zmq::socket_t* socket) {
   return msgs;
 }
 
+int poll(long timeout, std::vector<zmq::pollitem_t>* items) {
+  return zmq::poll(items->data(), items->size(), timeout);
+}
+
 }  // namespace zmq_util
 }  // namespace fluent

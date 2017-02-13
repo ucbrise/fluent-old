@@ -13,6 +13,7 @@
 #include "fluent/channel.h"
 #include "fluent/fluent_builder.h"
 #include "ra/all.h"
+#include "testing/captured_stdout.h"
 
 using ::testing::UnorderedElementsAreArray;
 
@@ -53,6 +54,47 @@ TEST(FluentExecutor, SimpleProgram) {
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}, {1}, {2}}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
   EXPECT_THAT(f.Get<2>().Get(), UnorderedElementsAreArray(C{}));
+}
+
+TEST(FluentExecutor, AllOperations) {
+  zmq::context_t context(1);
+
+  auto int_tuple_to_string = [](const std::tuple<int>& t) {
+    return std::tuple<std::string>(std::to_string(std::get<0>(t)));
+  };
+
+  // clang-format off
+  auto f = fluent("inproc://yolo", &context)
+    .table<int>("t")
+    .scratch<int>("s")
+    .stdout()
+    .RegisterRules([&int_tuple_to_string](auto& t, auto& s, auto& stdout) {
+      auto a = t <= (t.Iterable() | ra::count());
+      auto b = t += t.Iterable();
+      auto c = t -= s.Iterable();
+      auto d = s <= (t.Iterable() | ra::count());
+      auto e = stdout <= (s.Iterable() | ra::map(int_tuple_to_string));
+      auto f = stdout += (s.Iterable() | ra::map(int_tuple_to_string));
+      return std::make_tuple(a, b, c, d, e, f);
+    });
+  // clang-format on
+
+  using T = std::set<std::tuple<int>>;
+  CapturedStdout captured;
+
+  EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{}));
+  EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(T{}));
+  EXPECT_STREQ("", captured.Get().c_str());
+
+  f.Tick();
+  EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}}));
+  EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(T{}));
+  EXPECT_STREQ("1\n1\n", captured.Get().c_str());
+
+  f.Tick();
+  EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}, {1}}));
+  EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(T{}));
+  EXPECT_STREQ("1\n1\n2\n2\n", captured.Get().c_str());
 }
 
 TEST(FluentExecutor, SimpleCommunication) {

@@ -11,6 +11,7 @@
 
 #include "fluent/collection.h"
 #include "fluent/rule_tags.h"
+#include "ra/ra_util.h"
 
 namespace fluent {
 
@@ -21,17 +22,17 @@ class Table : public Collection<Ts...> {
 
   template <typename RA>
   void Merge(const RA& ra) {
-    BufferRaInto(ra, &this->MutableGet());
+    ra::BufferRaInto(ra, &this->MutableGet());
   }
 
   template <typename RA>
   void DeferredMerge(const RA& ra) {
-    StreamRaInto(ra, &deferred_merge_);
+    ra::StreamRaInto(ra, &deferred_merge_);
   }
 
   template <typename RA>
   void DeferredDelete(const RA& ra) {
-    StreamRaInto(ra, &deferred_delete_);
+    ra::StreamRaInto(ra, &deferred_delete_);
   }
 
   template <typename Rhs>
@@ -65,28 +66,6 @@ class Table : public Collection<Ts...> {
   }
 
  private:
-  template <typename RA>
-  void BufferRaInto(const RA& ra, std::set<std::tuple<Ts...>>* s) {
-    // If `query` includes an iterable over `ts_`, then inserting into `ts_`
-    // might invalidate the iterator. Thus, we first write into a temprorary
-    // vector and then copy the contents of the vector into the `ts_`.
-    auto physical = ra.ToPhysical();
-    auto rng = physical.ToRange();
-    auto buf = rng | ranges::to_<std::set<std::tuple<Ts...>>>();
-    auto begin = std::make_move_iterator(std::begin(buf));
-    auto end = std::make_move_iterator(std::end(buf));
-    s->insert(begin, end);
-  }
-
-  template <typename RA>
-  void StreamRaInto(const RA& ra, std::set<std::tuple<Ts...>>* s) {
-    auto physical = ra.ToPhysical();
-    auto rng = physical.ToRange();
-    for (auto iter = ranges::begin(rng); iter != ranges::end(rng); ++iter) {
-      s->insert(std::move(*iter));
-    }
-  }
-
   std::set<std::tuple<Ts...>> deferred_merge_;
   std::set<std::tuple<Ts...>> deferred_delete_;
 };

@@ -15,7 +15,7 @@ class PhysicalCross {
   PhysicalCross(PhysicalLeft left, PhysicalRight right)
       : left_(std::move(left)), right_(std::move(right)) {}
 
-  auto ToRange() const {
+  auto ToRange() {
     return ranges::view::for_each(left_.ToRange(), [this](const auto& left) {
       return ranges::yield_from(
           right_.ToRange() | ranges::view::transform([left](const auto& right) {

@@ -19,6 +19,7 @@
 #include "fluent/network_state.h"
 #include "fluent/scratch.h"
 #include "fluent/socket_cache.h"
+#include "fluent/stdin.h"
 #include "fluent/stdout.h"
 #include "fluent/table.h"
 
@@ -88,8 +89,20 @@ class FluentBuilder {
   template <typename U, typename... Us>
   FluentBuilder<Ts..., Channel<U, Us...>> channel(const std::string& name) && {
     LOG(INFO) << "Adding a channel named " << name << ".";
-    return AddCollection(std::make_unique<Channel<U, Us...>>(
-        name, &network_state_->socket_cache));
+    auto c = std::make_unique<Channel<U, Us...>>(name,
+                                                 &network_state_->socket_cache);
+    CHECK(parsers_.find(c->Name()) == parsers_.end())
+        << "The channel name '" << c->Name()
+        << "' is used multiple times. Channel names must be unique.";
+    parsers_.insert(std::make_pair(c->Name(), c->GetParser()));
+    return AddCollection(std::move(c));
+  }
+
+  FluentBuilder<Ts..., Stdin> stdin() && {
+    LOG(INFO) << "Adding stdin.";
+    auto stdin = std::make_unique<Stdin>();
+    stdin_ = stdin.get();
+    return AddCollection(std::move(stdin));
   }
 
   FluentBuilder<Ts..., Stdout> stdout() && {
@@ -130,7 +143,8 @@ class FluentBuilder {
   // Constructs an empty FluentBuilder. Note that this constructor should
   // only be called when Ts is empty (i.e. sizeof...(Ts) == 0).
   FluentBuilder(const std::string& address, zmq::context_t* const context)
-      : network_state_(std::make_unique<NetworkState>(address, context)) {
+      : network_state_(std::make_unique<NetworkState>(address, context)),
+        stdin_(nullptr) {
     static_assert(sizeof...(Ts) == 0,
                   "The FluentBuilder(const std::string& address) "
                   "constructor should only be called when Ts is empty.");
@@ -139,41 +153,20 @@ class FluentBuilder {
   // Moves the guts of one FluentBuilder into another.
   FluentBuilder(std::tuple<std::unique_ptr<Ts>...> collections,
                 std::map<std::string, Parser> parsers,
-                std::unique_ptr<NetworkState> network_state)
+                std::unique_ptr<NetworkState> network_state, Stdin* stdin)
       : collections_(std::move(collections)),
         parsers_(std::move(parsers)),
-        network_state_(std::move(network_state)) {}
-
-  // RegisterParser(T*) and RegisterParser(Channel<Us...>* c) are two overloads
-  // of the RegisterParser function which perfoms the following logic:
-  //
-  //   void RegisterParser(T* c) {
-  //     if (c is a Channel) {
-  //       register c's parser gotten with `c->GetParser()`;
-  //     } else {
-  //       do nothing;
-  //     }
-  //   }
-  template <typename T>
-  void RegisterParser(T*) {}
-
-  template <typename... Us>
-  void RegisterParser(Channel<Us...>* c) {
-    CHECK(parsers_.find(c->Name()) == parsers_.end())
-        << "The channel name '" << c->Name()
-        << "' is used multiple times. Channel names must be unique.";
-    parsers_.insert(std::make_pair(c->Name(), c->GetParser()));
-  }
+        network_state_(std::move(network_state)),
+        stdin_(stdin) {}
 
   // Return a new FluentBuilder with `c` and `c->GetParser()` appended to
   // `collections_` and `parsers_`.
   template <typename C>
   FluentBuilder<Ts..., C> AddCollection(std::unique_ptr<C> c) {
-    RegisterParser(c.get());
     std::tuple<std::unique_ptr<Ts>..., std::unique_ptr<C>> collections =
         std::tuple_cat(std::move(collections_), std::make_tuple(std::move(c)));
     return {std::move(collections), std::move(parsers_),
-            std::move(network_state_)};
+            std::move(network_state_), stdin_};
   }
 
   template <typename F, std::size_t... Is>
@@ -182,7 +175,7 @@ class FluentBuilder {
   RegisterRulesImpl(const F& f, std::index_sequence<Is...>) {
     auto relalgs = f(*std::get<Is>(collections_)...);
     return {std::move(collections_), std::move(parsers_),
-            std::move(network_state_), std::move(relalgs)};
+            std::move(network_state_), std::move(relalgs), stdin_};
   }
 
   // TODO(mwhittaker): Right now, I made things unique_ptr because I was
@@ -192,6 +185,10 @@ class FluentBuilder {
   std::tuple<std::unique_ptr<Ts>...> collections_;
   std::map<std::string, Parser> parsers_;
   std::unique_ptr<NetworkState> network_state_;
+
+  // This pointer, if not null, points into the Stdin object inside of
+  // `collections_`.
+  Stdin* stdin_;
 
   template <typename...>
   friend class FluentBuilder;

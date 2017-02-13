@@ -80,20 +80,21 @@ class Channel : public Collection<T, Ts...> {
   void MergeImpl(const RA& ra, std::index_sequence<Is...>) {
     auto physical = ra.ToPhysical();
     auto rng = physical.ToRange();
-    ranges::for_each(rng, [this](const std::tuple<T, Ts...>& t) {
-      VLOG(1) << "Channel " << this->Name() << " sending tuple to "
-              << std::get<0>(t) << ".";
 
-      std::vector<std::string> strings = {ToString(std::get<Is>(t))...};
+    for (auto iter = ranges::begin(rng); iter != ranges::end(rng); ++iter) {
+      VLOG(1) << "Channel " << this->Name() << " sending tuple to "
+              << std::get<0>(*iter) << ".";
+
+      std::vector<std::string> strings = {ToString(std::get<Is>(*iter))...};
       std::vector<zmq::message_t> msgs;
       msgs.push_back(zmq_util::string_to_message(this->Name()));
       for (const std::string& s : strings) {
         msgs.push_back(zmq_util::string_to_message(s));
       }
 
-      zmq::socket_t& socket = socket_cache_->At(std::get<0>(t));
+      zmq::socket_t& socket = socket_cache_->At(std::get<0>(*iter));
       zmq_util::send_msgs(std::move(msgs), &socket);
-    });
+    }
   }
 
   // Whenever a tuple with address `a` is added to a Channel, the socket

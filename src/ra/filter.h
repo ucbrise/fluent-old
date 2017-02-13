@@ -14,7 +14,7 @@ class PhysicalFilter {
  public:
   PhysicalFilter(PhysicalChild child, F* f) : child_(std::move(child)), f_(f) {}
 
-  auto ToRange() const { return child_.ToRange() | ranges::view::filter(*f_); }
+  auto ToRange() { return child_.ToRange() | ranges::view::filter(*f_); }
 
  private:
   PhysicalChild child_;

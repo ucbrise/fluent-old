@@ -23,9 +23,7 @@ SET(CMAKE_CXX_FLAGS_COMMON
      -Wextra \
      -Werror \
      -pedantic \
-     -g \
-     -fsanitize=address \
-     -fsanitize=undefined")
+     -g")
 SET(CMAKE_CXX_FLAGS_DEBUG
     "${CMAKE_CXX_FLAGS_DEBUG} \
      ${CMAKE_CXX_FLAGS_COMMON}")
@@ -55,7 +53,7 @@ LINK_DIRECTORIES(${ZEROMQ_LINK_DIRS})
 
 ENABLE_TESTING()
 ADD_SUBDIRECTORY(example)
-ADD_SUBDIRECTORY(fluent)
+#ADD_SUBDIRECTORY(fluent)
 ADD_SUBDIRECTORY(ra)
 ADD_SUBDIRECTORY(testing)
 ADD_SUBDIRECTORY(zmq_util)

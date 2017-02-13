@@ -14,7 +14,7 @@ class PhysicalMap {
  public:
   PhysicalMap(PhysicalChild child, F* f) : child_(child), f_(f) {}
 
-  auto ToRange() const {
+  auto ToRange() {
     return child_.ToRange() | ranges::view::transform(*f_);
   }
 

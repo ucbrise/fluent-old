@@ -14,7 +14,7 @@ class PhysicalIterable {
  public:
   explicit PhysicalIterable(const T* iterable) : iterable_(iterable) {}
 
-  auto ToRange() const { return ranges::view::all(*iterable_); }
+  auto ToRange() { return ranges::view::all(*iterable_); }
 
  private:
   const T* iterable_;

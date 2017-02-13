@@ -17,15 +17,20 @@ TEST(FluentBuilder, SimpleBuildCheck) {
   zmq::context_t context(1);
   // clang-format off
   auto f = fluent("inproc://yolo", &context)
-    .table<int>("t")
-    .scratch<int, int, float>("s")
-    .channel<std::string, float, char>("c")
-    .RegisterRules([](auto& t, auto& s, auto& c) {
-      return std::make_tuple(
-        t <= (t.Iterable() | ra::count()),
-        t <= (s.Iterable() | ra::count()),
-        t <= (c.Iterable() | ra::count())
-      );
+    .table<std::string, int>("t")
+    .scratch<std::string, int>("s")
+    .channel<std::string, int>("c")
+    .stdout()
+    .RegisterRules([](auto& t, auto& s, auto& c, auto& out) {
+      auto rule_a = t <= s.Iterable();
+      auto rule_b = t += s.Iterable();
+      auto rule_c = t -= s.Iterable();
+      auto rule_d = s <= s.Iterable();
+      auto rule_e = c <= s.Iterable();
+      auto rule_f = out <= (s.Iterable() | ra::project<0>());
+      auto rule_g = out += (s.Iterable() | ra::project<0>());
+      return std::make_tuple(rule_a, rule_b, rule_c, rule_d, rule_e,
+                             rule_f, rule_g);
     });
   // clang-format on
 }

@@ -19,6 +19,7 @@
 #include "fluent/network_state.h"
 #include "fluent/scratch.h"
 #include "fluent/socket_cache.h"
+#include "fluent/stdout.h"
 #include "fluent/table.h"
 
 namespace fluent {
@@ -91,6 +92,11 @@ class FluentBuilder {
         name, &network_state_->socket_cache));
   }
 
+  FluentBuilder<Ts..., Stdout> stdout() && {
+    LOG(INFO) << "Adding stdout.";
+    return AddCollection(std::make_unique<Stdout>());
+  }
+
   // Recall the example from above:
   //
   //   auto f = fluent(address)
@@ -138,15 +144,32 @@ class FluentBuilder {
         parsers_(std::move(parsers)),
         network_state_(std::move(network_state)) {}
 
+  // RegisterParser(T*) and RegisterParser(Channel<Us...>* c) are two overloads
+  // of the RegisterParser function which perfoms the following logic:
+  //
+  //   void RegisterParser(T* c) {
+  //     if (c is a Channel) {
+  //       register c's parser gotten with `c->GetParser()`;
+  //     } else {
+  //       do nothing;
+  //     }
+  //   }
+  template <typename T>
+  void RegisterParser(T*) {}
+
+  template <typename... Us>
+  void RegisterParser(Channel<Us...>* c) {
+    CHECK(parsers_.find(c->Name()) == parsers_.end())
+        << "The channel name '" << c->Name()
+        << "' is used multiple times. Channel names must be unique.";
+    parsers_.insert(std::make_pair(c->Name(), c->GetParser()));
+  }
+
   // Return a new FluentBuilder with `c` and `c->GetParser()` appended to
   // `collections_` and `parsers_`.
   template <typename C>
   FluentBuilder<Ts..., C> AddCollection(std::unique_ptr<C> c) {
-    CHECK(parsers_.find(c->Name()) == parsers_.end())
-        << "The collection name '" << c->Name()
-        << "' is used multiple times. Collection names must be unique.";
-
-    parsers_.insert(std::make_pair(c->Name(), c->GetParser()));
+    RegisterParser(c.get());
     std::tuple<std::unique_ptr<Ts>..., std::unique_ptr<C>> collections =
         std::tuple_cat(std::move(collections_), std::make_tuple(std::move(c)));
     return {std::move(collections), std::move(parsers_),

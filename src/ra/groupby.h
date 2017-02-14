@@ -49,8 +49,8 @@ class PhysicalGroupBy {
   PhysicalGroupBy(PhysicalChild child) : child_(std::move(child)) {}
 
   auto ToRange() {
-    auto project = [](const auto& t) { return std::tuple_cat(std::make_tuple(std::get<Is>(t))...); };
-    mp = hs_(child_.ToRange(), project);
+    auto projection = [](const auto& t) { return std::tuple_cat(std::make_tuple(std::get<Is>(t))...); };
+    mp = hs_(child_.ToRange(), projection);
     return ranges::view::all(mp) 
       | ranges::view::transform([](const auto& pair) {
         return ranges::view::all(pair.second); 

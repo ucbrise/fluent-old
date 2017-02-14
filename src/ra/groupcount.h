@@ -1,5 +1,5 @@
-#ifndef RA_GroupCount_H_
-#define RA_GroupCount_H_
+#ifndef RA_GROUPCOUNT_H_
+#define RA_GROUPCOUNT_H_
 
 #include <set>
 #include <type_traits>
@@ -64,4 +64,4 @@ GroupCount<typename std::decay<LogicalChild>::type> operator|(LogicalChild&& chi
 }  // namespace ra
 }  // namespace fluent
 
-#endif  // RA_GroupCount_H_
+#endif  // RA_GROUPCOUNT_H_

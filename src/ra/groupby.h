@@ -1,5 +1,5 @@
-#ifndef RA_GroupBy_H_
-#define RA_GroupBy_H_
+#ifndef RA_GROUPBY_H_
+#define RA_GROUPBY_H_
 
 #include <type_traits>
 #include <utility>
@@ -9,40 +9,14 @@
 
 #include "range/v3/all.hpp"
 
+#include "ra/hash_fn.h"
 namespace fluent {
 namespace ra {
-
-struct hash_fn {
-  template <typename I, typename S, typename P,
-            typename V = ranges::iterator_value_t<I>,
-            typename R = ranges::iterator_reference_t<I>,
-            typename Projected = std::result_of_t<P(R)>,
-            CONCEPT_REQUIRES_(ranges::InputIterator<I>() && ranges::Sentinel<S, I>())>
-  std::map<Projected, std::vector<V>> operator()(I begin, S end,
-                                                           P p) const {
-    std::map<Projected, std::vector<ranges::iterator_value_t<I>>> t;
-    for (; begin != end; ++begin) {
-      t[p(*begin)].push_back(*begin);
-    }
-    return t;
-  }
-
-  template <typename Rng, typename P, typename I = ranges::range_iterator_t<Rng>,
-            typename V = ranges::iterator_value_t<I>,
-            typename R = ranges::iterator_reference_t<I>,
-            typename Projected = std::result_of_t<P(R)>,
-            CONCEPT_REQUIRES_(ranges::InputRange<Rng>())>
-  std::map<Projected, std::vector<V>> operator()(Rng &&rng,
-                                                           P p) const {
-    return (*this)(begin(rng), end(rng), std::move(p));
-  }
-};
 
 template <typename PhysicalChild, std::size_t... Is>
 class PhysicalGroupBy {
 
   typedef ranges::iterator_value_t<ranges::range_iterator_t<typename std::result_of_t<decltype(&PhysicalChild::ToRange)(PhysicalChild)>>> valuetype;
-  //typedef typename std::tuple_element<Is, valuetype>::type keytype;
   typedef decltype(std::tuple_cat(std::make_tuple(std::get<Is>(std::declval<valuetype>()))...)) keytype;
 
  public:
@@ -50,8 +24,8 @@ class PhysicalGroupBy {
 
   auto ToRange() {
     auto projection = [](const auto& t) { return std::tuple_cat(std::make_tuple(std::get<Is>(t))...); };
-    mp = hs_(child_.ToRange(), projection);
-    return ranges::view::all(mp) 
+    mp_ = hs_(child_.ToRange(), projection);
+    return ranges::view::all(mp_) 
       | ranges::view::transform([](const auto& pair) {
         return ranges::view::all(pair.second); 
         });
@@ -60,7 +34,7 @@ class PhysicalGroupBy {
  private:
   PhysicalChild child_;
   hash_fn hs_;
-  std::map<keytype, std::vector<valuetype>> mp;
+  std::map<keytype, std::vector<valuetype>> mp_;
 };
 
 template <std::size_t... Is, typename PhysicalChild>
@@ -107,4 +81,4 @@ GroupBy<typename std::decay<LogicalChild>::type, Is...> operator|(
 }  // namespace ra
 }  // namespace fluent
 
-#endif  // RA_GroupBy_H_
+#endif  // RA_GROUPBY_H_

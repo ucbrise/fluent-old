@@ -1,5 +1,5 @@
-#ifndef RA_GroupSum_H_
-#define RA_GroupSum_H_
+#ifndef RA_GROUPSUM_H_
+#define RA_GROUPSUM_H_
 
 #include <type_traits>
 #include <utility>
@@ -18,7 +18,6 @@ class PhysicalGroupSum {
 
   typedef ranges::iterator_value_t<ranges::range_iterator_t<typename std::result_of_t<decltype(&PhysicalChild::ToRange)(PhysicalChild)>>> rngtype;
   typedef ranges::iterator_value_t<ranges::range_iterator_t<rngtype>> valuetype;
-  //typedef typename std::tuple_element<Is, valuetype>::type keytype;
 
  public:
   PhysicalGroupSum(PhysicalChild child) : child_(std::move(child)) {}
@@ -81,4 +80,4 @@ GroupSum<typename std::decay<LogicalChild>::type, Is> operator|(
 }  // namespace ra
 }  // namespace fluent
 
-#endif  // RA_GroupSum_H_
+#endif  // RA_GROUPSUM_H_

@@ -16,7 +16,7 @@
 
 namespace fluent {
 
-TEST(GroupBy, SingleColumnGroupBy) {
+TEST(GroupBy, SingleColumnGroupCount) {
   std::vector<std::tuple<int, int>> xs = {{6, 1}, {4, 3}, {6, 5}, {4, 1}};
   {
     auto groupby = ra::make_iterable(&xs) | ra::groupby<0>()
@@ -27,7 +27,7 @@ TEST(GroupBy, SingleColumnGroupBy) {
   }
 }
 
-TEST(GroupBy, MultiColumnGroupBy) {
+TEST(GroupBy, MultiColumnGroupCount) {
   std::vector<std::tuple<int, int, int>> xs = {{6, 1, 3}, {4, 3, 5}, {6, 1, 6}, {4, 3, 2}};
   {
     auto groupby = ra::make_iterable(&xs) | ra::groupby<0, 1>()

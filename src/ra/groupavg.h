@@ -1,5 +1,5 @@
-#ifndef RA_GroupAvg_H_
-#define RA_GroupAvg_H_
+#ifndef RA_GROUPAVG_H_
+#define RA_GROUPAVG_H_
 
 #include <type_traits>
 #include <utility>
@@ -18,7 +18,6 @@ class PhysicalGroupAvg {
 
   typedef ranges::iterator_value_t<ranges::range_iterator_t<typename std::result_of_t<decltype(&PhysicalChild::ToRange)(PhysicalChild)>>> rngtype;
   typedef ranges::iterator_value_t<ranges::range_iterator_t<rngtype>> valuetype;
-  //typedef typename std::tuple_element<Is, valuetype>::type keytype;
 
  public:
   PhysicalGroupAvg(PhysicalChild child) : child_(std::move(child)) {}
@@ -82,4 +81,4 @@ GroupAvg<typename std::decay<LogicalChild>::type, Is> operator|(
 }  // namespace ra
 }  // namespace fluent
 
-#endif  // RA_GroupAvg_H_
+#endif  // RA_GROUPAVG_H_

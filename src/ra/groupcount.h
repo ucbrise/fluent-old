@@ -1,13 +1,13 @@
 #ifndef RA_GroupCount_H_
 #define RA_GroupCount_H_
 
-#include <cstddef>
-
 #include <set>
 #include <type_traits>
 #include <utility>
 
 #include "range/v3/all.hpp"
+
+/* This operator should only be used following ra::groupby */
 
 namespace fluent {
 namespace ra {

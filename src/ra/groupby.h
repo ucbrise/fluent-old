@@ -1,9 +1,9 @@
 #ifndef RA_GROUPBY_H_
 #define RA_GROUPBY_H_
 
+#include <map>
 #include <type_traits>
 #include <utility>
-#include <map>
 
 #include <iostream>
 
@@ -15,20 +15,24 @@ namespace ra {
 
 template <typename PhysicalChild, std::size_t... Is>
 class PhysicalGroupBy {
-
-  typedef ranges::iterator_value_t<ranges::range_iterator_t<typename std::result_of_t<decltype(&PhysicalChild::ToRange)(PhysicalChild)>>> valuetype;
-  typedef decltype(std::tuple_cat(std::make_tuple(std::get<Is>(std::declval<valuetype>()))...)) keytype;
+  typedef ranges::iterator_value_t<
+      ranges::range_iterator_t<typename std::result_of_t<decltype (
+          &PhysicalChild::ToRange)(PhysicalChild)>>>
+      valuetype;
+  typedef decltype(std::tuple_cat(
+      std::make_tuple(std::get<Is>(std::declval<valuetype>()))...)) keytype;
 
  public:
   PhysicalGroupBy(PhysicalChild child) : child_(std::move(child)) {}
 
   auto ToRange() {
-    auto projection = [](const auto& t) { return std::tuple_cat(std::make_tuple(std::get<Is>(t))...); };
+    auto projection = [](const auto& t) {
+      return std::tuple_cat(std::make_tuple(std::get<Is>(t))...);
+    };
     mp_ = hs_(child_.ToRange(), projection);
-    return ranges::view::all(mp_) 
-      | ranges::view::transform([](const auto& pair) {
-        return ranges::view::all(pair.second); 
-        });
+    return ranges::view::all(mp_) |
+           ranges::view::transform(
+               [](const auto& pair) { return ranges::view::all(pair.second); });
   }
 
  private:

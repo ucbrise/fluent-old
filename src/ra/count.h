@@ -9,6 +9,8 @@
 
 #include "range/v3/all.hpp"
 
+#include "ra/type_list.h"
+
 namespace fluent {
 namespace ra {
 
@@ -39,6 +41,8 @@ PhysicalCount<typename std::decay<Physical>::type> make_physical_count(
 template <typename LogicalChild>
 class Count {
  public:
+  using column_types = TypeList<std::size_t>;
+
   Count(LogicalChild child) : child_(std::move(child)) {}
 
   auto ToPhysical() const { return make_physical_count(child_.ToPhysical()); }

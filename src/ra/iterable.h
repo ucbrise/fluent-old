@@ -6,6 +6,8 @@
 
 #include "range/v3/all.hpp"
 
+#include "ra/type_list.h"
+
 namespace fluent {
 namespace ra {
 
@@ -28,6 +30,8 @@ PhysicalIterable<T> make_physical_iterable(const T* iterable) {
 template <typename T>
 class Iterable {
  public:
+  using column_types = typename TupleToTypeList<typename T::value_type>::type;
+
   explicit Iterable(const T* iterable) : iterable_(iterable) {}
 
   auto ToPhysical() const { return make_physical_iterable(iterable_); }

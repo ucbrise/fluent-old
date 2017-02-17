@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 #include "range/v3/all.hpp"
 
+#include "common/type_list.h"
 #include "ra/all.h"
 #include "testing/test_util.h"
 
@@ -21,10 +22,14 @@ TEST(All, SimpleAll) {
         return std::tuple<int, int>(x, x);
       })
     | ra::filter([](const auto& t) { return std::get<0>(t) % 2 == 1; })
-    | ra::map([](const auto& t) { return std::get<0>(t) + std::get<1>(t); });
+    | ra::map([](const auto& t) {
+        return std::make_tuple(std::get<0>(t) + std::get<1>(t));
+      });
   // clang-format on
 
-  std::vector<int> expected = {2, 6};
+  static_assert(
+      std::is_same<decltype(relalg)::column_types, TypeList<int>>::value, "");
+  std::vector<std::tuple<int>> expected = {{2}, {6}};
   ExpectRngsEqual(relalg.ToPhysical().ToRange(), ranges::view::all(expected));
 }
 

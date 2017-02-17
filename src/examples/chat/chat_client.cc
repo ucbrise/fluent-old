@@ -39,10 +39,10 @@ int main(int argc, char* argv[]) {
                              auto& dummy) {
             auto bootstrap_a =
                 connect <= (dummy.Iterable() | ra::count() |
-                            ra::filter([](const std::tuple<int>& t) {
+                            ra::filter([](const std::tuple<std::size_t>& t) {
                               return std::get<0>(t) == 0;
                             }) |
-                            ra::map([&](auto&) {
+                            ra::map([&](const std::tuple<std::size_t>&) {
                               return std::make_tuple(server_address,
                                                      client_address, nickname);
                             }));

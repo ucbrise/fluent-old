@@ -6,6 +6,8 @@
 
 #include "range/v3/all.hpp"
 
+#include "ra/type_list.h"
+
 namespace fluent {
 namespace ra {
 
@@ -14,7 +16,7 @@ class PhysicalProject {
  public:
   PhysicalProject(PhysicalChild child) : child_(std::move(child)) {}
 
-  auto ToRange() const {
+  auto ToRange() {
     return child_.ToRange() | ranges::view::transform([](const auto& t) {
              return std::tuple_cat(std::make_tuple(std::get<Is>(t))...);
            });
@@ -34,6 +36,10 @@ make_physical_project(PhysicalChild&& child) {
 template <typename LogicalChild, std::size_t... Is>
 class Project {
  public:
+  using child_column_types = typename LogicalChild::column_types;
+  using column_types =
+      typename TypeListProject<child_column_types, Is...>::type;
+
   explicit Project(LogicalChild child) : child_(std::move(child)) {}
 
   auto ToPhysical() const {

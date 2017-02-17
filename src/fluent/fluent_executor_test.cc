@@ -148,8 +148,8 @@ TEST(FluentExecutor, ComplexProgram) {
 
   zmq::context_t context(1);
 
-  auto plus_one_times_two = [](const auto& t) {
-    return (1 + std::get<0>(t)) * 2;
+  auto plus_one_times_two = [](const std::tuple<int>& t) {
+    return std::tuple<int>((1 + std::get<0>(t)) * 2);
   };
   auto is_even = [](const auto& t) { return std::get<0>(t) % 2 == 0; };
   auto f = fluent("inproc://yolo", &context)

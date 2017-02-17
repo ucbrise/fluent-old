@@ -30,6 +30,8 @@ make_physical_filter(PhysicalChild&& child, F* f) {
 template <typename LogicalChild, typename F>
 class Filter {
  public:
+  using column_types = typename LogicalChild::column_types;
+
   Filter(LogicalChild child, F f)
       : child_(std::move(child)), f_(std::move(f)) {}
 

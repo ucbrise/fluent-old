@@ -39,4 +39,13 @@ ranges::for_each(physical.ToRange(), [](int x) {
 });
 ```
 
+## Operators
+- [`count`](count.h)
+- [`cross`](cross.h)
+- [`filter`](filter.h)
+- [`group_by`](group_by.h)
+- [`iterable`](iterable.h)
+- [`map`](map.h)
+- [`project`](project.h)
+
 [range-v3]: https://github.com/ericniebler/range-v3

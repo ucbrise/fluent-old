@@ -6,6 +6,8 @@
 
 #include "range/v3/all.hpp"
 
+#include "common/type_list.h"
+
 namespace fluent {
 namespace ra {
 
@@ -14,7 +16,7 @@ class PhysicalIterable {
  public:
   explicit PhysicalIterable(const T* iterable) : iterable_(iterable) {}
 
-  auto ToRange() const { return ranges::view::all(*iterable_); }
+  auto ToRange() { return ranges::view::all(*iterable_); }
 
  private:
   const T* iterable_;
@@ -28,6 +30,8 @@ PhysicalIterable<T> make_physical_iterable(const T* iterable) {
 template <typename T>
 class Iterable {
  public:
+  using column_types = typename TupleToTypeList<typename T::value_type>::type;
+
   explicit Iterable(const T* iterable) : iterable_(iterable) {}
 
   auto ToPhysical() const { return make_physical_iterable(iterable_); }

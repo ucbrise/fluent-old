@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "common/type_list.h"
 #include "range/v3/all.hpp"
 
 namespace fluent {
@@ -39,6 +40,11 @@ make_physical_cross(PhysicalLeft&& left, PhysicalRight&& right) {
 template <typename LogicalLeft, typename LogicalRight>
 class Cross {
  public:
+  using left_column_types = typename LogicalLeft::column_types;
+  using right_column_types = typename LogicalRight::column_types;
+  using column_types =
+      typename TypeListConcat<left_column_types, right_column_types>::type;
+
   Cross(LogicalLeft left, LogicalRight right)
       : left_(std::move(left)), right_(std::move(right)) {}
 

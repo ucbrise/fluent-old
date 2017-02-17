@@ -6,6 +6,8 @@
 
 #include "range/v3/all.hpp"
 
+#include "common/type_list.h"
+
 namespace fluent {
 namespace ra {
 
@@ -30,6 +32,11 @@ PhysicalMap<typename std::decay<PhysicalChild>::type, F> make_physical_map(
 template <typename LogicalChild, typename F>
 class Map {
  public:
+  using child_column_types = typename LogicalChild::column_types;
+  using child_tuple_type = typename TypeListToTuple<child_column_types>::type;
+  using tuple_type = typename std::result_of<F(child_tuple_type)>::type;
+  using column_types = typename TupleToTypeList<tuple_type>::type;
+
   Map(LogicalChild child, F f) : child_(std::move(child)), f_(std::move(f)) {}
 
   auto ToPhysical() const {

@@ -3,6 +3,7 @@
 
 #include <set>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "range/v3/all.hpp"
 
@@ -32,7 +33,7 @@ void ExpectRngsEqual(Rng1 actual, Rng2 expected) {
 //   (b) `x` and `y` are equal (modulo ordering).
 template <typename Rng, typename Container>
 void ExpectRngsUnorderedEqual(Rng actual, const Container& expected) {
-  auto container = actual | ranges::to_<std::set>();
+  auto container = actual | ranges::to_<Container>();
   EXPECT_THAT(container, testing::UnorderedElementsAreArray(expected));
 }
 

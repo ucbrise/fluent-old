@@ -9,7 +9,6 @@ MACRO(CREATE_FLUENT_TEST NAME)
 ENDMACRO(CREATE_FLUENT_TEST)
 
 CREATE_FLUENT_TEST(channel_test)
-CREATE_FLUENT_TEST(collection_test)
 CREATE_FLUENT_TEST(fluent_builder_test)
 CREATE_FLUENT_TEST(fluent_executor_test)
 CREATE_FLUENT_TEST(scratch_test)

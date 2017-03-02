@@ -60,9 +60,9 @@ TEST(Channel, TickClearsChannel) {
   SocketCache cache(&context);
   Channel<std::string, int, int> c("c", &cache);
 
-  c.MutableGet().insert(Tuple("foo", 1, 1));
-  c.MutableGet().insert(Tuple("bar", 2, 2));
-  c.MutableGet().insert(Tuple("baz", 3, 3));
+  c.ts_.insert(Tuple("foo", 1, 1));
+  c.ts_.insert(Tuple("bar", 2, 2));
+  c.ts_.insert(Tuple("baz", 3, 3));
 
   EXPECT_THAT(c.Get(), UnorderedElementsAreArray(TupleSet{
                            {"foo", 1, 1}, {"bar", 2, 2}, {"baz", 3, 3}}));

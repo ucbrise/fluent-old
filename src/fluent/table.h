@@ -9,20 +9,28 @@
 
 #include "range/v3/all.hpp"
 
-#include "fluent/collection.h"
 #include "fluent/rule_tags.h"
+#include "ra/iterable.h"
 #include "ra/ra_util.h"
 
 namespace fluent {
 
 template <typename... Ts>
-class Table : public Collection<Ts...> {
+class Table {
  public:
-  explicit Table(const std::string& name) : Collection<Ts...>(name) {}
+  explicit Table(std::string name) : name_(std::move(name)) {}
+
+  const std::string& Name() const { return name_; }
+
+  const std::set<std::tuple<Ts...>>& Get() const { return ts_; }
+
+  ra::Iterable<std::set<std::tuple<Ts...>>> Iterable() const {
+    return ra::make_iterable(&ts_);
+  }
 
   template <typename RA>
   void Merge(const RA& ra) {
-    ra::BufferRaInto(ra, &this->MutableGet());
+    ra::BufferRaInto(ra, &ts_);
   }
 
   template <typename RA>
@@ -53,12 +61,11 @@ class Table : public Collection<Ts...> {
     return {this, DeferredDeleteTag(), std::forward<Rhs>(rhs)};
   }
 
-  void Tick() override {
-    this->MutableGet().insert(
-        std::make_move_iterator(std::begin(deferred_merge_)),
-        std::make_move_iterator(std::end(deferred_merge_)));
+  void Tick() {
+    ts_.insert(std::make_move_iterator(std::begin(deferred_merge_)),
+               std::make_move_iterator(std::end(deferred_merge_)));
     for (const std::tuple<Ts...>& t : deferred_delete_) {
-      this->MutableGet().erase(t);
+      ts_.erase(t);
     }
 
     deferred_merge_.clear();
@@ -66,6 +73,8 @@ class Table : public Collection<Ts...> {
   }
 
  private:
+  const std::string name_;
+  std::set<std::tuple<Ts...>> ts_;
   std::set<std::tuple<Ts...>> deferred_merge_;
   std::set<std::tuple<Ts...>> deferred_delete_;
 };

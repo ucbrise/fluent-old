@@ -11,10 +11,10 @@
 #include "gtest/gtest.h"
 #include "range/v3/all.hpp"
 
-#include "fluent/collection.h"
 #include "fluent/rule_tags.h"
 #include "fluent/serialization.h"
 #include "fluent/socket_cache.h"
+#include "ra/iterable.h"
 #include "zmq_util/zmq_util.h"
 
 namespace fluent {
@@ -40,14 +40,22 @@ std::tuple<Ts...> parse_tuple(const std::vector<std::string>& columns) {
 // adding the tuple ("inproc://a", 1, 2, 3) will send the tuple ("inproc://a",
 // 1, 2, 3) to the node at address ("inproc//a", 1, 2, 3).
 template <typename T, typename... Ts>
-class Channel : public Collection<T, Ts...> {
+class Channel {
   static_assert(std::is_same<std::string, T>::value,
                 "The first column of a channel must be a string specifying a "
                 "ZeroMQ address (e.g. tcp://localhost:9999).");
 
  public:
-  Channel(const std::string& name, SocketCache* socket_cache)
-      : Collection<T, Ts...>(name), socket_cache_(socket_cache) {}
+  Channel(std::string name, SocketCache* socket_cache)
+      : name_(std::move(name)), socket_cache_(socket_cache) {}
+
+  const std::string& Name() const { return name_; }
+
+  const std::set<std::tuple<T, Ts...>>& Get() const { return ts_; }
+
+  ra::Iterable<std::set<std::tuple<T, Ts...>>> Iterable() const {
+    return ra::make_iterable(&ts_);
+  }
 
   // Merge assumes a `std::string ToString(const U&)` function exists for `U`
   // in `T, Ts...`.
@@ -62,7 +70,7 @@ class Channel : public Collection<T, Ts...> {
     return {this, MergeTag(), std::forward<Rhs>(rhs)};
   }
 
-  void Tick() override { this->MutableGet().clear(); }
+  void Tick() { ts_.clear(); }
 
   // `Collection<T1, ..., Tn>.GetParser()(columns)` parses a vector of `n`
   // strings into a tuple of type `std::tuple<T1, ..., Tn>` and inserts it into
@@ -71,7 +79,7 @@ class Channel : public Collection<T, Ts...> {
   // (see `serialization.h` for more information).
   std::function<void(const std::vector<std::string>& columns)> GetParser() {
     return [this](const std::vector<std::string>& columns) {
-      this->MutableGet().insert(detail::parse_tuple<T, Ts...>(columns));
+      ts_.insert(detail::parse_tuple<T, Ts...>(columns));
     };
   }
 
@@ -96,6 +104,9 @@ class Channel : public Collection<T, Ts...> {
       zmq_util::send_msgs(std::move(msgs), &socket);
     }
   }
+
+  const std::string name_;
+  std::set<std::tuple<T, Ts...>> ts_;
 
   // Whenever a tuple with address `a` is added to a Channel, the socket
   // associated with `a` in `socket_cache_` is used to send the tuple.

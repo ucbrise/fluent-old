@@ -11,7 +11,6 @@
 #include "range/v3/all.hpp"
 
 #include "common/macros.h"
-#include "fluent/collection.h"
 #include "fluent/rule_tags.h"
 #include "ra/ra_util.h"
 

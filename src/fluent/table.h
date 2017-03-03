@@ -9,7 +9,6 @@
 
 #include "range/v3/all.hpp"
 
-#include "fluent/rule_tags.h"
 #include "ra/iterable.h"
 #include "ra/ra_util.h"
 
@@ -41,24 +40,6 @@ class Table {
   template <typename RA>
   void DeferredDelete(const RA& ra) {
     ra::StreamRaInto(ra, &deferred_delete_);
-  }
-
-  template <typename Rhs>
-  std::tuple<Table<Ts...>*, MergeTag, typename std::decay<Rhs>::type>
-  operator<=(Rhs&& rhs) {
-    return {this, MergeTag(), std::forward<Rhs>(rhs)};
-  }
-
-  template <typename Rhs>
-  std::tuple<Table<Ts...>*, DeferredMergeTag, typename std::decay<Rhs>::type>
-  operator+=(Rhs&& rhs) {
-    return {this, DeferredMergeTag(), std::forward<Rhs>(rhs)};
-  }
-
-  template <typename Rhs>
-  std::tuple<Table<Ts...>*, DeferredDeleteTag, typename std::decay<Rhs>::type>
-  operator-=(Rhs&& rhs) {
-    return {this, DeferredDeleteTag(), std::forward<Rhs>(rhs)};
   }
 
   void Tick() {

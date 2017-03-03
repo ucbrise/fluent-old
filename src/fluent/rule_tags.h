@@ -10,31 +10,37 @@ namespace fluent {
 //   3. Deferred delete (e.g. t <- u)
 //   4. Asynchronous merge (e.g. t <~ u)
 //
-// In fluent, we adopt the first three types of rules with some minor
-// modifications:
-//
-//   - For channels, we let merge behave like asynchronous merge.
-//   - For scratches, we do not support deferred merge or deferred delete. The
-//     scratch will be cleared at the end of the tick anyway, so adding or
-//     removing from it is wasted work.
-//
-// To summarize, here are the rules that each collection supports.
+// Fluent has the same rules, except that asynchronous merge is collapsed into
+// merge. The following table describes what rules each collection supports:
 //
 //   |         | merge | deferred merge | deferred delete |
 //   | ------- | ----- | -------------- | --------------- |
 //   | table   | y     | y              | y               |
 //   | scratch | y     | n              | n               |
 //   | channel | y     | n              | n               |
+//   | stdin   | n     | n              | n               |
+//   | stdout  | y     | y              | n               |
 //
-// A FluentExecutor is constructed with a tuple of rules, where each rule is a
-// tuple (lhs, type, rhs) where
+// In Bloom, rules look something like this:
 //
-//   - lhs is a pointer to a collection,
-//   - type is an instance of one of the structs below, and
-//   - rhs is a relational algebra expression.
+//   foo <= bar.cross(baz)
 //
-// The fluent executor dispatches on the type of `type` to determine how to
-// evaluate the rule. More specifically,
+// where
+//
+//   - `foo` is the *head* of the rule,
+//   - `<=` describes the type of the rule, and
+//   - `bar.cross(baz)` is the *body* of the rule.
+//
+// Fluent represents rules in exactly the same way. More concretely, each rule
+// is a tuple (lhs, type, rhs) where:
+//
+//   - `lhs` is a pointer to a collection,
+//   - `type` is an instance of one of the structs below, and
+//   - `rhs` is a relational algebra expression.
+//
+// A FluentExecutor takes a list (techincally, a tuple) of rules when it is
+// constructed. The FluentExecutor then dispatches on the type of `type` to
+// determine how to evaluate the rule. More specifically,
 //
 //   - If type is a MergeTag, then lhs->Merge(rhs) is called.
 //   - If type is a DeferredMergeTag, then lhs->DeferredMerge(rhs) is called.

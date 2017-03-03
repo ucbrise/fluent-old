@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 #include "zmq.hpp"
 
+#include "fluent/infix.h"
 #include "ra/all.h"
 
 namespace fluent {
@@ -22,6 +23,7 @@ TEST(FluentBuilder, SimpleBuildCheck) {
     .channel<std::string, int>("c")
     .stdout()
     .RegisterRules([](auto& t, auto& s, auto& c, auto& out) {
+      using namespace fluent::infix;
       auto rule_a = t <= s.Iterable();
       auto rule_b = t += s.Iterable();
       auto rule_c = t -= s.Iterable();

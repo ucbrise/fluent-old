@@ -11,7 +11,6 @@
 #include "range/v3/all.hpp"
 
 #include "common/macros.h"
-#include "fluent/rule_tags.h"
 #include "ra/ra_util.h"
 
 namespace fluent {
@@ -37,18 +36,6 @@ class Stdout {
   template <typename RA>
   void DeferredMerge(const RA& ra) {
     ra::StreamRaInto(ra, &deferred_merge_);
-  }
-
-  template <typename Rhs>
-  std::tuple<Stdout*, MergeTag, typename std::decay<Rhs>::type> operator<=(
-      Rhs&& rhs) {
-    return {this, MergeTag(), std::forward<Rhs>(rhs)};
-  }
-
-  template <typename Rhs>
-  std::tuple<Stdout*, DeferredMergeTag, typename std::decay<Rhs>::type>
-  operator+=(Rhs&& rhs) {
-    return {this, DeferredMergeTag(), std::forward<Rhs>(rhs)};
   }
 
   void Tick() {

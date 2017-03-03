@@ -4,6 +4,7 @@
 
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
+#include "fluent/infix.h"
 #include "ra/all.h"
 
 namespace ra = fluent::ra;
@@ -37,6 +38,8 @@ int main(int argc, char* argv[]) {
           .table<int>("bootstrap_dummy")
           .RegisterRules([&](auto& in, auto& out, auto& connect, auto& mcast,
                              auto& dummy) {
+            using namespace fluent::infix;
+
             auto bootstrap_a =
                 connect <= (dummy.Iterable() | ra::count() |
                             ra::filter([](const std::tuple<std::size_t>& t) {

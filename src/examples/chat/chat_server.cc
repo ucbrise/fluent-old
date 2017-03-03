@@ -4,6 +4,7 @@
 
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
+#include "fluent/infix.h"
 #include "ra/all.h"
 
 namespace ra = fluent::ra;
@@ -31,6 +32,8 @@ int main(int argc, char* argv[]) {
           .channel<address_t, message_t>("mcast")
           .table<client_address_t, nickname_t>("nodelist")
           .RegisterRules([&](auto& connect, auto& mcast, auto& nodelist) {
+            using namespace fluent::infix;
+
             auto subscribe =
                 nodelist <= (connect.Iterable() | ra::project<1, 2>());
 

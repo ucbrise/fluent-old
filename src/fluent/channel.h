@@ -64,12 +64,6 @@ class Channel {
     MergeImpl(ra, std::make_index_sequence<sizeof...(Ts) + 1>());
   }
 
-  template <typename Rhs>
-  std::tuple<Channel<T, Ts...>*, MergeTag, typename std::decay<Rhs>::type>
-  operator<=(Rhs&& rhs) {
-    return {this, MergeTag(), std::forward<Rhs>(rhs)};
-  }
-
   void Tick() { ts_.clear(); }
 
   // `Collection<T1, ..., Tn>.GetParser()(columns)` parses a vector of `n`

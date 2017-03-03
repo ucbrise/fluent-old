@@ -12,6 +12,7 @@
 
 #include "fluent/channel.h"
 #include "fluent/fluent_builder.h"
+#include "fluent/infix.h"
 #include "ra/all.h"
 #include "testing/captured_stdout.h"
 
@@ -28,6 +29,7 @@ TEST(FluentExecutor, SimpleProgram) {
     .scratch<int, int, float>("s")
     .channel<std::string, float, char>("c")
     .RegisterRules([](auto& t, auto& s, auto& c) {
+      using namespace fluent::infix;
       return std::make_tuple(
         t <= (t.Iterable() | ra::count()),
         t <= (s.Iterable() | ra::count()),
@@ -69,6 +71,7 @@ TEST(FluentExecutor, AllOperations) {
     .scratch<int>("s")
     .stdout()
     .RegisterRules([&int_tuple_to_string](auto& t, auto& s, auto& stdout) {
+      using namespace fluent::infix;
       auto a = t <= (t.Iterable() | ra::count());
       auto b = t += t.Iterable();
       auto c = t -= s.Iterable();
@@ -109,6 +112,7 @@ TEST(FluentExecutor, SimpleCommunication) {
   auto ping = fluent("inproc://ping", &context)
     .channel<std::string, int>("c")
     .RegisterRules([&reroute](auto& c) {
+      using namespace fluent::infix;
       return std::make_tuple(
         c <= (c.Iterable() | ra::map(reroute("inproc://pong")))
       );
@@ -116,6 +120,7 @@ TEST(FluentExecutor, SimpleCommunication) {
   auto pong = fluent("inproc://pong", &context)
     .channel<std::string, int>("c")
     .RegisterRules([&reroute](auto& c) {
+      using namespace fluent::infix;
       return std::make_tuple(
         c <= (c.Iterable() | ra::map(reroute("inproc://ping")))
       );
@@ -156,6 +161,7 @@ TEST(FluentExecutor, ComplexProgram) {
                .table<int>("t")
                .scratch<int>("s")
                .RegisterRules([plus_one_times_two, is_even](auto& t, auto& s) {
+                 using namespace fluent::infix;
                  auto a = t += (s.Iterable() | ra::count());
                  auto b = t <= (t.Iterable() | ra::map(plus_one_times_two));
                  auto c = s <= t.Iterable();

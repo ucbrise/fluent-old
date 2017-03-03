@@ -5,7 +5,6 @@
 #include <string>
 #include <tuple>
 
-#include "fluent/rule_tags.h"
 #include "ra/iterable.h"
 
 namespace fluent {
@@ -37,12 +36,6 @@ class Scratch {
     auto begin = std::make_move_iterator(std::begin(buf));
     auto end = std::make_move_iterator(std::end(buf));
     ts_.insert(begin, end);
-  }
-
-  template <typename Rhs>
-  std::tuple<Scratch<Ts...>*, MergeTag, typename std::decay<Rhs>::type>
-  operator<=(Rhs&& rhs) {
-    return {this, MergeTag(), std::forward<Rhs>(rhs)};
   }
 
   void Tick() { ts_.clear(); }

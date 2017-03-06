@@ -16,10 +16,10 @@ you!
 (cd build && make test)    # run all the tests
 
 # Run a chat server listening on port 8000.
-./build/examples/chat/example_chat_chat_server 'tcp://*:8000'
+./build/examples/chat/example_chat_server 'tcp://*:8000'
 
 # Run a chat client on port 8001 with nickname 'zardoz'
-./build/examples/chat/example_chat_chat_client \
+./build/examples/chat/example_chat_client \
     'tcp://0.0.0.0:8000' 'tcp://0.0.0.0:8001' 'zardoz'
 ```
 

@@ -1,7 +1,9 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
-ADD_EXECUTABLE(example_chat_chat_client chat_client.cc)
-TARGET_LINK_LIBRARIES(example_chat_chat_client fluent)
+ADD_EXECUTABLE(examples_chat_client client.cc)
+ADD_EXECUTABLE(examples_chat_server server.cc)
+ADD_EXECUTABLE(examples_chat_ping_client ping_client.cc)
 
-ADD_EXECUTABLE(example_chat_chat_server chat_server.cc)
-TARGET_LINK_LIBRARIES(example_chat_chat_server fluent)
+TARGET_LINK_LIBRARIES(examples_chat_client fluent)
+TARGET_LINK_LIBRARIES(examples_chat_server fluent)
+TARGET_LINK_LIBRARIES(examples_chat_ping_client fluent)

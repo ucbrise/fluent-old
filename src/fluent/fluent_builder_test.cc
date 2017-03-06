@@ -2,6 +2,7 @@
 
 #include <cstddef>
 
+#include <chrono>
 #include <tuple>
 #include <utility>
 
@@ -21,9 +22,13 @@ TEST(FluentBuilder, SimpleBuildCheck) {
     .table<std::string, int>("t")
     .scratch<std::string, int>("s")
     .channel<std::string, int>("c")
+    .stdin()
     .stdout()
-    .RegisterRules([](auto& t, auto& s, auto& c, auto& out) {
+    .periodic("p", std::chrono::milliseconds(100))
+    .RegisterRules([](auto& t, auto& s, auto& c, auto& in, auto& out, auto& p) {
       using namespace fluent::infix;
+      (void) in.Iterable();
+      (void) p.Iterable();
       auto rule_a = t <= s.Iterable();
       auto rule_b = t += s.Iterable();
       auto rule_c = t -= s.Iterable();

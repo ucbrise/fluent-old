@@ -28,7 +28,7 @@
 
 namespace fluent {
 
-template <typename Collections, typename Rules>
+template <typename Collections, typename BootstrapRules, typename Rules>
 class FluentExecutor;
 
 // # Overview
@@ -36,32 +36,44 @@ class FluentExecutor;
 // a FluentBuilder and then use it to execute the program. It is best
 // explained through an example.
 //
-//   // This Fluent program will have four collections:
+//   // This FluentExecutor will have four collections:
 //   //   - a 3-column table named "t1" with types [int, char, float]
 //   //   - a 2-column table named "t2" with types [float, int]
 //   //   - a 3-column scratch named "s" with types [int, int, float]
 //   //   - a 3-column channel named "c" with types [std::string, float, char]
-//   // and a single rule which projects out the third and first columns of t1
-//   // and puts them into t2.
-//   auto f = fluent("tcp://*:8000")
+//   // The FluentExecutor will also have two rules:
+//   //   - The first is a bootstrap rule (registered with
+//   //     RegisterBootstrapRules) that will move the contents of `tuples`
+//   //     into `t1`. This rule will be executed exactly once at the beginning
+//   //     of the fluent program.
+//   //   - The second rule projects out the third and first columns of t1 and
+//   //     puts them into t2. It will be run every tick of the program.
+//   auto f = fluent(address)
 //     .table<int, char, float>("t1")
 //     .table<float, int>("t2")
 //     .scratch<int, int, float>("s")
 //     .channel<std::string, float, char>("c")
+//     .RegisterBootstrapRules([&](auto& t1, auto& t2, auto& s, auto& c) {
+//       return std::make_tuple(t1 <= ra::make_iterable(&tuples));
+//     });
 //     .RegisterRules([](auto& t1, auto& t2, auto& s, auto& c) {
 //       return std::make_tuple(t2 <= t1.iterable | ra::project<2, 0>());
 //     });
 //
-//   // Calling `f.Tick()` will run a single round of execution. Every rule
-//   // registered with `RegisterRules` above will be called. After the round,
-//   // scratches and channels are cleared. In our example, calling tick will
-//   // move the projected contents of `t2` into `t1`. `t2` is initially empty,
-//   // so this won't do anything.
+//   // Calling `f.BootstrapTick()` will run the bootstrap rules. Every rule
+//   // registered with `RegisterBootstrapRules` above will be called.
+//   // Afterwards, every collection is "ticked". For example, scratches and
+//   // channels are cleared.
+//   f.BootstrapTick();
+//
+//   // Calling `f.Tick()` will run the rules in exactly the same way
+//   // `f.BootstrapTick()` ran the bootstrap rules.
 //   f.Tick();
 //
-//   // Calling `f.Run()` will run a Fluent program. The program will
-//   // repeatedly call `f.Tick()` and then wait for messages to arrive from
-//   // other Fluent nodes, populating channels appropriately.
+//   // Calling `f.Run()` will run a Fluent program. The program will call
+//   // `f.BootstrapTick()` and then repeatedly call `f.Tick()` and then wait
+//   // for messages to arrive from other Fluent nodes, populating channels
+//   // appropriately.
 //   f.Run();
 //
 // # Implementation
@@ -78,32 +90,52 @@ class FluentExecutor;
 //     - Lhss are pointers to collections,
 //     - Every type in RuleTags is one of the rule tags in `rule_tags.h`, and
 //     - Rhss are relational algebra expressions.
+//   - Bootstrap{Lhss,RuleTags,Rhss} work exactly like their non-Bootstrap
+//     counterparts.
 //   - A FluentExecutor steals most of its guts from a FluentBuilder.
-template <typename... Cs, typename... Lhss, typename... RuleTags,
-          typename... Rhss>
-class FluentExecutor<TypeList<Cs...>,
-                     std::tuple<std::tuple<Lhss, RuleTags, Rhss>...>> {
+template <typename... Cs, typename... BootstrapLhss,
+          typename... BootstrapRuleTags, typename... BootstrapRhss,
+          typename... Lhss, typename... RuleTags, typename... Rhss>
+class FluentExecutor<
+    TypeList<Cs...>,
+    std::tuple<std::tuple<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>,
+    std::tuple<std::tuple<Lhss, RuleTags, Rhss>...>> {
+  static_assert(sizeof...(BootstrapLhss) == sizeof...(BootstrapRuleTags) &&
+                    sizeof...(BootstrapRuleTags) == sizeof...(BootstrapRhss),
+                "The ith entry of BootstrapLhss corresponds to the left-hand "
+                "side of the ith bootstrap rule. The ith entry of "
+                "BootstrapRuleTags corresponds to the type of the bootstrap "
+                "rule. The ith entry of BootstrapRhss corresponds to the "
+                "right-hand side of the ith bootstrap rule. Thus, the sizes of "
+                "BootstrapLhss, BootstrapRuleTags, and BootstrapRhss must be "
+                "equal");
+
+  static_assert(sizeof...(Lhss) == sizeof...(RuleTags) &&
+                    sizeof...(RuleTags) == sizeof...(Rhss),
+                "The ith entry of Lhss corresponds to the left-hand side of "
+                "the ith rule. The ith entry of RuleTags corresponds to the "
+                "type of the rule. The ith entry of Rhss corresponds to the "
+                "right-hand side of the ith rule. Thus, the sizes of Lhss, "
+                "RuleTags, and Rhss must be equal");
+
  public:
+  using BootstrapRules = std::tuple<
+      std::tuple<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>;
+  using Rules = std::tuple<std::tuple<Lhss, RuleTags, Rhss>...>;
   using Parser = std::function<void(const std::vector<std::string>& columns)>;
 
   FluentExecutor(std::tuple<std::unique_ptr<Cs>...> collections,
+                 BootstrapRules bootstrap_rules,
                  std::map<std::string, Parser> parsers,
                  std::unique_ptr<NetworkState> network_state, Stdin* stdin,
-                 std::vector<Periodic*> periodics,
-                 std::tuple<std::tuple<Lhss, RuleTags, Rhss>...> rules)
+                 std::vector<Periodic*> periodics, Rules rules)
       : collections_(std::move(collections)),
+        bootstrap_rules_(std::move(bootstrap_rules)),
         parsers_(std::move(parsers)),
         network_state_(std::move(network_state)),
         stdin_(stdin),
         periodics_(periodics),
         rules_(rules) {
-    static_assert(sizeof...(Lhss) == sizeof...(RuleTags) &&
-                      sizeof...(RuleTags) == sizeof...(Rhss),
-                  "The ith entry of Lhss corresponds to the left-hand side of "
-                  "the ith rule. The ith entry of RuleTags corresponds to the "
-                  "type of the rule. The ith entry of Rhss corresponds to the "
-                  "right-hand side of the ith rule. Thus, the sizes of Lhss, "
-                  "RuleTags, and Rhss must be equal");
     LOG(INFO) << sizeof...(Lhss)
               << " rules registered with the FluentExecutor.";
 
@@ -117,6 +149,15 @@ class FluentExecutor<TypeList<Cs...>,
   template <std::size_t I>
   const auto& Get() const {
     return *std::get<I>(collections_);
+  }
+
+  // Sequentially execute each registered bootstrap query and then invoke the
+  // `Tick` method of every collection.
+  void BootstrapTick() {
+    if (sizeof...(BootstrapLhss) != 0) {
+      ExecuteBootstrapRules<0>();
+      TickCollections<0>();
+    }
   }
 
   // Sequentially execute each registered query and then invoke the `Tick`
@@ -170,9 +211,10 @@ class FluentExecutor<TypeList<Cs...>,
   // TODO(mwhittaker): Figure out if it should be Receive() then Tick() or
   // Tick() then Receive()?
   void Run() {
+    BootstrapTick();
     while (true) {
-      Tick();
       Receive();
+      Tick();
     }
   }
 
@@ -237,6 +279,22 @@ class FluentExecutor<TypeList<Cs...>,
     collection->DeferredDelete(ra);
   }
 
+  // `ExecuteBootstrapRules<0>` executes every rule in `bootstrap_rules_`.
+  template <std::size_t I>
+  typename std::enable_if<I == sizeof...(BootstrapRhss)>::type
+  ExecuteBootstrapRules() {}
+
+  template <std::size_t I>
+  typename std::enable_if<I != sizeof...(BootstrapRhss)>::type
+  ExecuteBootstrapRules() {
+    if (I != sizeof...(BootstrapRhss)) {
+      ExecuteRule(CHECK_NOTNULL(std::get<0>(std::get<I>(bootstrap_rules_))),
+                  std::get<1>(std::get<I>(bootstrap_rules_)),
+                  std::get<2>(std::get<I>(bootstrap_rules_)));
+      ExecuteBootstrapRules<I + 1>();
+    }
+  }
+
   // `ExecuteRules<0>` executes every rule in `rules_`.
   template <std::size_t I>
   typename std::enable_if<I == sizeof...(Rhss)>::type ExecuteRules() {}
@@ -265,6 +323,7 @@ class FluentExecutor<TypeList<Cs...>,
 
   // See `FluentBuilder`.
   std::tuple<std::unique_ptr<Cs>...> collections_;
+  BootstrapRules bootstrap_rules_;
   std::map<std::string, Parser> parsers_;
   std::unique_ptr<NetworkState> network_state_;
   Stdin* const stdin_;
@@ -278,7 +337,7 @@ class FluentExecutor<TypeList<Cs...>,
   //
   // See the class comment at the top of the file or see rule_tags.h for more
   // information.
-  std::tuple<std::tuple<Lhss, RuleTags, Rhss>...> rules_;
+  Rules rules_;
 
   // When a FluentExecutor runs its Receive method, it has to worry about three
   // types of events triggering:

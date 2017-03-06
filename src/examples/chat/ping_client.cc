@@ -32,37 +32,25 @@ int main(int argc, char* argv[]) {
   const std::string msg = argv[4];
   zmq::context_t context(1);
 
+  std::vector<std::tuple<server_address_t, client_address_t, nickname_t>>
+      connect_tuple = {{server_address, client_address, nickname}};
+
   auto f =
       fluent::fluent(client_address, &context)
           .channel<server_address_t, client_address_t, nickname_t>("connect")
           .channel<address_t, message_t>("mcast")
-          .table<int>("bootstrap_dummy")
           .periodic("p", std::chrono::milliseconds(1000))
-          .RegisterRules([&](auto& connect, auto& mcast, auto& dummy, auto& p) {
+          .RegisterBootstrapRules([&](auto& connect, auto&, auto&) {
             using namespace fluent::infix;
-
-            auto bootstrap_a =
-                connect <= (dummy.Iterable() | ra::count() |
-                            ra::filter([](const std::tuple<std::size_t>& t) {
-                              return std::get<0>(t) == 0;
-                            }) |
-                            ra::map([&](const std::tuple<std::size_t>&) {
-                              return std::make_tuple(server_address,
-                                                     client_address, nickname);
-                            }));
-
-            auto bootstrap_b =
-                dummy <= (dummy.Iterable() | ra::count() |
-                          ra::map([](const std::tuple<int>& t) {
-                            return std::make_tuple(std::get<0>(t) + 1);
-                          }));
-
-            auto from_in =
+            return std::make_tuple(connect <=
+                                   ra::make_iterable(&connect_tuple));
+          })
+          .RegisterRules([&](auto&, auto& mcast, auto& p) {
+            using namespace fluent::infix;
+            return std::make_tuple(
                 mcast <= (p.Iterable() | ra::map([&](const auto&) {
                             return std::make_tuple(server_address, msg);
-                          }));
-
-            return std::make_tuple(bootstrap_a, bootstrap_b, from_in);
+                          })));
           });
 
   f.Run();

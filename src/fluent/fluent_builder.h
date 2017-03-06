@@ -71,7 +71,7 @@ namespace fluent {
 //
 // Similar to `collections_`, we also incrementally build `parsers_`: a map
 // from a collection's name to a function which can parse messages into it.
-template <typename... Ts>
+template <typename... Cs>
 class FluentBuilder {
  public:
   using Parser = std::function<void(const std::vector<std::string>& columns)>;
@@ -82,19 +82,19 @@ class FluentBuilder {
   // methods move their contents.
 
   template <typename... Us>
-  FluentBuilder<Ts..., Table<Us...>> table(const std::string& name) && {
+  FluentBuilder<Cs..., Table<Us...>> table(const std::string& name) && {
     LOG(INFO) << "Adding a table named " << name << ".";
     return AddCollection(std::make_unique<Table<Us...>>(name));
   }
 
   template <typename... Us>
-  FluentBuilder<Ts..., Scratch<Us...>> scratch(const std::string& name) && {
+  FluentBuilder<Cs..., Scratch<Us...>> scratch(const std::string& name) && {
     LOG(INFO) << "Adding a scratch named " << name << ".";
     return AddCollection(std::make_unique<Scratch<Us...>>(name));
   }
 
   template <typename... Us>
-  FluentBuilder<Ts..., Channel<Us...>> channel(const std::string& name) && {
+  FluentBuilder<Cs..., Channel<Us...>> channel(const std::string& name) && {
     LOG(INFO) << "Adding a channel named " << name << ".";
     auto c =
         std::make_unique<Channel<Us...>>(name, &network_state_->socket_cache);
@@ -105,19 +105,19 @@ class FluentBuilder {
     return AddCollection(std::move(c));
   }
 
-  FluentBuilder<Ts..., Stdin> stdin() && {
+  FluentBuilder<Cs..., Stdin> stdin() && {
     LOG(INFO) << "Adding stdin.";
     auto stdin = std::make_unique<Stdin>();
     stdin_ = stdin.get();
     return AddCollection(std::move(stdin));
   }
 
-  FluentBuilder<Ts..., Stdout> stdout() && {
+  FluentBuilder<Cs..., Stdout> stdout() && {
     LOG(INFO) << "Adding stdout.";
     return AddCollection(std::make_unique<Stdout>());
   }
 
-  FluentBuilder<Ts..., Periodic> periodic(const std::string& name,
+  FluentBuilder<Cs..., Periodic> periodic(const std::string& name,
                                           const Periodic::period& period) && {
     LOG(INFO) << "Adding Periodic named " << name << ".";
     auto p = std::make_unique<Periodic>(name, period);
@@ -146,26 +146,26 @@ class FluentBuilder {
   // implemented by Collection's `<=` operator. `RegisterRules` will execute
   // `f` to generate the rules and use them to construct a `FluentExecutor`.
   template <typename F>
-  FluentExecutor<TypeList<Ts...>, typename std::result_of<F(Ts&...)>::type>
+  FluentExecutor<TypeList<Cs...>, typename std::result_of<F(Cs&...)>::type>
   RegisterRules(const F& f) && {
-    return RegisterRulesImpl(f, std::make_index_sequence<sizeof...(Ts)>());
+    return RegisterRulesImpl(f, std::make_index_sequence<sizeof...(Cs)>());
   }
 
  private:
   // Constructs an empty FluentBuilder. Note that this constructor should
-  // only be called when Ts is empty (i.e. sizeof...(Ts) == 0). This private
+  // only be called when Cs is empty (i.e. sizeof...(Cs) == 0). This private
   // constructor is used primarily by the `fluent` function down below.
   FluentBuilder(const std::string& address, zmq::context_t* const context)
       : network_state_(std::make_unique<NetworkState>(address, context)),
         stdin_(nullptr) {
-    static_assert(sizeof...(Ts) == 0,
+    static_assert(sizeof...(Cs) == 0,
                   "The FluentBuilder(const std::string& address, "
                   "zmq::context_t* const context) constructor should only be "
-                  "called when Ts is empty.");
+                  "called when Cs is empty.");
   }
 
   // Moves the guts of one FluentBuilder into another.
-  FluentBuilder(std::tuple<std::unique_ptr<Ts>...> collections,
+  FluentBuilder(std::tuple<std::unique_ptr<Cs>...> collections,
                 std::map<std::string, Parser> parsers,
                 std::unique_ptr<NetworkState> network_state, Stdin* stdin,
                 std::vector<Periodic*> periodics)
@@ -181,8 +181,8 @@ class FluentBuilder {
 
   // Return a new FluentBuilder with `c` appended to `collections`.
   template <typename C>
-  FluentBuilder<Ts..., C> AddCollection(std::unique_ptr<C> c) {
-    std::tuple<std::unique_ptr<Ts>..., std::unique_ptr<C>> collections =
+  FluentBuilder<Cs..., C> AddCollection(std::unique_ptr<C> c) {
+    std::tuple<std::unique_ptr<Cs>..., std::unique_ptr<C>> collections =
         std::tuple_cat(std::move(collections_), std::make_tuple(std::move(c)));
     return {std::move(collections), std::move(parsers_),
             std::move(network_state_), stdin_, std::move(periodics_)};
@@ -190,7 +190,7 @@ class FluentBuilder {
 
   // See `RegisterRules`.
   template <typename F, std::size_t... Is>
-  FluentExecutor<TypeList<Ts...>, typename std::result_of<F(Ts&...)>::type>
+  FluentExecutor<TypeList<Cs...>, typename std::result_of<F(Cs&...)>::type>
   RegisterRulesImpl(const F& f, std::index_sequence<Is...>) {
     auto relalgs = f(*std::get<Is>(collections_)...);
     return {std::move(collections_),   std::move(parsers_),
@@ -220,7 +220,7 @@ class FluentBuilder {
   // paranoid that as data was being moved from one FluentBuilder to
   // another, pointers to fields would be invalidated. Maybe we don't need the
   // unique_ptr, but I'd need to think harder about it.
-  std::tuple<std::unique_ptr<Ts>...> collections_;
+  std::tuple<std::unique_ptr<Cs>...> collections_;
 
   // `parsers_`  maps channel names to parsing functions that can parse a
   // packet (represented as a vector of strings) into a tuple and insert it

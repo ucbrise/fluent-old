@@ -2,6 +2,7 @@
 
 #include <cstddef>
 
+#include <set>
 #include <tuple>
 #include <utility>
 
@@ -183,6 +184,35 @@ TEST(FluentExecutor, ComplexProgram) {
   f.Tick();
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
+}
+
+TEST(FluentExecutor, SimpleBootstrap) {
+  zmq::context_t context(1);
+
+  using Tuples = std::set<std::tuple<int>>;
+  Tuples xs = {{1}, {2}, {3}, {4}, {5}};
+
+  // clang-format off
+  auto f = fluent("inproc://yolo", &context)
+    .table<int>("t")
+    .scratch<int>("s")
+    .RegisterBootstrapRules([&xs](auto& t, auto& s) {
+      using namespace fluent::infix;
+      return std::make_tuple(
+        t <= ra::make_iterable(&xs),
+        s <= ra::make_iterable(&xs)
+      );
+    })
+    .RegisterRules([&xs](auto&, auto&) {
+      return std::make_tuple();
+    });
+  // clang-format on
+
+  EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(Tuples{}));
+  EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(Tuples{}));
+  f.BootstrapTick();
+  EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(xs));
+  EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(Tuples{}));
 }
 
 }  // namespace fluent

@@ -28,9 +28,17 @@
 
 namespace fluent {
 
+template <typename Collections, typename BootstrapRules>
+class FluentBuilder;
+
 // # Overview
 // A FluentBuilder is a class that you can use to build up a FluentExecutor. It
 // is best explained through an example.
+//
+//   // We'll use this to bootstrap our fluent program later.
+//   std::vector<std::tuple<int, char, float>> tuples = {
+//     {1, 'a', 1.0}, {2, 'b', 2.0}, {3, 'c', 3.0}, {4, 'd', 4.0}
+//   }
 //
 //   // Each FluentExecutor contains a socket which listens for messages from
 //   // other Fluent nodes. Here, our FluentExecutor will listen on
@@ -42,38 +50,81 @@ namespace fluent {
 //   //   - a 2-column table named "t2" with types [float, int]
 //   //   - a 3-column scratch named "s" with types [int, int, float]
 //   //   - a 3-column channel named "c" with types [std::string, float, char]
-//   // and a single rule which projects out the third and first columns of t1
-//   // and puts them into t2.
+//   // The FluentExecutor will also have two rules:
+//   //   - The first is a bootstrap rule (registered with
+//   //     RegisterBootstrapRules) that will move the contents of `tuples`
+//   //     into `t1`. This rule will be executed exactly once at the beginning
+//   //     of the fluent program.
+//   //   - The second rule projects out the third and first columns of t1 and
+//   //     puts them into t2. It will be run every tick of the program.
 //   auto f = fluent(address)
 //     .table<int, char, float>("t1")
 //     .table<float, int>("t2")
 //     .scratch<int, int, float>("s")
 //     .channel<std::string, float, char>("c")
+//     .RegisterBootstrapRules([&](auto& t1, auto& t2, auto& s, auto& c) {
+//       return std::make_tuple(t1 <= ra::make_iterable(&tuples));
+//     });
 //     .RegisterRules([](auto& t1, auto& t2, auto& s, auto& c) {
 //       return std::make_tuple(t2 <= t1.iterable | ra::project<2, 0>());
 //     });
 //
-// # Implementation details
-// In order to support the nice `.table`, `.scratch`, and `.channel` syntax,
-// FluentBuilder requires quite a bit of metaprogramming. Here, we briefly
-// explain FluentBuilder's implementation.
+// # Implementation
+// Each FluentBuilder maintains two key fields (in addition to a bunch of other
+// less important fields): `collections_` and `boostrap_rules_`.
 //
-// A FluentBuilder<T1, ..., Tn> corresponds to a Fluent program with n
-// collections.  Each Ti is either a Table<Us...>, Scratch<Us...>, or
-// Channel<Us...>.  Pointers to the collections are stored `collections_` which
-// is of type `std::tuple<std::unique_ptr<T1>, ..., std::unique_ptr<Tn>>`.
+// `collections_` contains pointers to every collection registered with this
+// FluentBuilder. For example, given the following FluentBuilder:
 //
-// Imagine we call `f.table<int>("foo")` where `f` is of type
-// `FluentBuilder<T1, ..., Tn>`. Calling `table` will return a new
-// FluentBuilder of type `FluentBuilder<T1, ...., Tn, Table<int>>`.
-// `collections_` (along with all other fields) are moved into the new
-// FluentBuilder.
+//   auto f = fluent(address)
+//     .table<int, char, float>("t1")
+//     .table<float, int>("t2")
+//     .scratch<int, int, float>("s")
+//     .channel<std::string, float, char>("c")
 //
-// Similar to `collections_`, we also incrementally build `parsers_`: a map
-// from a collection's name to a function which can parse messages into it.
-template <typename... Cs>
-class FluentBuilder {
+// `collections_` will have the following type:
+//
+//   std::tuple<
+//     std::unique_ptr<Table<int, char, float>>,          // t1
+//     std::unique_ptr<Table<float, int>>,                // t2
+//     std::unique_ptr<Scratch<int, int, float>>,         // s
+//     std::unique_ptr<Channel<std::string, float, char>> // c
+//   >
+//
+// `boostrap_rules_` is a collection of rules of the form (lhs, type, rhs)
+// where
+//
+//   - `lhs` is a pointer to a collection,
+//   - `type` is an instance of one of the structs below, and
+//   - `rhs` is a relational algebra expression.
+//
+// The Ith rule has type
+//
+//   std::tuple<BootstrapLhss[I], BootstrapRuleTags[I], BootstrapRhss[I]>
+//
+// Whenever a user calls a function like `.table`, `.scratch`, or `.channel`,
+// we return a brand new FluentBuilder with the newly registered collection
+// appended to `collections_`. Whenever a user calls `.RegisterBootstrapRules`,
+// we return a brand new FluentBuilder with the newly registered rules
+// replacing `boostrap_rules_`.
+template <typename... Cs, typename... BootstrapLhss,
+          typename... BootstrapRuleTags, typename... BootstrapRhss>
+class FluentBuilder<TypeList<Cs...>,
+                    std::tuple<std::tuple<BootstrapLhss, BootstrapRuleTags,
+                                          BootstrapRhss>...>> {
+  static_assert(sizeof...(BootstrapLhss) == sizeof...(BootstrapRuleTags) &&
+                    sizeof...(BootstrapRuleTags) == sizeof...(BootstrapRhss),
+                "The ith entry of BootstrapLhss corresponds to the left-hand "
+                "side of the ith bootstrap rule. The ith entry of "
+                "BootstrapRuleTags corresponds to the type of the bootstrap "
+                "rule. The ith entry of BootstrapRhss corresponds to the "
+                "right-hand side of the ith bootstrap rule. Thus, the sizes of "
+                "BootstrapLhss, BootstrapRuleTags, and BootstrapRhss must be "
+                "equal");
+
  public:
+  using BootstrapRules = std::tuple<
+      std::tuple<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>;
   using Parser = std::function<void(const std::vector<std::string>& columns)>;
 
   // Create a table, scratch, channel, stdin, stdout, or periodic. Note the
@@ -82,19 +133,22 @@ class FluentBuilder {
   // methods move their contents.
 
   template <typename... Us>
-  FluentBuilder<Cs..., Table<Us...>> table(const std::string& name) && {
+  FluentBuilder<TypeList<Cs..., Table<Us...>>, BootstrapRules> table(
+      const std::string& name) && {
     LOG(INFO) << "Adding a table named " << name << ".";
     return AddCollection(std::make_unique<Table<Us...>>(name));
   }
 
   template <typename... Us>
-  FluentBuilder<Cs..., Scratch<Us...>> scratch(const std::string& name) && {
+  FluentBuilder<TypeList<Cs..., Scratch<Us...>>, BootstrapRules> scratch(
+      const std::string& name) && {
     LOG(INFO) << "Adding a scratch named " << name << ".";
     return AddCollection(std::make_unique<Scratch<Us...>>(name));
   }
 
   template <typename... Us>
-  FluentBuilder<Cs..., Channel<Us...>> channel(const std::string& name) && {
+  FluentBuilder<TypeList<Cs..., Channel<Us...>>, BootstrapRules> channel(
+      const std::string& name) && {
     LOG(INFO) << "Adding a channel named " << name << ".";
     auto c =
         std::make_unique<Channel<Us...>>(name, &network_state_->socket_cache);
@@ -105,24 +159,36 @@ class FluentBuilder {
     return AddCollection(std::move(c));
   }
 
-  FluentBuilder<Cs..., Stdin> stdin() && {
+  FluentBuilder<TypeList<Cs..., Stdin>, BootstrapRules> stdin() && {
     LOG(INFO) << "Adding stdin.";
     auto stdin = std::make_unique<Stdin>();
     stdin_ = stdin.get();
     return AddCollection(std::move(stdin));
   }
 
-  FluentBuilder<Cs..., Stdout> stdout() && {
+  FluentBuilder<TypeList<Cs..., Stdout>, BootstrapRules> stdout() && {
     LOG(INFO) << "Adding stdout.";
     return AddCollection(std::make_unique<Stdout>());
   }
 
-  FluentBuilder<Cs..., Periodic> periodic(const std::string& name,
-                                          const Periodic::period& period) && {
+  FluentBuilder<TypeList<Cs..., Periodic>, BootstrapRules> periodic(
+      const std::string& name, const Periodic::period& period) && {
     LOG(INFO) << "Adding Periodic named " << name << ".";
     auto p = std::make_unique<Periodic>(name, period);
     periodics_.push_back(p.get());
     return AddCollection(std::move(p));
+  }
+
+  // See `RegisterRules`
+  template <typename F>
+  FluentBuilder<TypeList<Cs...>, typename std::result_of<F(Cs&...)>::type>
+  RegisterBootstrapRules(const F& f) && {
+    static_assert(sizeof...(BootstrapLhss) == 0,
+                  "You are registering bootstrap rules with a FluentBuilder "
+                  "that already has bootstrap rules registered with it. This "
+                  "is disallowed.");
+    return RegisterBootstrapRulesImpl(
+        f, std::make_index_sequence<sizeof...(Cs)>());
   }
 
   // Recall the example from above:
@@ -146,7 +212,8 @@ class FluentBuilder {
   // implemented by Collection's `<=` operator. `RegisterRules` will execute
   // `f` to generate the rules and use them to construct a `FluentExecutor`.
   template <typename F>
-  FluentExecutor<TypeList<Cs...>, typename std::result_of<F(Cs&...)>::type>
+  FluentExecutor<TypeList<Cs...>, BootstrapRules,
+                 typename std::result_of<F(Cs&...)>::type>
   RegisterRules(const F& f) && {
     return RegisterRulesImpl(f, std::make_index_sequence<sizeof...(Cs)>());
   }
@@ -166,10 +233,12 @@ class FluentBuilder {
 
   // Moves the guts of one FluentBuilder into another.
   FluentBuilder(std::tuple<std::unique_ptr<Cs>...> collections,
+                BootstrapRules boostrap_rules,
                 std::map<std::string, Parser> parsers,
                 std::unique_ptr<NetworkState> network_state, Stdin* stdin,
                 std::vector<Periodic*> periodics)
       : collections_(std::move(collections)),
+        boostrap_rules_(std::move(boostrap_rules)),
         parsers_(std::move(parsers)),
         network_state_(std::move(network_state)),
         stdin_(stdin),
@@ -181,46 +250,56 @@ class FluentBuilder {
 
   // Return a new FluentBuilder with `c` appended to `collections`.
   template <typename C>
-  FluentBuilder<Cs..., C> AddCollection(std::unique_ptr<C> c) {
+  FluentBuilder<TypeList<Cs..., C>, BootstrapRules> AddCollection(
+      std::unique_ptr<C> c) {
     std::tuple<std::unique_ptr<Cs>..., std::unique_ptr<C>> collections =
         std::tuple_cat(std::move(collections_), std::make_tuple(std::move(c)));
-    return {std::move(collections), std::move(parsers_),
-            std::move(network_state_), stdin_, std::move(periodics_)};
+    return {std::move(collections),
+            std::move(boostrap_rules_),
+            std::move(parsers_),
+            std::move(network_state_),
+            stdin_,
+            std::move(periodics_)};
+  }
+
+  // See `RegisterBootstrapRules`.
+  template <typename F, std::size_t... Is>
+  FluentBuilder<TypeList<Cs...>, typename std::result_of<F(Cs&...)>::type>
+  RegisterBootstrapRulesImpl(const F& f, std::index_sequence<Is...>) {
+    auto boostrap_rules = f(*std::get<Is>(collections_)...);
+    return {std::move(collections_),
+            std::move(boostrap_rules),
+            std::move(parsers_),
+            std::move(network_state_),
+            stdin_,
+            std::move(periodics_)};
   }
 
   // See `RegisterRules`.
   template <typename F, std::size_t... Is>
-  FluentExecutor<TypeList<Cs...>, typename std::result_of<F(Cs&...)>::type>
+  FluentExecutor<TypeList<Cs...>, BootstrapRules,
+                 typename std::result_of<F(Cs&...)>::type>
   RegisterRulesImpl(const F& f, std::index_sequence<Is...>) {
     auto relalgs = f(*std::get<Is>(collections_)...);
-    return {std::move(collections_),   std::move(parsers_),
-            std::move(network_state_), stdin_,
-            std::move(periodics_),     std::move(relalgs)};
+    return {std::move(collections_),
+            std::move(boostrap_rules_),
+            std::move(parsers_),
+            std::move(network_state_),
+            stdin_,
+            std::move(periodics_),
+            std::move(relalgs)};
   }
 
-  // `collections_` contains pointers to every collection registered with this
-  // FluentBuilder. For example, given the following FluentBuilder:
-  //
-  //   auto f = fluent(address)
-  //     .table<int, char, float>("t1")
-  //     .table<float, int>("t2")
-  //     .scratch<int, int, float>("s")
-  //     .channel<std::string, float, char>("c")
-  //
-  // `collections_` will have the following type:
-  //
-  //   std::tuple<
-  //     std::unique_ptr<Table<int, char, float>>,          // t1
-  //     std::unique_ptr<Table<float, int>>,                // t2
-  //     std::unique_ptr<Scratch<int, int, float>>,         // s
-  //     std::unique_ptr<Channel<std::string, float, char>> // c
-  //   >
+  // See class documentation above.
   //
   // TODO(mwhittaker): Right now, I made things unique_ptr because I was
   // paranoid that as data was being moved from one FluentBuilder to
   // another, pointers to fields would be invalidated. Maybe we don't need the
   // unique_ptr, but I'd need to think harder about it.
   std::tuple<std::unique_ptr<Cs>...> collections_;
+
+  // See class documentation above.
+  BootstrapRules boostrap_rules_;
 
   // `parsers_`  maps channel names to parsing functions that can parse a
   // packet (represented as a vector of strings) into a tuple and insert it
@@ -245,7 +324,7 @@ class FluentBuilder {
   std::vector<Periodic*> periodics_;
 
   // All FluentBuilders are friends of one another.
-  template <typename...>
+  template <typename Collections, typename BootstrapRules>
   friend class FluentBuilder;
 
   // The `fluent` function is used to construct a FluentBuilder without any
@@ -255,15 +334,15 @@ class FluentBuilder {
   //     .table<int, char, float>("t")
   //     .scratch<int, int, float>("s")
   //     // and so on...
-  friend FluentBuilder<> fluent(const std::string& address,
-                                zmq::context_t* const context);
+  friend FluentBuilder<TypeList<>, std::tuple<>> fluent(
+      const std::string& address, zmq::context_t* const context);
 };
 
 // Create an empty FluentBuilder listening on ZeroMQ address `address` using
 // the ZeroMQ context `context`.
-inline FluentBuilder<> fluent(const std::string& address,
-                              zmq::context_t* const context) {
-  return FluentBuilder<>(address, context);
+inline FluentBuilder<TypeList<>, std::tuple<>> fluent(
+    const std::string& address, zmq::context_t* const context) {
+  return {address, context};
 }
 
 }  // namespace fluent

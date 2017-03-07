@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
   zmq::context_t context(1);
 
   std::vector<std::tuple<server_address_t, client_address_t, nickname_t>>
-      connect_tuple = {{server_address, client_address, nickname}};
+      connect_tuple = std::vector<std::tuple<server_address_t, client_address_t, nickname_t>>{std::tuple<server_address_t, client_address_t, nickname_t>{server_address, client_address, nickname}};
 
   auto f =
       fluent::fluent(client_address, &context)

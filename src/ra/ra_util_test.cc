@@ -16,7 +16,7 @@ TEST(RaUtil, SimpleRa) {
   auto ra = ra::make_iterable(&xs);
 
   std::set<std::tuple<int, char>> buffered;
-  std::set<std::tuple<int, char>> streamed;
+  std::vector<std::tuple<int, char>> streamed;
   ra::BufferRaInto(ra, &buffered);
   ra::StreamRaInto(ra, &streamed);
 

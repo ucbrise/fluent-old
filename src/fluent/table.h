@@ -56,8 +56,8 @@ class Table {
  private:
   const std::string name_;
   std::set<std::tuple<Ts...>> ts_;
-  std::set<std::tuple<Ts...>> deferred_merge_;
-  std::set<std::tuple<Ts...>> deferred_delete_;
+  std::vector<std::tuple<Ts...>> deferred_merge_;
+  std::vector<std::tuple<Ts...>> deferred_delete_;
 };
 
 }  // namespace fluent

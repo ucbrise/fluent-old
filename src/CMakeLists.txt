@@ -23,9 +23,9 @@ SET(CMAKE_CXX_FLAGS_COMMON
      -Wextra \
      -Werror \
      -pedantic \
-     -g")
-     #-fsanitize=address \
-     #-fsanitize=undefined")
+     -g \
+     -fsanitize=address \
+     -fsanitize=undefined")
 SET(CMAKE_CXX_FLAGS_DEBUG
     "${CMAKE_CXX_FLAGS_DEBUG} \
      ${CMAKE_CXX_FLAGS_COMMON}")

@@ -96,10 +96,10 @@ TEST(Table, CompositeQueryMerge) {
 
   TupleSet expected;
   for (int i = 0; i < 10; ++i) {
-    expected.insert({i, i, i});
+    expected.insert(Tuple(i, i, i));
     const int doubled = i * 2;
     if (doubled * 3 < 50) {
-      expected.insert({doubled, doubled, doubled});
+      expected.insert(Tuple(doubled, doubled, doubled));
     }
   }
   EXPECT_THAT(t.Get(), UnorderedElementsAreArray(expected));

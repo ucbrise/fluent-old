@@ -1,6 +1,13 @@
 #ifndef RA_RA_UTIL_H_
 #define RA_RA_UTIL_H_
 
+#include <iterator>
+#include <set>
+#include <tuple>
+#include <vector>
+
+#include "range/v3/all.hpp"
+
 namespace fluent {
 namespace ra {
 
@@ -23,7 +30,7 @@ void BufferRaInto(const RA& ra, std::set<std::tuple<Ts...>>* s) {
   // vector and then copy the contents of the vector into the `ts_`.
   auto physical = ra.ToPhysical();
   auto rng = physical.ToRange();
-  auto buf = rng | ranges::to_<std::set<std::tuple<Ts...>>>();
+  auto buf = rng | ranges::to_<std::vector<std::tuple<Ts...>>>();
   auto begin = std::make_move_iterator(std::begin(buf));
   auto end = std::make_move_iterator(std::end(buf));
   s->insert(begin, end);

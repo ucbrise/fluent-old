@@ -6,6 +6,7 @@
 #include <tuple>
 
 #include "ra/iterable.h"
+#include "ra/ra_util.h"
 
 namespace fluent {
 
@@ -22,20 +23,9 @@ class Scratch {
     return ra::make_iterable(&ts_);
   }
 
-  // TODO(mwhittaker): This method definition is copied verbatim from the
-  // implementation of table.h. Refactor things so we don't have to duplicate
-  // the code.
   template <typename RA>
   void Merge(const RA& ra) {
-    // If `query` includes an iterable over `ts_`, then inserting into `ts_`
-    // might invalidate the iterator. Thus, we first write into a temprorary
-    // vector and then copy the contents of the vector into the `ts_`.
-    auto physical = ra.ToPhysical();
-    auto rng = physical.ToRange();
-    auto buf = rng | ranges::to_<std::set<std::tuple<Ts...>>>();
-    auto begin = std::make_move_iterator(std::begin(buf));
-    auto end = std::make_move_iterator(std::end(buf));
-    ts_.insert(begin, end);
+    ra::BufferRaInto(ra, &ts_);
   }
 
   void Tick() { ts_.clear(); }

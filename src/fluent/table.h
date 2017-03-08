@@ -43,8 +43,8 @@ class Table {
   }
 
   void Tick() {
-    ts_.insert(std::make_move_iterator(std::begin(deferred_merge_)),
-               std::make_move_iterator(std::end(deferred_merge_)));
+    ts_.insert(std::begin(deferred_merge_),
+               std::end(deferred_merge_));
     for (const std::tuple<Ts...>& t : deferred_delete_) {
       ts_.erase(t);
     }
@@ -56,8 +56,8 @@ class Table {
  private:
   const std::string name_;
   std::set<std::tuple<Ts...>> ts_;
-  std::vector<std::tuple<Ts...>> deferred_merge_;
-  std::vector<std::tuple<Ts...>> deferred_delete_;
+  std::set<std::tuple<Ts...>> deferred_merge_;
+  std::set<std::tuple<Ts...>> deferred_delete_;
 };
 
 }  // namespace fluent

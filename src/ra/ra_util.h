@@ -43,11 +43,11 @@ void BufferRaInto(const RA& ra, std::set<std::tuple<Ts...>>* s) {
 // involves an iterator over `s`. If `ra` contains an iterator over `s`, then
 // those iterators would be invalidated by streaming into `s`.
 template <typename RA, typename... Ts>
-void StreamRaInto(const RA& ra, std::vector<std::tuple<Ts...>>* s) {
+void StreamRaInto(const RA& ra, std::set<std::tuple<Ts...>>* s) {
   auto physical = ra.ToPhysical();
   auto rng = physical.ToRange();
   for (auto iter = ranges::begin(rng); iter != ranges::end(rng); ++iter) {
-    s->insert(s->end(), std::move(*iter));
+    s->insert(std::move(*iter));
   }
 }
 

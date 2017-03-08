@@ -46,7 +46,7 @@ class Stdout {
   }
 
  private:
-  std::vector<std::tuple<std::string>> deferred_merge_;
+  std::set<std::tuple<std::string>> deferred_merge_;
 };
 
 }  // namespace fluent

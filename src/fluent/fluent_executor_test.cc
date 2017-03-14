@@ -222,7 +222,7 @@ TEST(FluentExecutor, Lattices) {
   std::set<std::tuple<int>> xs = {{1}, {2}, {3}, {4}, {5}};
   std::set<std::tuple<int>> ys = {{4}, {5}, {3}, {1}, {2}};
   std::set<std::tuple<int, int>> zs = {{1, 5}, {1, 4}};
-  std::set<std::tuple<bool>> b = {false, true, false};
+  std::set<std::tuple<bool>> b = {{false}, {true}, {false}};
 
   // clang-format off
   auto f = fluent("inproc://yolo", &context)

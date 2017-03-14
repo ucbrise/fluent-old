@@ -215,6 +215,50 @@ TEST(FluentExecutor, SimpleBootstrap) {
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(Tuples{}));
 }
 
+
+TEST(FluentExecutor, Lattices) {
+  zmq::context_t context(1);
+
+  std::set<std::tuple<int>> xs = {{1}, {2}, {3}, {4}, {5}};
+  std::set<std::tuple<int>> ys = {{4}, {5}, {3}, {1}, {2}};
+  std::set<std::tuple<int, int>> zs = {{1, 5}, {1, 4}};
+  std::set<std::tuple<bool>> b = {false, true, false};
+
+  // clang-format off
+  auto f = fluent("inproc://yolo", &context)
+    .table<int>("t")
+    .lattice<BoolLattice>("bl")
+    .lattice<MaxLattice<int>>("maxl")
+    .lattice<MinLattice<int>>("minl")
+    .lattice<MapLattice<int, MaxLattice<int>>>("mapl")
+    .RegisterRules([&xs, &ys, &zs, &b](auto& t, auto& bl, auto& maxl, auto& minl, auto& mapl) {
+      using namespace fluent::infix;
+      return std::make_tuple(
+        t <= ra::make_iterable(&xs),
+        bl <= ra::make_iterable(&b),
+        maxl <= ra::make_iterable(&ys),
+        minl <= ra::make_iterable(&ys),
+        mapl <= ra::make_iterable(&zs)
+      );
+    });
+  // clang-format on
+
+  EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(std::set<std::tuple<int>>{}));
+  EXPECT_THAT(f.Get<1>().Reveal(), false);
+  EXPECT_THAT(f.Get<2>().Reveal(), 0);
+  EXPECT_THAT(f.Get<3>().Reveal(), 1000000);
+  f.Tick();
+  EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(xs));
+  EXPECT_THAT(f.Get<1>().Reveal(), true);
+  EXPECT_THAT(f.Get<2>().Reveal(), 5);
+  EXPECT_THAT(f.Get<3>().Reveal(), 1);
+  std::unordered_map<int, MaxLattice<int>> res = f.Get<4>().Reveal();
+  for (auto it = res.begin(); it != res.end(); it++) {
+    EXPECT_THAT((it->second).Reveal(), 5);
+  }
+}
+
+
 }  // namespace fluent
 
 int main(int argc, char** argv) {

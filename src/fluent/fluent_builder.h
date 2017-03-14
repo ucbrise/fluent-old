@@ -16,8 +16,13 @@
 #include "zmq.hpp"
 
 #include "common/type_list.h"
+#include "fluent/base_lattice.h"
+#include "fluent/bool_lattice.h"
 #include "fluent/channel.h"
 #include "fluent/fluent_executor.h"
+#include "fluent/max_lattice.h"
+#include "fluent/map_lattice.h"
+#include "fluent/min_lattice.h"
 #include "fluent/network_state.h"
 #include "fluent/periodic.h"
 #include "fluent/scratch.h"
@@ -177,6 +182,13 @@ class FluentBuilder<TypeList<Cs...>,
     auto p = std::make_unique<Periodic>(name, period);
     periodics_.push_back(p.get());
     return AddCollection(std::move(p));
+  }
+
+  template <typename T>
+  FluentBuilder<TypeList<Cs..., T>, BootstrapRules> lattice(
+      const std::string& name) && {
+    LOG(INFO) << "Adding a lattice named " << name << ".";
+    return AddCollection(std::make_unique<T>(name));
   }
 
   // See `RegisterRules`

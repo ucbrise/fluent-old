@@ -6,6 +6,7 @@
 #include <tuple>
 #include <vector>
 
+#include "common/type_list.h"
 #include "range/v3/all.hpp"
 
 namespace fluent {
@@ -50,6 +51,15 @@ void StreamRaInto(const RA& ra, std::set<std::tuple<Ts...>>* s) {
     s->insert(std::move(*iter));
   }
 }
+
+
+template <typename RA>
+std::vector<typename TypeListToTuple<typename RA::column_types>::type> MergeRaInto(const RA& ra) {
+  auto physical = ra.ToPhysical();
+  auto rng = physical.ToRange();
+  return rng | ranges::to_<std::vector<typename TypeListToTuple<typename RA::column_types>::type>>();
+}
+
 
 }  // namespace ra
 }  // namespace fluent

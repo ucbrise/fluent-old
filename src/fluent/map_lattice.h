@@ -10,6 +10,7 @@
 
 #include "range/v3/all.hpp"
 
+#include "fluent/max_lattice.h"
 #include "ra/iterable.h"
 #include "ra/ra_util.h"
 
@@ -22,7 +23,7 @@ class MapLattice {
   explicit MapLattice<K, V>(const std::string &name) : name_(name) {}
   MapLattice<K, V>(const std::unordered_map<K, V> &e) : name_(""), element_(e) {}
   explicit MapLattice<K, V>(const std::string &name, const std::unordered_map<K, V> &e) : name_(name), element_(e) {}
-  explicit MapLattice<K, V>(const MapLattice<K, V> &other) : name_(other.Name()), element_(other.Reveal()) {}
+  MapLattice<K, V>(const MapLattice<K, V> &other) : name_(other.Name()), element_(other.Reveal()) {}
 
   const std::string& Name() const { return name_; }
 
@@ -59,6 +60,10 @@ class MapLattice {
   // }
 
   void Tick() {}
+
+  MaxLattice<int> size() const{
+		return this->element_.size();
+  }
 
  protected:
   const std::string name_;

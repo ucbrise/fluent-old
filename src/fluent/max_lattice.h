@@ -2,6 +2,7 @@
 #define FLUENT_MAX_LATTICE_H_
 
 #include "fluent/base_lattice.h"
+#include "fluent/bool_lattice.h"
 
 namespace fluent {
 
@@ -21,7 +22,22 @@ public:
 	explicit MaxLattice(const std::string &name) : Lattice<T>(name) {}
 	MaxLattice(const T &e) : Lattice<T>(e) {}
 	explicit MaxLattice(const std::string &name, const T &e) : Lattice<T>(name, e) {}
-	explicit MaxLattice(const MaxLattice &other) : Lattice<T>(other) {}
+	MaxLattice(const MaxLattice &other) : Lattice<T>(other) {}
+
+	BoolLattice gt(const T &n) const{
+		if (this->element_ > n) return BoolLattice(true);
+		else return BoolLattice(false);
+	}
+	BoolLattice gt_eq(const T &n) const{
+		if (this->element_ >= n) return BoolLattice(true);
+		else return BoolLattice(false);
+	}
+	MaxLattice<T> add(const T &n) const{
+		return MaxLattice<T>(this->element_ + n);
+	}
+	MaxLattice<T> subtract(const T &n) const{
+		return MaxLattice<T>(this->element_ - n);
+	}
 };
 
 }  // namespace fluent

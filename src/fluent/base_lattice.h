@@ -25,20 +25,27 @@ class Lattice {
   }
   Lattice<T>(const T &e) : name_(""), element_(e) {}
   explicit Lattice<T>(const std::string &name, const T &e) : name_(name), element_(e) {}
-  explicit Lattice<T>(const Lattice<T> &other) : name_(other.Name()), element_(other.Reveal()) {}
+  Lattice<T>(const Lattice<T> &other) : name_(other.Name()), element_(other.Reveal()) {}
 
   const std::string& Name() const { return name_; }
 
   const T& Reveal() const { return element_; }
 
   template <typename RA>
-  void Merge(const RA& ra) {
+  typename std::enable_if<!(std::is_base_of<Lattice<T>, RA>::value)>::type
+  Merge(const RA& ra) {
     auto buf = ra::MergeRaInto<RA>(ra);
     auto begin = std::make_move_iterator(std::begin(buf));
     auto end = std::make_move_iterator(std::end(buf));
     for (auto it = begin; it != end; it++) {
       merge(std::get<0>(*it));
     }
+  }
+
+  template <typename L>
+  typename std::enable_if<(std::is_base_of<Lattice<T>, L>::value)>::type
+  Merge(const L& l) {
+    merge(l.Reveal());
   }
 
   void merge(const T &e) {

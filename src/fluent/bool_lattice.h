@@ -17,7 +17,7 @@ public:
 	explicit BoolLattice(const std::string &name) : Lattice<bool>(name) {}
 	BoolLattice(const bool &e) : Lattice<bool>(e) {}
 	explicit BoolLattice(const std::string &name, const bool &e) : Lattice<bool>(name, e) {}
-	explicit BoolLattice(const BoolLattice &other) : Lattice<bool>(other) {}
+	BoolLattice(const BoolLattice &other) : Lattice<bool>(other) {}
 };
 
 }  // namespace fluent

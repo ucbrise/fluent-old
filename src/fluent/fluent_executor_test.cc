@@ -224,6 +224,9 @@ TEST(FluentExecutor, Lattices) {
   std::set<std::tuple<int, int>> zs = {{1, 5}, {1, 4}};
   std::set<std::tuple<bool>> b = {{false}, {true}, {false}};
 
+  MaxLattice<int> omaxl("l", 10);
+  MapLattice<int, MaxLattice<int>> omapl;
+
   // clang-format off
   auto f = fluent("inproc://yolo", &context)
     .table<int>("t")
@@ -231,12 +234,12 @@ TEST(FluentExecutor, Lattices) {
     .lattice<MaxLattice<int>>("maxl")
     .lattice<MinLattice<int>>("minl")
     .lattice<MapLattice<int, MaxLattice<int>>>("mapl")
-    .RegisterRules([&xs, &ys, &zs, &b](auto& t, auto& bl, auto& maxl, auto& minl, auto& mapl) {
+    .RegisterRules([&xs, &ys, &zs, &b, &omaxl, &omapl](auto& t, auto& bl, auto& maxl, auto& minl, auto& mapl) {
       using namespace fluent::infix;
       return std::make_tuple(
         t <= ra::make_iterable(&xs),
-        bl <= ra::make_iterable(&b),
-        maxl <= ra::make_iterable(&ys),
+        bl <= omapl.size().gt_eq(0),
+        maxl <= omaxl,
         minl <= ra::make_iterable(&ys),
         mapl <= ra::make_iterable(&zs)
       );
@@ -250,7 +253,7 @@ TEST(FluentExecutor, Lattices) {
   f.Tick();
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(xs));
   EXPECT_THAT(f.Get<1>().Reveal(), true);
-  EXPECT_THAT(f.Get<2>().Reveal(), 5);
+  EXPECT_THAT(f.Get<2>().Reveal(), 10);
   EXPECT_THAT(f.Get<3>().Reveal(), 1);
   std::unordered_map<int, MaxLattice<int>> res = f.Get<4>().Reveal();
   for (auto it = res.begin(); it != res.end(); it++) {

@@ -18,11 +18,16 @@ namespace fluent {
 TEST(MaxLattice, SimpleMerge) {
   MaxLattice<int> l("l");
   EXPECT_THAT(l.Reveal(), 0);
-  
+
+  MaxLattice<int> o("o", 10);
+
   std::set<std::tuple<int>> s1 = {{2}, {3}, {1}};
 
   l.Merge(ra::make_iterable(&s1));
   EXPECT_THAT(l.Reveal(), 3);
+
+  l.Merge(o);
+  EXPECT_THAT(l.Reveal(), 10);
 }
 
 }  // namespace fluent

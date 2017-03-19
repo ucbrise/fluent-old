@@ -14,6 +14,8 @@
 #include "fluent/channel.h"
 #include "fluent/fluent_builder.h"
 #include "fluent/infix.h"
+#include "postgres/connection_config.h"
+#include "postgres/noop_client.h"
 #include "ra/all.h"
 #include "testing/captured_stdout.h"
 
@@ -23,9 +25,11 @@ namespace fluent {
 
 TEST(FluentExecutor, SimpleProgram) {
   zmq::context_t context(1);
+  postgres::ConnectionConfig connection_config;
+  postgres::NoopClient noop(connection_config);
 
   // clang-format off
-  auto f = fluent("inproc://yolo", &context)
+  auto f = fluent("inproc://yolo", &context, &noop)
     .table<int>("t")
     .scratch<int, int, float>("s")
     .channel<std::string, float, char>("c")
@@ -61,13 +65,15 @@ TEST(FluentExecutor, SimpleProgram) {
 
 TEST(FluentExecutor, AllOperations) {
   zmq::context_t context(1);
+  postgres::ConnectionConfig connection_config;
+  postgres::NoopClient noop(connection_config);
 
   auto int_tuple_to_string = [](const std::tuple<int>& t) {
     return std::tuple<std::string>(std::to_string(std::get<0>(t)));
   };
 
   // clang-format off
-  auto f = fluent("inproc://yolo", &context)
+  auto f = fluent("inproc://yolo", &context, &noop)
     .table<int>("t")
     .scratch<int>("s")
     .stdout()
@@ -109,8 +115,10 @@ TEST(FluentExecutor, SimpleCommunication) {
   };
 
   zmq::context_t context(1);
+  postgres::ConnectionConfig connection_config;
+  postgres::NoopClient noop(connection_config);
   // clang-format off
-  auto ping = fluent("inproc://ping", &context)
+  auto ping = fluent("inproc://ping", &context, &noop)
     .channel<std::string, int>("c")
     .RegisterRules([&reroute](auto& c) {
       using namespace fluent::infix;
@@ -118,7 +126,7 @@ TEST(FluentExecutor, SimpleCommunication) {
         c <= (c.Iterable() | ra::map(reroute("inproc://pong")))
       );
     });
-  auto pong = fluent("inproc://pong", &context)
+  auto pong = fluent("inproc://pong", &context, &noop)
     .channel<std::string, int>("c")
     .RegisterRules([&reroute](auto& c) {
       using namespace fluent::infix;
@@ -153,12 +161,14 @@ TEST(FluentExecutor, ComplexProgram) {
   using S = std::set<Tuple>;
 
   zmq::context_t context(1);
+  postgres::ConnectionConfig connection_config;
+  postgres::NoopClient noop(connection_config);
 
   auto plus_one_times_two = [](const std::tuple<int>& t) {
     return std::tuple<int>((1 + std::get<0>(t)) * 2);
   };
   auto is_even = [](const auto& t) { return std::get<0>(t) % 2 == 0; };
-  auto f = fluent("inproc://yolo", &context)
+  auto f = fluent("inproc://yolo", &context, &noop)
                .table<int>("t")
                .scratch<int>("s")
                .RegisterRules([plus_one_times_two, is_even](auto& t, auto& s) {
@@ -188,12 +198,14 @@ TEST(FluentExecutor, ComplexProgram) {
 
 TEST(FluentExecutor, SimpleBootstrap) {
   zmq::context_t context(1);
+  postgres::ConnectionConfig connection_config;
+  postgres::NoopClient noop(connection_config);
 
   using Tuples = std::set<std::tuple<int>>;
   Tuples xs = {{1}, {2}, {3}, {4}, {5}};
 
   // clang-format off
-  auto f = fluent("inproc://yolo", &context)
+  auto f = fluent("inproc://yolo", &context, &noop)
     .table<int>("t")
     .scratch<int>("s")
     .RegisterBootstrapRules([&xs](auto& t, auto& s) {

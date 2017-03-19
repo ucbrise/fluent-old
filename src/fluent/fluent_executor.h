@@ -16,6 +16,7 @@
 #include "gtest/gtest.h"
 #include "zmq.hpp"
 
+#include "common/tuple_util.h"
 #include "common/type_list.h"
 #include "fluent/channel.h"
 #include "fluent/network_state.h"
@@ -25,6 +26,7 @@
 #include "fluent/socket_cache.h"
 #include "fluent/stdin.h"
 #include "fluent/table.h"
+#include "postgres/client.h"
 
 namespace fluent {
 
@@ -128,21 +130,32 @@ class FluentExecutor<
                  BootstrapRules bootstrap_rules,
                  std::map<std::string, Parser> parsers,
                  std::unique_ptr<NetworkState> network_state, Stdin* stdin,
-                 std::vector<Periodic*> periodics, Rules rules)
+                 std::vector<Periodic*> periodics,
+                 postgres::Client* postgres_client, Rules rules)
       : collections_(std::move(collections)),
         bootstrap_rules_(std::move(bootstrap_rules)),
         parsers_(std::move(parsers)),
         network_state_(std::move(network_state)),
         stdin_(stdin),
         periodics_(periodics),
+        postgres_client_(postgres_client),
         rules_(rules) {
-    LOG(INFO) << sizeof...(Lhss)
-              << " rules registered with the FluentExecutor.";
-
+    // Initialize periodic timeouts. See the comment above `PeriodicTimeout`
+    // below for more information.
     Periodic::time now = Periodic::clock::now();
     for (Periodic* p : periodics_) {
       timeout_queue_.push(PeriodicTimeout{now + p->Period(), p});
     }
+
+    // Initialize lineage database with name, collections, and rules.
+    // DO_NOT_SUBMIT(mwhittaker): Put name here.
+    postgres_client_->Init("TODO_put_name_here");
+    TupleIter(collections_, [this](const auto& collection) {
+      postgres_client_->AddCollection(collection->Name());
+    });
+    TupleIter(rules_,
+              [this](const auto& rule) { postgres_client_->AddRule(rule); });
+    // DO_NOT_SUBMIT(mwhittaker): Initialize per collection tables.
   }
 
   // Get<I>() returns a const reference to the Ith collection.
@@ -328,6 +341,7 @@ class FluentExecutor<
   std::unique_ptr<NetworkState> network_state_;
   Stdin* const stdin_;
   std::vector<Periodic*> periodics_;
+  postgres::Client* const postgres_client_;
 
   // A collection of rules (lhs, type, rhs) where
   //

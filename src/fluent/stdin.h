@@ -20,6 +20,11 @@ class Stdin {
   Stdin() {}
   DISALLOW_COPY_AND_ASSIGN(Stdin);
 
+  const std::string& Name() const {
+    static const std::string name = "stdin";
+    return name;
+  }
+
   ra::Iterable<std::set<std::tuple<std::string>>> Iterable() const {
     return ra::make_iterable(&lines_);
   }

@@ -33,9 +33,11 @@ SET(CMAKE_CXX_FLAGS_RELEASE
     "${CMAKE_CXX_FLAGS_RELEASE} \
      ${CMAKE_CXX_FLAGS_COMMON}")
 
+ADD_SUBDIRECTORY(vendor/fmt)
 ADD_SUBDIRECTORY(vendor/googlebenchmark)
 ADD_SUBDIRECTORY(vendor/googlelog)
 ADD_SUBDIRECTORY(vendor/googletest)
+ADD_SUBDIRECTORY(vendor/libpqxx)
 ADD_SUBDIRECTORY(vendor/range-v3)
 ADD_SUBDIRECTORY(vendor/zeromq)
 ADD_SUBDIRECTORY(vendor/zeromqcpp)
@@ -49,14 +51,23 @@ INCLUDE_DIRECTORIES(${GTEST_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${RANGEV3_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${ZEROMQCPP_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${ZEROMQ_INCLUDE_DIRS})
+# We compile with the -Werror flag which means that warnings are turned into
+# errors. The following includes produce warnings (turned errors) which prevent
+# the code from building. By specifying them as a SYSTEM include, we ignore the
+# warnings and allow the code to build.
+INCLUDE_DIRECTORIES(SYSTEM ${FMT_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(SYSTEM ${LIBPQXX_INCLUDE_DIRS})
 
+LINK_DIRECTORIES(${FMT_LINK_DIRS})
 LINK_DIRECTORIES(${GLOG_LINK_DIRS})
+LINK_DIRECTORIES(${LIBPQXX_LINK_DIRS})
 LINK_DIRECTORIES(${ZEROMQ_LINK_DIRS})
 
 ENABLE_TESTING()
 ADD_SUBDIRECTORY(common)
 ADD_SUBDIRECTORY(examples)
 ADD_SUBDIRECTORY(fluent)
+ADD_SUBDIRECTORY(postgres)
 ADD_SUBDIRECTORY(ra)
 ADD_SUBDIRECTORY(testing)
 ADD_SUBDIRECTORY(zmq_util)

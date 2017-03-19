@@ -11,14 +11,18 @@
 #include "zmq.hpp"
 
 #include "fluent/infix.h"
+#include "postgres/connection_config.h"
+#include "postgres/noop_client.h"
 #include "ra/all.h"
 
 namespace fluent {
 
 TEST(FluentBuilder, SimpleBuildCheck) {
   zmq::context_t context(1);
+  postgres::ConnectionConfig connection_config;
+  postgres::NoopClient noop(connection_config);
   // clang-format off
-  auto f = fluent("inproc://yolo", &context)
+  auto f = fluent("inproc://yolo", &context, &noop)
     .table<std::string, int>("t")
     .scratch<std::string, int>("s")
     .channel<std::string, int>("c")

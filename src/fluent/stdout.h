@@ -20,6 +20,11 @@ class Stdout {
   Stdout() {}
   DISALLOW_COPY_AND_ASSIGN(Stdout);
 
+  const std::string& Name() const {
+    static const std::string name = "stdout";
+    return name;
+  }
+
   template <typename RA>
   void Merge(const RA& ra) {
     auto physical = ra.ToPhysical();

@@ -1,10 +1,9 @@
-#include <iostream>
-
-#include "glog/logging.h"
+#include "examples/chat/client.h"
 
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"
+#include "postgres/client.h"
 #include "ra/all.h"
 
 namespace ra = fluent::ra;
@@ -15,25 +14,16 @@ using client_address_t = std::string;
 using nickname_t = std::string;
 using message_t = std::string;
 
-int main(int argc, char* argv[]) {
-  google::InitGoogleLogging(argv[0]);
-
-  if (argc != 4) {
-    std::cerr << "usage: " << argv[0]
-              << " <server address> <client address> <nickname>" << std::endl;
-    return 1;
-  }
-
-  const std::string server_address = argv[1];
-  const std::string client_address = argv[2];
-  const std::string nickname = argv[3];
+int ClientMain(const ClientArgs& args,
+               fluent::postgres::Client* postgres_client) {
   zmq::context_t context(1);
 
   std::vector<std::tuple<server_address_t, client_address_t, nickname_t>>
-      connect_tuple = {std::make_tuple(server_address, client_address, nickname)};
+      connect_tuple = {std::make_tuple(args.server_address, args.client_address,
+                                       args.nickname)};
 
   auto f =
-      fluent::fluent(client_address, &context)
+      fluent::fluent(args.client_address, &context, postgres_client)
           .stdin()
           .stdout()
           .channel<server_address_t, client_address_t, nickname_t>("connect")
@@ -46,11 +36,11 @@ int main(int argc, char* argv[]) {
           .RegisterRules([&](auto& in, auto& out, auto&, auto& mcast) {
             using namespace fluent::infix;
             auto from_in =
-                mcast <=
-                (in.Iterable() |
-                 ra::map([&](const std::tuple<std::string>& line) {
-                   return std::make_tuple(server_address, std::get<0>(line));
-                 }));
+                mcast <= (in.Iterable() |
+                          ra::map([&](const std::tuple<std::string>& line) {
+                            return std::make_tuple(args.server_address,
+                                                   std::get<0>(line));
+                          }));
 
             auto to_out = out <= (mcast.Iterable() | ra::project<1>());
 
@@ -58,4 +48,5 @@ int main(int argc, char* argv[]) {
           });
 
   f.Run();
+  return 0;
 }

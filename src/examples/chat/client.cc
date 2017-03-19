@@ -23,7 +23,8 @@ int ClientMain(const ClientArgs& args,
                                        args.nickname)};
 
   auto f =
-      fluent::fluent(args.client_address, &context, postgres_client)
+      fluent::fluent("chat_client", args.client_address, &context,
+                     postgres_client)
           .stdin()
           .stdout()
           .channel<server_address_t, client_address_t, nickname_t>("connect")

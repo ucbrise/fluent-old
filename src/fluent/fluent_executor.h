@@ -126,13 +126,15 @@ class FluentExecutor<
   using Rules = std::tuple<std::tuple<Lhss, RuleTags, Rhss>...>;
   using Parser = std::function<void(const std::vector<std::string>& columns)>;
 
-  FluentExecutor(std::tuple<std::unique_ptr<Cs>...> collections,
+  FluentExecutor(std::string name,
+                 std::tuple<std::unique_ptr<Cs>...> collections,
                  BootstrapRules bootstrap_rules,
                  std::map<std::string, Parser> parsers,
                  std::unique_ptr<NetworkState> network_state, Stdin* stdin,
                  std::vector<Periodic*> periodics,
                  postgres::Client* postgres_client, Rules rules)
-      : collections_(std::move(collections)),
+      : name_(std::move(name)),
+        collections_(std::move(collections)),
         bootstrap_rules_(std::move(bootstrap_rules)),
         parsers_(std::move(parsers)),
         network_state_(std::move(network_state)),
@@ -149,7 +151,7 @@ class FluentExecutor<
 
     // Initialize lineage database with name, collections, and rules.
     // DO_NOT_SUBMIT(mwhittaker): Put name here.
-    postgres_client_->Init("TODO_put_name_here");
+    postgres_client_->Init(name_);
     TupleIter(collections_, [this](const auto& collection) {
       postgres_client_->AddCollection(collection->Name());
     });
@@ -335,6 +337,7 @@ class FluentExecutor<
   }
 
   // See `FluentBuilder`.
+  std::string name_;
   std::tuple<std::unique_ptr<Cs>...> collections_;
   BootstrapRules bootstrap_rules_;
   std::map<std::string, Parser> parsers_;

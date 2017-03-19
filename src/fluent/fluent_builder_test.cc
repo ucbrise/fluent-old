@@ -22,7 +22,7 @@ TEST(FluentBuilder, SimpleBuildCheck) {
   postgres::ConnectionConfig connection_config;
   postgres::NoopClient noop(connection_config);
   // clang-format off
-  auto f = fluent("inproc://yolo", &context, &noop)
+  auto f = fluent("name", "inproc://yolo", &context, &noop)
     .table<std::string, int>("t")
     .scratch<std::string, int>("s")
     .channel<std::string, int>("c")

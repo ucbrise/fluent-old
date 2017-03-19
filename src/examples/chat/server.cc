@@ -18,7 +18,8 @@ int ServerMain(const ServerArgs& args,
                fluent::postgres::Client* postgres_client) {
   zmq::context_t context(1);
   auto f =
-      fluent::fluent(args.server_address, &context, postgres_client)
+      fluent::fluent("chat_server", args.server_address, &context,
+                     postgres_client)
           .channel<server_address_t, client_address_t, nickname_t>("connect")
           .channel<address_t, message_t>("mcast")
           .table<client_address_t, nickname_t>("nodelist")

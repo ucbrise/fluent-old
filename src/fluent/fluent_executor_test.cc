@@ -29,7 +29,7 @@ TEST(FluentExecutor, SimpleProgram) {
   postgres::NoopClient noop(connection_config);
 
   // clang-format off
-  auto f = fluent("inproc://yolo", &context, &noop)
+  auto f = fluent("name", "inproc://yolo", &context, &noop)
     .table<int>("t")
     .scratch<int, int, float>("s")
     .channel<std::string, float, char>("c")
@@ -73,7 +73,7 @@ TEST(FluentExecutor, AllOperations) {
   };
 
   // clang-format off
-  auto f = fluent("inproc://yolo", &context, &noop)
+  auto f = fluent("name", "inproc://yolo", &context, &noop)
     .table<int>("t")
     .scratch<int>("s")
     .stdout()
@@ -118,7 +118,7 @@ TEST(FluentExecutor, SimpleCommunication) {
   postgres::ConnectionConfig connection_config;
   postgres::NoopClient noop(connection_config);
   // clang-format off
-  auto ping = fluent("inproc://ping", &context, &noop)
+  auto ping = fluent("name", "inproc://ping", &context, &noop)
     .channel<std::string, int>("c")
     .RegisterRules([&reroute](auto& c) {
       using namespace fluent::infix;
@@ -126,7 +126,7 @@ TEST(FluentExecutor, SimpleCommunication) {
         c <= (c.Iterable() | ra::map(reroute("inproc://pong")))
       );
     });
-  auto pong = fluent("inproc://pong", &context, &noop)
+  auto pong = fluent("name", "inproc://pong", &context, &noop)
     .channel<std::string, int>("c")
     .RegisterRules([&reroute](auto& c) {
       using namespace fluent::infix;
@@ -168,7 +168,7 @@ TEST(FluentExecutor, ComplexProgram) {
     return std::tuple<int>((1 + std::get<0>(t)) * 2);
   };
   auto is_even = [](const auto& t) { return std::get<0>(t) % 2 == 0; };
-  auto f = fluent("inproc://yolo", &context, &noop)
+  auto f = fluent("name", "inproc://yolo", &context, &noop)
                .table<int>("t")
                .scratch<int>("s")
                .RegisterRules([plus_one_times_two, is_even](auto& t, auto& s) {
@@ -205,7 +205,7 @@ TEST(FluentExecutor, SimpleBootstrap) {
   Tuples xs = {{1}, {2}, {3}, {4}, {5}};
 
   // clang-format off
-  auto f = fluent("inproc://yolo", &context, &noop)
+  auto f = fluent("name", "inproc://yolo", &context, &noop)
     .table<int>("t")
     .scratch<int>("s")
     .RegisterBootstrapRules([&xs](auto& t, auto& s) {

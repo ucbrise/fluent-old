@@ -26,7 +26,8 @@ int PingClientMain(const PingClientArgs& args,
                                        args.nickname)};
 
   auto f =
-      fluent::fluent(args.client_address, &context, postgres_client)
+      fluent::fluent("chat_ping_client", args.client_address, &context,
+                     postgres_client)
           .channel<server_address_t, client_address_t, nickname_t>("connect")
           .channel<address_t, message_t>("mcast")
           .periodic("p", std::chrono::milliseconds(1000))

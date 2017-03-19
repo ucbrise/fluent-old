@@ -223,9 +223,10 @@ class FluentBuilder<TypeList<Cs...>,
   // Constructs an empty FluentBuilder. Note that this constructor should
   // only be called when Cs is empty (i.e. sizeof...(Cs) == 0). This private
   // constructor is used primarily by the `fluent` function down below.
-  FluentBuilder(const std::string& address, zmq::context_t* context,
-                postgres::Client* postgres_client)
-      : network_state_(std::make_unique<NetworkState>(address, context)),
+  FluentBuilder(const std::string& name, const std::string& address,
+                zmq::context_t* context, postgres::Client* postgres_client)
+      : name_(name),
+        network_state_(std::make_unique<NetworkState>(address, context)),
         stdin_(nullptr),
         postgres_client_(postgres_client) {
     static_assert(sizeof...(Cs) == 0,
@@ -235,13 +236,15 @@ class FluentBuilder<TypeList<Cs...>,
   }
 
   // Moves the guts of one FluentBuilder into another.
-  FluentBuilder(std::tuple<std::unique_ptr<Cs>...> collections,
+  FluentBuilder(std::string name,
+                std::tuple<std::unique_ptr<Cs>...> collections,
                 BootstrapRules boostrap_rules,
                 std::map<std::string, Parser> parsers,
                 std::unique_ptr<NetworkState> network_state, Stdin* stdin,
                 std::vector<Periodic*> periodics,
                 postgres::Client* postgres_client)
-      : collections_(std::move(collections)),
+      : name_(std::move(name)),
+        collections_(std::move(collections)),
         boostrap_rules_(std::move(boostrap_rules)),
         parsers_(std::move(parsers)),
         network_state_(std::move(network_state)),
@@ -259,13 +262,10 @@ class FluentBuilder<TypeList<Cs...>,
       std::unique_ptr<C> c) {
     std::tuple<std::unique_ptr<Cs>..., std::unique_ptr<C>> collections =
         std::tuple_cat(std::move(collections_), std::make_tuple(std::move(c)));
-    return {std::move(collections),
-            std::move(boostrap_rules_),
-            std::move(parsers_),
-            std::move(network_state_),
-            stdin_,
-            std::move(periodics_),
-            postgres_client_};
+    return {std::move(name_),           std::move(collections),
+            std::move(boostrap_rules_), std::move(parsers_),
+            std::move(network_state_),  stdin_,
+            std::move(periodics_),      postgres_client_};
   }
 
   // See `RegisterBootstrapRules`.
@@ -273,13 +273,10 @@ class FluentBuilder<TypeList<Cs...>,
   FluentBuilder<TypeList<Cs...>, typename std::result_of<F(Cs&...)>::type>
   RegisterBootstrapRulesImpl(const F& f, std::index_sequence<Is...>) {
     auto boostrap_rules = f(*std::get<Is>(collections_)...);
-    return {std::move(collections_),
-            std::move(boostrap_rules),
-            std::move(parsers_),
-            std::move(network_state_),
-            stdin_,
-            std::move(periodics_),
-            postgres_client_};
+    return {std::move(name_),          std::move(collections_),
+            std::move(boostrap_rules), std::move(parsers_),
+            std::move(network_state_), stdin_,
+            std::move(periodics_),     postgres_client_};
   }
 
   // See `RegisterRules`.
@@ -288,15 +285,15 @@ class FluentBuilder<TypeList<Cs...>,
                  typename std::result_of<F(Cs&...)>::type>
   RegisterRulesImpl(const F& f, std::index_sequence<Is...>) {
     auto relalgs = f(*std::get<Is>(collections_)...);
-    return {std::move(collections_),
-            std::move(boostrap_rules_),
-            std::move(parsers_),
-            std::move(network_state_),
-            stdin_,
-            std::move(periodics_),
-            std::move(postgres_client_),
+    return {std::move(name_),           std::move(collections_),
+            std::move(boostrap_rules_), std::move(parsers_),
+            std::move(network_state_),  stdin_,
+            std::move(periodics_),      std::move(postgres_client_),
             std::move(relalgs)};
   }
+
+  // DO_NOT_SUBMIT(mwhittaker): Document.
+  const std::string name_;
 
   // See class documentation above.
   //
@@ -346,16 +343,16 @@ class FluentBuilder<TypeList<Cs...>,
   //     .scratch<int, int, float>("s")
   //     // and so on...
   friend FluentBuilder<TypeList<>, std::tuple<>> fluent(
-      const std::string& address, zmq::context_t* context,
-      postgres::Client* postgres_client);
+      const std::string& name, const std::string& address,
+      zmq::context_t* context, postgres::Client* postgres_client);
 };
 
 // Create an empty FluentBuilder listening on ZeroMQ address `address` using
 // the ZeroMQ context `context`.
 inline FluentBuilder<TypeList<>, std::tuple<>> fluent(
-    const std::string& address, zmq::context_t* context,
-    postgres::Client* postgres_client) {
-  return {address, context, postgres_client};
+    const std::string& name, const std::string& address,
+    zmq::context_t* context, postgres::Client* postgres_client) {
+  return {name, address, context, postgres_client};
 }
 
 }  // namespace fluent

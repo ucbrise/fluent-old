@@ -3,6 +3,7 @@
 
 #include <cstdint>
 
+#include <chrono>
 #include <string>
 #include <type_traits>
 
@@ -61,6 +62,27 @@ struct SqlType<long long> {
   std::string value(long long x) { return std::to_string(x); }
 };
 
+template <>
+struct SqlType<unsigned long> {
+  static_assert(sizeof(unsigned long) == 8,
+                "We assume unsigned longs are 8 bytes.");
+  // The maximum unsigned long is 18,446,744,073,709,551,615 which is 20 digits
+  // of precision.
+  std::string type() { return "numeric(20)"; }
+  std::string value(unsigned long x) { return std::to_string(x); }
+};
+
+template <>
+struct SqlType<unsigned long long> {
+  static_assert(sizeof(unsigned long long) == 8,
+                "We assume unsigned long longs are 8 bytes.");
+  // The maximum unsigned long long is 18,446,744,073,709,551,615 which is 20
+  // digits
+  // of precision.
+  std::string type() { return "numeric(20)"; }
+  std::string value(unsigned long long x) { return std::to_string(x); }
+};
+
 // TODO(mwhittaker): Ensure that we're not losing precision.
 template <>
 struct SqlType<float> {
@@ -73,6 +95,18 @@ template <>
 struct SqlType<double> {
   std::string type() { return "double precision"; }
   std::string value(double x) { return std::to_string(x); }
+};
+
+template <typename Clock>
+struct SqlType<std::chrono::time_point<Clock>> {
+  std::string type() { return "timestamp with time zone"; }
+  std::string value(const std::chrono::time_point<Clock>& t) {
+    return fmt::format(
+        "TIMESTAMP WITH TIME ZONE 'epoch' + {} * INTERVAL '1 microsecond'",
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            t.time_since_epoch())
+            .count());
+  }
 };
 
 }  // namespace postgres

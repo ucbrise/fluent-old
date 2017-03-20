@@ -9,6 +9,7 @@ ADD_LIBRARY(postgres
 TARGET_LINK_LIBRARIES(postgres
     ${FMT_LINK_DIRS}/libfmt.a
     ${LIBPQXX_LINK_DIRS}/libpqxx.a
+    common
     glog
     pq
 )

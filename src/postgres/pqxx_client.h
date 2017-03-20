@@ -16,7 +16,8 @@ class PqxxClient : public Client {
  public:
   PqxxClient(const ConnectionConfig& connection_config);
   void Init(const std::string& name) override;
-  void AddCollection(const std::string&) override;
+  void AddCollection(const std::string& collection_name,
+                     const std::vector<std::string>& types) override;
 
  private:
   void ExecuteQuery(const std::string& name, const std::string& query);
@@ -24,6 +25,7 @@ class PqxxClient : public Client {
 
   pqxx::connection connection_;
   std::int64_t id_;
+  std::string name_;
 };
 
 }  // namespace postgres

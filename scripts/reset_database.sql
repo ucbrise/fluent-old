@@ -1,8 +1,8 @@
 -- psql -f reset_database.sql
 
-DROP TABLE IF EXISTS Nodes;
-DROP TABLE IF EXISTS Collections;
-DROP TABLE IF EXISTS Rules;
+-- http://stackoverflow.com/questions/3327312/drop-all-tables-in-postgresql
+DROP SCHEMA PUBLIC CASCADE;
+CREATE SCHEMA PUBLIC;
 
 CREATE TABLE Nodes (
     id      bigint PRIMARY KEY,

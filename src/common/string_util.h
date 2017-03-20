@@ -2,6 +2,7 @@
 #define COMMON_STRING_UTIL_H_
 
 #include <string>
+#include <vector>
 
 namespace fluent {
 
@@ -23,6 +24,8 @@ template <typename T, typename... Ts>
 std::string Join(const T& x, const Ts&... xs) {
   return std::to_string(x) + ", " + Join(xs...);
 }
+
+std::string Join(const std::vector<std::string>& ss);
 
 }  // namespace fluent
 

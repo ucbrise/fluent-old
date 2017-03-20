@@ -3,6 +3,7 @@
 #include "fmt/format.h"
 #include "glog/logging.h"
 
+#include "common/string_util.h"
 #include "postgres/constants.h"
 
 namespace fluent {
@@ -25,25 +26,63 @@ void PqxxClient::ExecuteQuery(const std::string& name,
 
 void PqxxClient::Init(const std::string& name) {
   // TODO(mwhittaker): Handle the scenario where there is a hash collision.
+  name_ = name;
   id_ = static_cast<std::int64_t>(std::hash<std::string>()(name));
-  ExecuteQuery("Init", fmt::format("INSERT INTO {} ({}, {}) VALUES ({}, '{}')",
+  ExecuteQuery("Init", fmt::format(R"(
+    INSERT INTO {} ({}, {})
+    VALUES ({}, '{}');)",
                                    NODES, NODES_ID, NODES_NAME, id_, name));
+
+  ExecuteQuery("CreateLineageTable", fmt::format(R"(
+    CREATE TABLE {}_lineage (
+      dep_node_id          bigint   NOT NULL,
+      dep_collection_name  text     NOT NULL,
+      dep_tuple_hash       bigint   NOT NULL,
+      rule_number          integer  NOT NULL,
+      inserted             boolean  NOT NULL,
+      collection_name      text     NOT NULL,
+      tuple_hash           bigint   NOT NULL,
+      time                 integer  NOT NULL
+    );)",
+                                                 name));
 }
 
-void PqxxClient::AddCollection(const std::string& collection_name) {
+void PqxxClient::AddCollection(const std::string& collection_name,
+                               const std::vector<std::string>& types) {
+  CHECK_GT(types.size(), 0ul) << "Collections should have at least one column.";
   CHECK_NE(id_, static_cast<std::int64_t>(0)) << "Call Init first.";
+  CHECK_NE(collection_name, std::string("lineage"))
+      << "Lineage is a reserved collection name.";
+
   ExecuteQuery("AddCollection",
-               fmt::format("INSERT INTO {} ({}, {}) VALUES ({}, '{}')",
+               fmt::format(R"(
+    INSERT INTO {} ({}, {})
+    VALUES ({}, '{}');)",
                            COLLECTIONS, COLLECTIONS_NODE_ID,
                            COLLECTIONS_COLLECTION_NAME, id_, collection_name));
+
+  std::vector<std::string> columns;
+  for (std::size_t i = 0; i < types.size(); ++i) {
+    columns.push_back(fmt::format("col_{} {} NOT NULL", i, types[i]));
+  }
+  ExecuteQuery("AddCollectionTable",
+               fmt::format(R"(
+    CREATE TABLE {}_{} (
+      hash          bigint  NOT NULL,
+      time_inserted integer NOT NULL,
+      time_deleted  integer,
+      {}
+    );)",
+                           name_, collection_name, Join(columns)));
 }
 
 void PqxxClient::AddRule(std::size_t rule_number, const std::string& rule) {
   CHECK_NE(id_, static_cast<std::int64_t>(0)) << "Call Init first.";
-  ExecuteQuery("AddRule",
-               fmt::format("INSERT INTO {} ({}, {}, {}) VALUES ({}, {}, '{}')",
-                           RULES, RULES_NODE_ID, RULES_RULE_NUMBER, RULES_RULE,
-                           id_, rule_number, rule));
+  ExecuteQuery("AddRule", fmt::format(R"(
+    INSERT INTO {} ({}, {}, {})
+    VALUES ({}, {}, '{}');)",
+                                      RULES, RULES_NODE_ID, RULES_RULE_NUMBER,
+                                      RULES_RULE, id_, rule_number, rule));
 }
 
 }  // namespace postgres

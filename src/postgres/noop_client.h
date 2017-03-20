@@ -12,7 +12,8 @@ class NoopClient : public Client {
  public:
   NoopClient(const ConnectionConfig&) {}
   void Init(const std::string&) override {}
-  void AddCollection(const std::string&) override {}
+  void AddCollection(const std::string&,
+                     const std::vector<std::string>&) override {}
 
  private:
   void AddRule(std::size_t, const std::string&) override {}

@@ -11,6 +11,7 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "glog/logging.h"
 #include "gtest/gtest.h"
@@ -21,16 +22,92 @@
 #include "fluent/channel.h"
 #include "fluent/network_state.h"
 #include "fluent/periodic.h"
+#include "fluent/periodic.h"
 #include "fluent/rule_tags.h"
 #include "fluent/scratch.h"
 #include "fluent/socket_cache.h"
 #include "fluent/stdin.h"
+#include "fluent/stdout.h"
 #include "fluent/table.h"
 #include "postgres/client.h"
 
 namespace fluent {
+namespace detail {
 
-template <typename Collections, typename BootstrapRules, typename Rules>
+template <template <typename> class SqlType, typename... Ts>
+struct TypesToSqlTypes {};
+
+template <template <typename> class SqlType>
+struct TypesToSqlTypes<SqlType> {
+  std::vector<std::string> operator()() { return {}; }
+};
+
+template <template <typename> class SqlType, typename T, typename... Ts>
+struct TypesToSqlTypes<SqlType, T, Ts...> {
+  std::vector<std::string> operator()() {
+    std::vector<std::string> types = TypesToSqlTypes<SqlType, Ts...>()();
+    types.insert(types.begin(), SqlType<T>().type());
+    return types;
+  }
+};
+
+template <template <typename> class SqlType, typename Collection>
+struct SqlTypes;
+
+template <template <typename> class SqlType, typename... Ts>
+struct SqlTypes<SqlType, Table<Ts...>> {
+  std::vector<std::string> operator()() {
+    return TypesToSqlTypes<SqlType, Ts...>()();
+  };
+};
+
+template <template <typename> class SqlType, typename... Ts>
+struct SqlTypes<SqlType, Scratch<Ts...>> {
+  std::vector<std::string> operator()() {
+    return TypesToSqlTypes<SqlType, Ts...>()();
+  };
+};
+
+template <template <typename> class SqlType, typename... Ts>
+struct SqlTypes<SqlType, Channel<Ts...>> {
+  std::vector<std::string> operator()() {
+    return TypesToSqlTypes<SqlType, Ts...>()();
+  };
+};
+
+template <template <typename> class SqlType>
+struct SqlTypes<SqlType, Stdin> {
+  std::vector<std::string> operator()() {
+    return {SqlType<std::string>().type()};
+  };
+};
+
+template <template <typename> class SqlType>
+struct SqlTypes<SqlType, Stdout> {
+  std::vector<std::string> operator()() {
+    return {SqlType<std::string>().type()};
+  };
+};
+
+template <template <typename> class SqlType>
+struct SqlTypes<SqlType, Periodic> {
+  std::vector<std::string> operator()() {
+    return {SqlType<Periodic::id>().type(), SqlType<Periodic::time>().type()};
+  };
+};
+
+template <typename T>
+struct UnwrapUniquePtr;
+
+template <typename T>
+struct UnwrapUniquePtr<std::unique_ptr<T>> {
+  using type = T;
+};
+
+}  // namespace detail
+
+template <typename Collections, typename BootstrapRules, typename Rules,
+          template <typename> class Hash, template <typename> class SqlType>
 class FluentExecutor;
 
 // # Overview
@@ -97,11 +174,12 @@ class FluentExecutor;
 //   - A FluentExecutor steals most of its guts from a FluentBuilder.
 template <typename... Cs, typename... BootstrapLhss,
           typename... BootstrapRuleTags, typename... BootstrapRhss,
-          typename... Lhss, typename... RuleTags, typename... Rhss>
+          typename... Lhss, typename... RuleTags, typename... Rhss,
+          template <typename> class Hash, template <typename> class SqlType>
 class FluentExecutor<
     TypeList<Cs...>,
     std::tuple<std::tuple<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>,
-    std::tuple<std::tuple<Lhss, RuleTags, Rhss>...>> {
+    std::tuple<std::tuple<Lhss, RuleTags, Rhss>...>, Hash, SqlType> {
   static_assert(sizeof...(BootstrapLhss) == sizeof...(BootstrapRuleTags) &&
                     sizeof...(BootstrapRuleTags) == sizeof...(BootstrapRhss),
                 "The ith entry of BootstrapLhss corresponds to the left-hand "
@@ -149,18 +227,7 @@ class FluentExecutor<
       timeout_queue_.push(PeriodicTimeout{now + p->Period(), p});
     }
 
-    // Initialize lineage database with name, collections, and rules.
-    // DO_NOT_SUBMIT(mwhittaker): Put name here.
-    postgres_client_->Init(name_);
-    TupleIter(collections_, [this](const auto& collection) {
-      postgres_client_->AddCollection(collection->Name());
-    });
-    // TODO(mwhittaker): Right now, we pass the relational alebgra part of the
-    // rule, but we should be passing the entire rule.
-    TupleIteri(rules_, [this](std::size_t i, const auto& rule) {
-      postgres_client_->AddRule(i, std::get<2>(rule));
-    });
-    // DO_NOT_SUBMIT(mwhittaker): Initialize per collection tables.
+    InitPostgres();
   }
 
   // Get<I>() returns a const reference to the Ith collection.
@@ -245,6 +312,26 @@ class FluentExecutor<
   }
 
  private:
+  void InitPostgres() {
+    // Nodes.
+    postgres_client_->Init(name_);
+
+    // Collections.
+    TupleIter(collections_, [this](const auto& collection) {
+      using collection_type = typename detail::UnwrapUniquePtr<
+          typename std::decay<decltype(collection)>::type>::type;
+      postgres_client_->AddCollection(
+          collection->Name(), detail::SqlTypes<SqlType, collection_type>()());
+    });
+
+    // Rules.
+    TupleIteri(rules_, [this](std::size_t i, const auto& rule) {
+      // TODO(mwhittaker): Right now, we pass the relational alebgra part of
+      // the rule, but we should be passing the entire rule.
+      postgres_client_->AddRule(i, std::get<2>(rule));
+    });
+  }
+
   // `GetPollTimoutInMicros` returns the minimum time (in microseconds) that we
   // need to wait before a PeriodicTimeout in `timeout_queue_` is ready. If
   // `timeout_queue_` is empty, then we return -1, which indicates that we

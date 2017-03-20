@@ -5,6 +5,7 @@
 #include <cstdint>
 
 #include <string>
+#include <vector>
 
 namespace fluent {
 namespace postgres {
@@ -15,7 +16,8 @@ class Client {
   virtual void Init(const std::string& name) = 0;
 
   // DO_NOT_SUBMIT(mwhittaker): Document.
-  virtual void AddCollection(const std::string& collection_name) = 0;
+  virtual void AddCollection(const std::string& collection_name,
+                             const std::vector<std::string>& types) = 0;
 
   // DO_NOT_SUBMIT(mwhittaker): Document.
   template <typename RA>

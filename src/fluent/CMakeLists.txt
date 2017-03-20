@@ -1,7 +1,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
 ADD_LIBRARY(fluent socket_cache.cc)
-TARGET_LINK_LIBRARIES(fluent glog zmq_util postgres)
+TARGET_LINK_LIBRARIES(fluent glog zmq_util postgres ${FMT_LINK_DIRS}/libfmt.a)
 
 MACRO(CREATE_FLUENT_TEST NAME)
     CREATE_NAMED_TEST(fluent_${NAME} ${NAME})

@@ -2,12 +2,15 @@
 #define RA_GROUP_BY_H_
 
 #include <cstddef>
+#include <map>
 #include <type_traits>
 #include <utility>
-#include <map>
 
-#include "common/type_list.h"
+#include "fmt/format.h"
 #include "range/v3/all.hpp"
+
+#include "common/string_util.h"
+#include "common/type_list.h"
 
 // TODO(mwhittaker): Document this file.
 
@@ -124,6 +127,12 @@ class GroupBy<LogicalChild, Keys<Ks...>, Aggregates<AggregateColumns>...> {
         decltype(child_.ToPhysical()),
         GroupBy<LogicalChild, Keys<Ks...>, Aggregates<AggregateColumns>...>>(
         child_.ToPhysical());
+  }
+
+  std::string ToDebugString() const {
+    return fmt::format("GroupBy<Keys<{}>, {}>({})", Join(Ks...),
+                       Join(Aggregates<AggregateColumns>::ToDebugString()...),
+                       child_.ToDebugString());
   }
 
  private:

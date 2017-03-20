@@ -15,7 +15,7 @@ class NoopClient : public Client {
   void AddCollection(const std::string&) override {}
 
  private:
-  void AddRule(const std::string&) override {}
+  void AddRule(std::size_t, const std::string&) override {}
 };
 
 }  // namespace postgres

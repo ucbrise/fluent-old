@@ -6,8 +6,11 @@
 #include <type_traits>
 #include <utility>
 
-#include "common/type_list.h"
+#include "fmt/format.h"
 #include "range/v3/all.hpp"
+
+#include "common/string_util.h"
+#include "common/type_list.h"
 
 namespace fluent {
 namespace ra {
@@ -87,6 +90,12 @@ class HashJoin<LogicalLeft, LeftKeys<LeftKs...>, LogicalRight,
                             HashJoin<LogicalLeft, LeftKeys<LeftKs...>,
                                      LogicalRight, RightKeys<RightKs...>>>(
         left_.ToPhysical(), right_.ToPhysical());
+  }
+
+  std::string ToDebugString() const {
+    return fmt::format("Join<Left<>, Right<>>({}, {})", Join(LeftKs...),
+                       Join(RightKs...), left_.ToDebugString(),
+                       right_.ToDebugString());
   }
 
  private:

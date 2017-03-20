@@ -24,24 +24,26 @@ void PqxxClient::ExecuteQuery(const std::string& name,
 }
 
 void PqxxClient::Init(const std::string& name) {
-  id_ = std::hash<std::string>()(name);
+  // TODO(mwhittaker): Handle the scenario where there is a hash collision.
+  id_ = static_cast<std::int64_t>(std::hash<std::string>()(name));
   ExecuteQuery("Init", fmt::format("INSERT INTO {} ({}, {}) VALUES ({}, '{}')",
                                    NODES, NODES_ID, NODES_NAME, id_, name));
 }
 
 void PqxxClient::AddCollection(const std::string& collection_name) {
-  CHECK_NE(id_, static_cast<std::size_t>(0)) << "Call Init first.";
+  CHECK_NE(id_, static_cast<std::int64_t>(0)) << "Call Init first.";
   ExecuteQuery("AddCollection",
                fmt::format("INSERT INTO {} ({}, {}) VALUES ({}, '{}')",
                            COLLECTIONS, COLLECTIONS_NODE_ID,
                            COLLECTIONS_COLLECTION_NAME, id_, collection_name));
 }
 
-void PqxxClient::AddRule(const std::string& rule) {
-  CHECK_NE(id_, static_cast<std::size_t>(0)) << "Call Init first.";
+void PqxxClient::AddRule(std::size_t rule_number, const std::string& rule) {
+  CHECK_NE(id_, static_cast<std::int64_t>(0)) << "Call Init first.";
   ExecuteQuery("AddRule",
-               fmt::format("INSERT INTO {} ({}, {}) VALUES ({}, '{}')", RULES,
-                           RULES_NODE_ID, RULES_RULE, id_, rule));
+               fmt::format("INSERT INTO {} ({}, {}, {}) VALUES ({}, {}, '{}')",
+                           RULES, RULES_NODE_ID, RULES_RULE_NUMBER, RULES_RULE,
+                           id_, rule_number, rule));
 }
 
 }  // namespace postgres

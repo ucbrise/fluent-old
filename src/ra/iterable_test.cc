@@ -20,6 +20,7 @@ TEST(Relalg, EmptyIterable) {
   static_assert(
       std::is_same<decltype(iter)::column_types, TypeList<int>>::value, "");
   ExpectRngsEqual(iter.ToPhysical().ToRange(), ranges::view::all(xs));
+  EXPECT_EQ(iter.ToDebugString(), "Iterable");
 }
 
 TEST(Relalg, SimpleIterable) {

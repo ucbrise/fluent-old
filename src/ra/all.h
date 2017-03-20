@@ -5,6 +5,7 @@
 #include "cross.h"
 #include "filter.h"
 #include "group_by.h"
+#include "hash_join.h"
 #include "iterable.h"
 #include "map.h"
 #include "project.h"

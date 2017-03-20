@@ -155,8 +155,11 @@ class FluentExecutor<
     TupleIter(collections_, [this](const auto& collection) {
       postgres_client_->AddCollection(collection->Name());
     });
-    TupleIter(rules_,
-              [this](const auto& rule) { postgres_client_->AddRule(rule); });
+    // TODO(mwhittaker): Right now, we pass the relational alebgra part of the
+    // rule, but we should be passing the entire rule.
+    TupleIteri(rules_, [this](std::size_t i, const auto& rule) {
+      postgres_client_->AddRule(i, std::get<2>(rule));
+    });
     // DO_NOT_SUBMIT(mwhittaker): Initialize per collection tables.
   }
 

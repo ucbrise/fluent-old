@@ -21,6 +21,13 @@ TEST(TupleUtil, AddStringTupleIter) {
   EXPECT_EQ(s, "ab");
 }
 
+TEST(TupleUtil, TupleIteri) {
+  double sum = 0.0;
+  TupleIteri(std::tuple<int, float, double>{1, 2.0, 3.0},
+             [&sum](std::size_t i, auto x) { sum += i, sum += x; });
+  EXPECT_EQ(sum, 9.0);
+}
+
 }  // namespace fluent
 
 int main(int argc, char** argv) {

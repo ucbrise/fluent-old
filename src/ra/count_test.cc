@@ -24,6 +24,7 @@ TEST(Count, EmptyCount) {
       "");
   const std::set<std::tuple<int>> expected = {{0}};
   ExpectRngsEqual(count.ToPhysical().ToRange(), expected);
+  EXPECT_EQ(count.ToDebugString(), "Count(Iterable)");
 }
 
 TEST(Count, SimpleCount) {

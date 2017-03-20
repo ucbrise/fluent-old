@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  ServerArgs args{argv[1]};
+  ServerArgs args{argv[4]};
   fluent::postgres::ConnectionConfig config{"localhost", 5432, argv[1], argv[2],
                                             argv[3]};
   fluent::postgres::PqxxClient client(config);

@@ -17,6 +17,7 @@ extern const std::string COLLECTIONS_COLLECTION_NAME;
 
 extern const std::string RULES;
 extern const std::string RULES_NODE_ID;
+extern const std::string RULES_RULE_NUMBER;
 extern const std::string RULES_RULE;
 
 }  // namespace postgres

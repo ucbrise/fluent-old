@@ -1,7 +1,7 @@
 #ifndef POSTGRES_PQXX_CLIENT_H_
 #define POSTGRES_PQXX_CLIENT_H_
 
-#include <cstddef>
+#include <cstdint>
 
 #include "pqxx/pqxx"
 
@@ -20,10 +20,10 @@ class PqxxClient : public Client {
 
  private:
   void ExecuteQuery(const std::string& name, const std::string& query);
-  void AddRule(const std::string&) override;
+  void AddRule(std::size_t rule_number, const std::string&) override;
 
   pqxx::connection connection_;
-  std::size_t id_;
+  std::int64_t id_;
 };
 
 }  // namespace postgres

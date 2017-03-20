@@ -1,6 +1,7 @@
 #ifndef POSTGRES_CLIENT_H_
 #define POSTGRES_CLIENT_H_
 
+#include <cstddef>
 #include <cstdint>
 
 #include <string>
@@ -18,13 +19,12 @@ class Client {
 
   // DO_NOT_SUBMIT(mwhittaker): Document.
   template <typename RA>
-  void AddRule(const RA& ra) {
-    // DO_NOT_SUBMIT(mwhittaker): Invoke AddRule below.
-    (void)ra;
+  void AddRule(std::size_t rule_number, const RA& ra) {
+    AddRule(rule_number, ra.ToDebugString());
   }
 
  private:
-  virtual void AddRule(const std::string& rule) = 0;
+  virtual void AddRule(std::size_t rule_number, const std::string& rule) = 0;
 };
 
 }  // namespace postgres

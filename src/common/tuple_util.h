@@ -9,9 +9,10 @@
 namespace fluent {
 namespace {
 
+// Iter
 template <std::size_t I, typename F, typename... Ts>
 typename std::enable_if<I == sizeof...(Ts)>::type TupleIteriImpl(
-    const std::tuple<Ts...>&, const F&) {}
+    const std::tuple<Ts...>&, F&) {}
 
 template <std::size_t I, typename F, typename... Ts>
 typename std::enable_if<I != sizeof...(Ts)>::type TupleIteriImpl(
@@ -20,6 +21,18 @@ typename std::enable_if<I != sizeof...(Ts)>::type TupleIteriImpl(
   TupleIteriImpl<I + 1>(t, f);
 }
 
+template <std::size_t I, typename F, typename... Ts>
+typename std::enable_if<I == sizeof...(Ts)>::type TupleIteriImpl(
+    std::tuple<Ts...>&, F&) {}
+
+template <std::size_t I, typename F, typename... Ts>
+typename std::enable_if<I != sizeof...(Ts)>::type TupleIteriImpl(
+    std::tuple<Ts...>& t, F& f) {
+  f(I, std::get<I>(t));
+  TupleIteriImpl<I + 1>(t, f);
+}
+
+// Map
 template <std::size_t I, typename F, typename... Ts>
 typename std::enable_if<I == sizeof...(Ts), std::tuple<>>::type TupleMapImpl(
     const std::tuple<Ts...>&, const F&) {
@@ -34,6 +47,7 @@ auto TupleMapImpl(
                         TupleMapImpl<I + 1>(t, f));
 }
 
+// Fold
 template <std::size_t I, typename F, typename Acc, typename... Ts>
 typename std::enable_if<I == sizeof...(Ts), Acc>::type TupleFoldImpl(
     const Acc& acc, const std::tuple<Ts...>&, const F&) {
@@ -54,10 +68,20 @@ void TupleIteri(const std::tuple<Ts...>& t, F f) {
   TupleIteriImpl<0>(t, f);
 }
 
+template <typename F, typename... Ts>
+void TupleIteri(std::tuple<Ts...>& t, F f) {
+  TupleIteriImpl<0>(t, f);
+}
+
 // `TupleIter((a, ..., z), f)` executes `f(a); ...; f(z)`.
 template <typename F, typename... Ts>
 void TupleIter(const std::tuple<Ts...>& t, F f) {
-  TupleIteri(t, [&f](std::size_t, auto& t) { f(t); });
+  TupleIteri(t, [&f](std::size_t, const auto& x) { f(x); });
+}
+
+template <typename F, typename... Ts>
+void TupleIter(std::tuple<Ts...>& t, F f) {
+  TupleIteri(t, [&f](std::size_t, auto& x) { f(x); });
 }
 
 // `TupleMap((a, ..., z), f)` returns the tuple `(f(a), ..., f(z))`.

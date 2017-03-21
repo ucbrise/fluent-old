@@ -34,6 +34,7 @@
 namespace fluent {
 namespace detail {
 
+// DO_NOT_SUBMIT(mwhittaker): Document.
 template <template <typename> class SqlType, typename... Ts>
 struct TypesToSqlTypes {};
 
@@ -51,6 +52,7 @@ struct TypesToSqlTypes<SqlType, T, Ts...> {
   }
 };
 
+// DO_NOT_SUBMIT(mwhittaker): Document.
 template <template <typename> class SqlType, typename Collection>
 struct SqlTypes;
 
@@ -96,6 +98,7 @@ struct SqlTypes<SqlType, Periodic> {
   };
 };
 
+// DO_NOT_SUBMIT(mwhittaker): Document.
 template <typename T>
 struct UnwrapUniquePtr;
 
@@ -239,17 +242,15 @@ class FluentExecutor<
   // Sequentially execute each registered bootstrap query and then invoke the
   // `Tick` method of every collection.
   void BootstrapTick() {
-    if (sizeof...(BootstrapLhss) != 0) {
-      ExecuteBootstrapRules<0>();
-      TickCollections<0>();
-    }
+    TupleIter(bootstrap_rules_, [this](auto& rule) { ExecuteRule(&rule); });
+    TupleIter(collections_, [](auto& c) { c->Tick(); });
   }
 
   // Sequentially execute each registered query and then invoke the `Tick`
   // method of every collection.
   void Tick() {
-    ExecuteRules<0>();
-    TickCollections<0>();
+    TupleIter(rules_, [this](auto& rule) { ExecuteRule(&rule); });
+    TupleIter(collections_, [](auto& c) { c->Tick(); });
   }
 
   // (Potentially) block and receive messages sent by other Fluent nodes.
@@ -384,46 +385,10 @@ class FluentExecutor<
     collection->DeferredDelete(ra);
   }
 
-  // `ExecuteBootstrapRules<0>` executes every rule in `bootstrap_rules_`.
-  template <std::size_t I>
-  typename std::enable_if<I == sizeof...(BootstrapRhss)>::type
-  ExecuteBootstrapRules() {}
-
-  template <std::size_t I>
-  typename std::enable_if<I != sizeof...(BootstrapRhss)>::type
-  ExecuteBootstrapRules() {
-    if (I != sizeof...(BootstrapRhss)) {
-      ExecuteRule(CHECK_NOTNULL(std::get<0>(std::get<I>(bootstrap_rules_))),
-                  std::get<1>(std::get<I>(bootstrap_rules_)),
-                  std::get<2>(std::get<I>(bootstrap_rules_)));
-      ExecuteBootstrapRules<I + 1>();
-    }
-  }
-
-  // `ExecuteRules<0>` executes every rule in `rules_`.
-  template <std::size_t I>
-  typename std::enable_if<I == sizeof...(Rhss)>::type ExecuteRules() {}
-
-  template <std::size_t I>
-  typename std::enable_if<I != sizeof...(Rhss)>::type ExecuteRules() {
-    if (I != sizeof...(Rhss)) {
-      ExecuteRule(CHECK_NOTNULL(std::get<0>(std::get<I>(rules_))),
-                  std::get<1>(std::get<I>(rules_)),
-                  std::get<2>(std::get<I>(rules_)));
-      ExecuteRules<I + 1>();
-    }
-  }
-
-  // `TickCollections<0>` calls `Tick` on every collection in `collection_`.
-  template <std::size_t I>
-  typename std::enable_if<I == sizeof...(Cs)>::type TickCollections() {}
-
-  template <std::size_t I>
-  typename std::enable_if<I != sizeof...(Cs)>::type TickCollections() {
-    if (I != sizeof...(Cs)) {
-      std::get<I>(collections_)->Tick();
-      TickCollections<I + 1>();
-    }
+  template <typename Lhs, typename RuleTag, typename Rhs>
+  void ExecuteRule(std::tuple<Lhs, RuleTag, Rhs>* rule) {
+    ExecuteRule(CHECK_NOTNULL(std::get<0>(*rule)), std::get<1>(*rule),
+                std::get<2>(*rule));
   }
 
   // See `FluentBuilder`.

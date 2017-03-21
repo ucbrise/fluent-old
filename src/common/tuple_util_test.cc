@@ -16,6 +16,18 @@ TEST(TupleUtil, TupleIter) {
   }
 
   {
+    double sum = 0.0;
+    std::tuple<int, float, double> t{1, 2.0, 3.0};
+    std::tuple<int, float, double> expected{2, 3.0, 4.0};
+    TupleIter(t, [&sum](auto& x) {
+      sum += x;
+      x++;
+    });
+    EXPECT_EQ(sum, 6.0);
+    EXPECT_EQ(t, expected);
+  }
+
+  {
     std::string s = "";
     TupleIter(std::tuple<std::string, std::string>{"a", "b"},
               [&s](auto x) { s += x; });
@@ -24,10 +36,28 @@ TEST(TupleUtil, TupleIter) {
 }
 
 TEST(TupleUtil, TupleIteri) {
-  double sum = 0.0;
-  TupleIteri(std::tuple<int, float, double>{1, 2.0, 3.0},
-             [&sum](std::size_t i, auto x) { sum += i, sum += x; });
-  EXPECT_EQ(sum, 9.0);
+  {
+    double sum = 0.0;
+    TupleIteri(std::tuple<int, float, double>{1, 2.0, 3.0},
+               [&sum](std::size_t i, auto x) {
+                 sum += i;
+                 sum += x;
+               });
+    EXPECT_EQ(sum, 9.0);
+  }
+
+  {
+    double sum = 0.0;
+    std::tuple<int, float, double> t{1, 2.0, 3.0};
+    std::tuple<int, float, double> expected{2, 3.0, 4.0};
+    TupleIteri(t, [&sum](std::size_t i, auto& x) {
+      sum += i;
+      sum += x;
+      x++;
+    });
+    EXPECT_EQ(sum, 9.0);
+    EXPECT_EQ(t, expected);
+  }
 }
 
 TEST(TupleUtil, TupleMap) {

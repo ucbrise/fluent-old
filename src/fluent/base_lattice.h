@@ -26,6 +26,10 @@ class Lattice {
   Lattice<T>(const T &e) : name_(""), element_(e) {}
   explicit Lattice<T>(const std::string &name, const T &e) : name_(name), element_(e) {}
   Lattice<T>(const Lattice<T> &other) : name_(other.Name()), element_(other.Reveal()) {}
+  Lattice<T>& operator=(const Lattice<T> &other) {
+    element_ = other.Reveal();
+    return *this;
+  }
 
   const std::string& Name() const { return name_; }
 
@@ -61,6 +65,14 @@ class Lattice {
   }
 
   void Tick() {}
+
+  bool operator==(const Lattice<T>& other) const {
+    return element_ == other.Reveal();
+  }
+
+  bool operator<(const Lattice<T>& other) const {
+    return element_ < other.Reveal();
+  }
 
   using type = T;
 

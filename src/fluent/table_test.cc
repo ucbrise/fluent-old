@@ -2,12 +2,15 @@
 
 #include <set>
 #include <tuple>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "glog/logging.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+
+#include "fluent/max_lattice.h"
 
 #include "ra/all.h"
 
@@ -162,6 +165,17 @@ TEST(Table, DeferredMergeAndDelete) {
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(empty));
   t.Tick();
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s3));
+}
+
+TEST(Table, ComplexType) {
+  Table<MaxLattice<int>> t("t");
+  MaxLattice<int> maxl1(10);
+  MaxLattice<int> maxl2(20);
+  std::set<std::tuple<MaxLattice<int>>> s = {};
+  s.insert(std::make_tuple(maxl1));
+  s.insert(std::make_tuple(maxl2));
+  t.Merge(ra::make_iterable(&s));
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s));
 }
 
 }  // namespace fluent

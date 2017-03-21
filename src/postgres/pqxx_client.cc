@@ -71,9 +71,35 @@ void PqxxClient::AddCollection(const std::string& collection_name,
       hash          bigint  NOT NULL,
       time_inserted integer NOT NULL,
       time_deleted  integer,
-      {}
+      {},
+      PRIMARY KEY (hash, time_inserted)
     );)",
                            name_, collection_name, Join(columns)));
+}
+
+void PqxxClient::InsertTuple(const std::string& collection_name,
+                             std::size_t hash, int time_inserted,
+                             const std::vector<std::string>& values) {
+  CHECK_GT(values.size(), static_cast<std::size_t>(0))
+      << "Collections should have at least one column.";
+
+  ExecuteQuery("InsertTuple", fmt::format(R"(
+    INSERT INTO {}_{}
+    VALUES ({}, {}, NULL, {});
+  )",
+                                          name_, collection_name,
+                                          static_cast<std::int64_t>(hash),
+                                          time_inserted, Join(values)));
+}
+
+void PqxxClient::DeleteTuple(const std::string& collection_name,
+                             std::size_t hash, int time_deleted) {
+  ExecuteQuery("AddRule", fmt::format(R"(
+    UPDATE {}
+    SET time_deleted = {}
+    WHERE hash={} AND time_deleted IS NULL;)",
+                                      collection_name, time_deleted,
+                                      static_cast<std::int64_t>(hash)));
 }
 
 void PqxxClient::AddRule(std::size_t rule_number, const std::string& rule) {

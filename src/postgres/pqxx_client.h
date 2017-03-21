@@ -18,6 +18,12 @@ class PqxxClient : public Client {
   void Init(const std::string& name) override;
   void AddCollection(const std::string& collection_name,
                      const std::vector<std::string>& types) override;
+  void InsertTuple(const std::string& collection_name, std::size_t hash,
+                   int time_inserted,
+                   const std::vector<std::string>& values) override;
+
+  void DeleteTuple(const std::string& collection_name, std::size_t hash,
+                   int time_deleted) override;
 
  private:
   void ExecuteQuery(const std::string& name, const std::string& query);

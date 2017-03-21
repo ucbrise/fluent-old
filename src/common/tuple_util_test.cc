@@ -96,6 +96,13 @@ TEST(TupleUtil, TupleFold) {
   }
 }
 
+TEST(TupleUtil, TupleToVector) {
+  std::tuple<int, int, int> t{1, 2, 3};
+  std::vector<int> actual = TupleToVector(t);
+  std::vector<int> expected = {1, 2, 3};
+  EXPECT_EQ(actual, expected);
+}
+
 }  // namespace fluent
 
 int main(int argc, char** argv) {

@@ -25,6 +25,14 @@ class Client {
     AddRule(rule_number, ra.ToDebugString());
   }
 
+  // DO_NOT_SUBMIT(mwhittaker): Document.
+  virtual void InsertTuple(const std::string& collection_name, std::size_t hash,
+                           int time_inserted,
+                           const std::vector<std::string>& values) = 0;
+
+  virtual void DeleteTuple(const std::string& collection_name, std::size_t hash,
+                           int time_deleted) = 0;
+
  private:
   virtual void AddRule(std::size_t rule_number, const std::string& rule) = 0;
 };

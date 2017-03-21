@@ -14,6 +14,9 @@ class NoopClient : public Client {
   void Init(const std::string&) override {}
   void AddCollection(const std::string&,
                      const std::vector<std::string>&) override {}
+  void InsertTuple(const std::string&, std::size_t, int,
+                   const std::vector<std::string>&) override {}
+  void DeleteTuple(const std::string&, std::size_t, int) override {}
 
  private:
   void AddRule(std::size_t, const std::string&) override {}

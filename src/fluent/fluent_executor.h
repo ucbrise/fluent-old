@@ -99,6 +99,20 @@ struct SqlTypes<SqlType, Periodic> {
 };
 
 // DO_NOT_SUBMIT(mwhittaker): Document.
+template <template <typename> class SqlType, typename Types>
+struct SqlValues;
+
+template <template <typename> class SqlType, typename... Ts>
+struct SqlValues<SqlType, std::tuple<Ts...>> {
+  std::vector<std::string> operator()(const std::tuple<Ts...>& t) {
+    auto strings = TupleMap(t, [](const auto& x) {
+      return SqlType<typename std::decay<decltype(x)>::type>().value(x);
+    });
+    return TupleToVector(strings);
+  }
+};
+
+// DO_NOT_SUBMIT(mwhittaker): Document.
 template <typename T>
 struct UnwrapUniquePtr;
 
@@ -256,6 +270,8 @@ class FluentExecutor<
   // (Potentially) block and receive messages sent by other Fluent nodes.
   // Receiving a message will insert it into the appropriate channel.
   void Receive() {
+    time_++;
+
     std::vector<zmq::pollitem_t> pollitems = {
         {network_state_->socket, 0, ZMQ_POLLIN, 0}};
     if (stdin_ != nullptr) {
@@ -372,24 +388,58 @@ class FluentExecutor<
   // TODO(mwhittaker): Document.
   template <typename Lhs, typename Rhs>
   void ExecuteRule(Lhs* collection, MergeTag, const Rhs& ra) {
+    using tuple_type =
+        typename TypeListToTuple<typename Rhs::column_types>::type;
+    std::set<tuple_type> s;
+    ra::StreamRaInto(ra, &s);
+    for (const auto& t : s) {
+      postgres_client_->InsertTuple(
+          collection->Name(), Hash<tuple_type>()(t), time_,
+          detail::SqlValues<SqlType, tuple_type>()(t));
+    }
+
     collection->Merge(ra);
   }
 
   template <typename Lhs, typename Rhs>
   void ExecuteRule(Lhs* collection, DeferredMergeTag, const Rhs& ra) {
+    // TODO(mwhittaker): Remove duplication.
+    using tuple_type =
+        typename TypeListToTuple<typename Rhs::column_types>::type;
+    std::set<tuple_type> s;
+    ra::StreamRaInto(ra, &s);
+    for (const auto& t : s) {
+      postgres_client_->InsertTuple(
+          collection->Name(), Hash<tuple_type>()(t), time_,
+          detail::SqlValues<SqlType, tuple_type>()(t));
+    }
+
     collection->DeferredMerge(ra);
   }
 
   template <typename Lhs, typename Rhs>
   void ExecuteRule(Lhs* collection, DeferredDeleteTag, const Rhs& ra) {
+    using tuple_type =
+        typename TypeListToTuple<typename Rhs::column_types>::type;
+    std::set<tuple_type> s;
+    ra::StreamRaInto(ra, &s);
+    for (const auto& t : s) {
+      postgres_client_->DeleteTuple(collection->Name(), Hash<tuple_type>()(t),
+                                    time_);
+    }
+
     collection->DeferredDelete(ra);
   }
 
   template <typename Lhs, typename RuleTag, typename Rhs>
   void ExecuteRule(std::tuple<Lhs, RuleTag, Rhs>* rule) {
+    time_++;
     ExecuteRule(CHECK_NOTNULL(std::get<0>(*rule)), std::get<1>(*rule),
                 std::get<2>(*rule));
   }
+
+  // DO_NOT_SUBMIT(mwhittaker): Document.
+  int time_ = 0;
 
   // See `FluentBuilder`.
   std::string name_;

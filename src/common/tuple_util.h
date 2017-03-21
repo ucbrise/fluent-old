@@ -5,6 +5,9 @@
 
 #include <tuple>
 #include <type_traits>
+#include <vector>
+
+#include "common/type_list.h"
 
 namespace fluent {
 namespace {
@@ -95,6 +98,16 @@ std::tuple<typename std::result_of<F(const Ts&)>::type...> TupleMap(
 template <typename F, typename Acc, typename... Ts>
 Acc TupleFold(const Acc& acc, const std::tuple<Ts...>& t, F f) {
   return TupleFoldImpl<0>(acc, t, f);
+}
+
+// `TupleToVector(t)` converts `t` into a vector.
+template <typename T, typename... Ts>
+std::vector<T> TupleToVector(const std::tuple<T, Ts...>& t) {
+  static_assert(TypeListAllSame<TypeList<T, Ts...>>::value,
+                "TupletoVector expects a tuple with a single type.");
+  std::vector<T> xs(sizeof...(Ts) + 1);
+  TupleIteri(t, [&xs](std::size_t i, const auto& x) { xs[i] = x; });
+  return xs;
 }
 
 }  // namespace fluent

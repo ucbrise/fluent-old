@@ -32,11 +32,17 @@ int main(int argc, char* argv[]) {
 
   auto f =
       fluent::fluent(client_address, &context)
+          // Accept GET/PUT from stdin
           .stdin()
+          // Show results to stdout
           .stdout()
+          // Send GET request
           .channel<server_address_t, client_address_t, k_t>("getrequest")
+          // Receive GET response
           .channel<client_address_t, v_t>("getresponse")
+          // Send PUT request
           .channel<server_address_t, client_address_t, k_t, v_t>("putrequest")
+          // Receive PUT response
           .channel<client_address_t, succeed_t>("putresponse")
           .RegisterRules([&](auto& in, auto& out, auto& getrequest, auto& getresponse, auto& putrequest, auto& putresponse) {
             using namespace fluent::infix;

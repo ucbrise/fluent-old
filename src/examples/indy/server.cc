@@ -36,17 +36,29 @@ int main(int argc, char* argv[]) {
 
   auto f =
       fluent::fluent(server_address, &context)
+          // Keeps track of a list of server address for gossiping
           .table<server_address_t>("serverlist")
+          // Keeps track of a set of keys that get changed within a gossip period
           .table<k_t>("changeset")
+          // Communication from a new worker node to the seed node
           .channel<server_address_t, server_address_t>("addrgossipseed")
+          // Communication from the seed node to a new worker node
           .channel<server_address_t, server_address_t>("addrgossip")
+          // New worker node sync up its KVS with the seed node
           .channel<server_address_t, k_t, v_t>("sync")
+          // Receive GET request
           .channel<server_address_t, client_address_t, k_t>("getrequest")
+          // Respond to GET request
           .channel<client_address_t, v_t>("getresponse")
+          // Receive PUT request
           .channel<server_address_t, client_address_t, k_t, v_t>("putrequest")
+          // Respond to PUT request
           .channel<client_address_t, succeed_t>("putresponse")
+          // Gossip updates to other worker nodes
           .channel<server_address_t, k_t, v_t>("gossip")
+          // KVS using MaxLattice for conflict resolution
           .lattice<fluent::MapLattice<std::string, fluent::MaxLattice<int>>>("mapl")
+          // Trigger gossip every 100 milliseconds
           .periodic("p", std::chrono::milliseconds(100))
           .RegisterBootstrapRules([&](auto& serverlist, auto&, auto& addrgossipseed, auto&, auto&, auto&, auto&, auto&, auto&, auto&, auto&, auto&) {
             using namespace fluent::infix;

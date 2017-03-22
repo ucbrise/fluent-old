@@ -31,7 +31,7 @@ TEST(FluentExecutor, SimpleProgram) {
 
   auto f = fluent<pg::NoopClient, Hash, pg::ToSql>("name", "inproc://yolo",
                                                    &context, connection_config)
-               .table<int>("t")
+               .table<std::size_t>("t")
                .scratch<int, int, float>("s")
                .channel<std::string, float, char>("c")
                .RegisterRules([](auto& t, auto& s, auto& c) {
@@ -72,8 +72,8 @@ TEST(FluentExecutor, AllOperations) {
   auto f =
       fluent<pg::NoopClient, Hash, pg::ToSql>("name", "inproc://yolo", &context,
                                               connection_config)
-          .table<int>("t")
-          .scratch<int>("s")
+          .table<std::size_t>("t")
+          .scratch<std::size_t>("s")
           .stdout()
           .RegisterRules([&int_tuple_to_string](auto& t, auto& s,
                                                 auto& stdout) {
@@ -160,14 +160,14 @@ TEST(FluentExecutor, ComplexProgram) {
   zmq::context_t context(1);
   postgres::ConnectionConfig connection_config;
 
-  auto plus_one_times_two = [](const std::tuple<int>& t) {
-    return std::tuple<int>((1 + std::get<0>(t)) * 2);
+  auto plus_one_times_two = [](const std::tuple<std::size_t>& t) {
+    return std::tuple<std::size_t>((1 + std::get<0>(t)) * 2);
   };
   auto is_even = [](const auto& t) { return std::get<0>(t) % 2 == 0; };
   auto f = fluent<pg::NoopClient, Hash, pg::ToSql>("name", "inproc://yolo",
                                                    &context, connection_config)
-               .table<int>("t")
-               .scratch<int>("s")
+               .table<std::size_t>("t")
+               .scratch<std::size_t>("s")
                .RegisterRules([plus_one_times_two, is_even](auto& t, auto& s) {
                  using namespace fluent::infix;
                  auto a = t += (s.Iterable() | ra::count());
@@ -200,21 +200,17 @@ TEST(FluentExecutor, SimpleBootstrap) {
   using Tuples = std::set<std::tuple<int>>;
   Tuples xs = {{1}, {2}, {3}, {4}, {5}};
 
-  // clang-format off
-  auto f = fluent<pg::NoopClient, Hash, pg::ToSql>("name", "inproc://yolo", &context, connection_config)
-    .table<int>("t")
-    .scratch<int>("s")
-    .RegisterBootstrapRules([&xs](auto& t, auto& s) {
-      using namespace fluent::infix;
-      return std::make_tuple(
-        t <= ra::make_iterable(&xs),
-        s <= ra::make_iterable(&xs)
-      );
-    })
-    .RegisterRules([&xs](auto&, auto&) {
-      return std::make_tuple();
-    });
-  // clang-format on
+  auto f =
+      fluent<pg::NoopClient, Hash, pg::ToSql>("name", "inproc://yolo", &context,
+                                              connection_config)
+          .table<int>("t")
+          .scratch<int>("s")
+          .RegisterBootstrapRules([&xs](auto& t, auto& s) {
+            using namespace fluent::infix;
+            return std::make_tuple(t <= ra::make_iterable(&xs),
+                                   s <= ra::make_iterable(&xs));
+          })
+          .RegisterRules([&xs](auto&, auto&) { return std::make_tuple(); });
 
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(Tuples{}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(Tuples{}));

@@ -13,7 +13,9 @@ namespace fluent {
 namespace postgres {
 
 // DO_NOT_SUBMIT(mwhittaker): Document.
-// TODO(mwhittaker): Escape strings.
+
+// TODO(mwhittaker): Escape strings. This is actually pretty annoying to do
+// because pqxx's functions to escape strings require a database connection.
 
 template <typename T>
 struct ToSql;

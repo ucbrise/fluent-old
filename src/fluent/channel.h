@@ -2,8 +2,8 @@
 #define FLUENT_CHANNEL_H_
 
 #include <cstddef>
-#include <iostream>
 
+#include <set>
 #include <type_traits>
 #include <utility>
 
@@ -11,6 +11,7 @@
 #include "gtest/gtest.h"
 #include "range/v3/all.hpp"
 
+#include "common/type_traits.h"
 #include "fluent/rule_tags.h"
 #include "fluent/serialization.h"
 #include "fluent/socket_cache.h"
@@ -61,7 +62,17 @@ class Channel {
   // in `T, Ts...`.
   template <typename RA>
   void Merge(const RA& ra) {
-    MergeImpl(ra, std::make_index_sequence<sizeof...(Ts) + 1>());
+    static_assert(!IsSet<typename std::decay<RA>::type>::value, "");
+    static_assert(!IsVector<typename std::decay<RA>::type>::value, "");
+    auto physical = ra.ToPhysical();
+    auto rng = physical.ToRange();
+    MergeImpl(ranges::begin(rng), ranges::end(rng),
+              std::make_index_sequence<sizeof...(Ts) + 1>());
+  }
+
+  void Merge(const std::set<std::tuple<T, Ts...>>& ts) {
+    MergeImpl(std::begin(ts), std::end(ts),
+              std::make_index_sequence<sizeof...(Ts) + 1>());
   }
 
   void Tick() { ts_.clear(); }
@@ -78,12 +89,9 @@ class Channel {
   }
 
  private:
-  template <typename RA, std::size_t... Is>
-  void MergeImpl(const RA& ra, std::index_sequence<Is...>) {
-    auto physical = ra.ToPhysical();
-    auto rng = physical.ToRange();
-
-    for (auto iter = ranges::begin(rng); iter != ranges::end(rng); ++iter) {
+  template <typename Iterator, typename Sentinel, std::size_t... Is>
+  void MergeImpl(Iterator iter, Sentinel end, std::index_sequence<Is...>) {
+    for (; iter != end; ++iter) {
       VLOG(1) << "Channel " << this->Name() << " sending tuple to "
               << std::get<0>(*iter) << ".";
 

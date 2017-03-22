@@ -11,6 +11,7 @@
 #include "range/v3/all.hpp"
 
 #include "common/macros.h"
+#include "common/type_traits.h"
 #include "ra/ra_util.h"
 
 namespace fluent {
@@ -27,20 +28,26 @@ class Stdout {
 
   template <typename RA>
   void Merge(const RA& ra) {
+    static_assert(!IsSet<typename std::decay<RA>::type>::value, "");
+    static_assert(!IsVector<typename std::decay<RA>::type>::value, "");
     auto physical = ra.ToPhysical();
     auto rng = physical.ToRange();
-    for (auto iter = ranges::begin(rng); iter != ranges::end(rng); ++iter) {
-      using value_type =
-          typename std::decay<decltype(std::get<0>(*iter))>::type;
-      static_assert(std::is_same<value_type, std::string>::value,
-                    "Stdout can only merge strings.");
-      std::cout << std::get<0>(*iter) << std::endl;
-    }
+    MergeImpl(ranges::begin(rng), ranges::end(rng));
+  }
+
+  void Merge(const std::set<std::tuple<std::string>>& ts) {
+    MergeImpl(ts.begin(), ts.end());
   }
 
   template <typename RA>
   void DeferredMerge(const RA& ra) {
+    static_assert(!IsSet<typename std::decay<RA>::type>::value, "");
+    static_assert(!IsVector<typename std::decay<RA>::type>::value, "");
     ra::StreamRaInto(ra, &deferred_merge_);
+  }
+
+  void DeferredMerge(const std::set<std::tuple<std::string>>& ts) {
+    deferred_merge_.insert(ts.begin(), ts.end());
   }
 
   void Tick() {
@@ -51,6 +58,20 @@ class Stdout {
   }
 
  private:
+  template <typename Iterator, typename Sentinel>
+  void MergeImpl(Iterator iter, Sentinel end) {
+    for (; iter != end; ++iter) {
+      using tuple_type = typename std::decay<decltype(*iter)>::type;
+      using value_type =
+          typename std::decay<decltype(std::get<0>(*iter))>::type;
+      static_assert(std::tuple_size<tuple_type>::value == 1,
+                    "Stdout can only merge string tuples..");
+      static_assert(std::is_same<value_type, std::string>::value,
+                    "Stdout can only merge strings.");
+      std::cout << std::get<0>(*iter) << std::endl;
+    }
+  }
+
   std::set<std::tuple<std::string>> deferred_merge_;
 };
 

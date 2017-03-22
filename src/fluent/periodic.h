@@ -10,6 +10,7 @@
 #include <utility>
 
 #include "common/macros.h"
+#include "common/type_traits.h"
 #include "ra/iterable.h"
 
 namespace fluent {

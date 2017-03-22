@@ -14,7 +14,6 @@
 using ::testing::UnorderedElementsAreArray;
 
 namespace fluent {
-
 namespace {
 
 template <typename A, typename B, typename C>
@@ -43,6 +42,18 @@ TEST(Table, SimpleMerge) {
   t.Merge(ra::make_iterable(&s1));
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s1));
   t.Merge(ra::make_iterable(&s2));
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s3));
+}
+
+TEST(Table, SimpleSetMerge) {
+  Table<int, int> t("t");
+  std::set<std::tuple<int, int>> s1 = {{1, 1}, {2, 2}};
+  std::set<std::tuple<int, int>> s2 = {{2, 2}, {3, 3}};
+  std::set<std::tuple<int, int>> s3 = {{1, 1}, {2, 2}, {3, 3}};
+
+  t.Merge(s1);
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s1));
+  t.Merge(s2);
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s3));
 }
 

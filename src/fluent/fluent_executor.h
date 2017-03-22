@@ -359,11 +359,11 @@ class FluentExecutor<
         typename TypeListToTuple<typename Rhs::column_types>::type;
     std::set<tuple_type> s;
     ra::StreamRaInto(ra, &s);
+
     for (const auto& t : s) {
       postgres_client_->InsertTuple(collection->Name(), time_, t);
     }
-
-    collection->Merge(ra);
+    collection->Merge(s);
   }
 
   template <typename Lhs, typename Rhs>
@@ -373,11 +373,11 @@ class FluentExecutor<
         typename TypeListToTuple<typename Rhs::column_types>::type;
     std::set<tuple_type> s;
     ra::StreamRaInto(ra, &s);
+
     for (const auto& t : s) {
       postgres_client_->InsertTuple(collection->Name(), time_, t);
     }
-
-    collection->DeferredMerge(ra);
+    collection->DeferredMerge(s);
   }
 
   template <typename Lhs, typename Rhs>
@@ -386,11 +386,11 @@ class FluentExecutor<
         typename TypeListToTuple<typename Rhs::column_types>::type;
     std::set<tuple_type> s;
     ra::StreamRaInto(ra, &s);
+
     for (const auto& t : s) {
       postgres_client_->DeleteTuple(collection->Name(), time_, t);
     }
-
-    collection->DeferredDelete(ra);
+    collection->DeferredDelete(s);
   }
 
   template <typename Lhs, typename RuleTag, typename Rhs>

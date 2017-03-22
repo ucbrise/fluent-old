@@ -24,6 +24,18 @@ TEST(Scratch, SimpleMerge) {
   EXPECT_THAT(s.Get(), testing::UnorderedElementsAreArray(s3));
 }
 
+TEST(Scratch, SimpleSetMerge) {
+  Scratch<int, int> s("s");
+  std::set<std::tuple<int, int>> s1 = {{1, 1}, {2, 2}};
+  std::set<std::tuple<int, int>> s2 = {{2, 2}, {3, 3}};
+  std::set<std::tuple<int, int>> s3 = {{1, 1}, {2, 2}, {3, 3}};
+
+  s.Merge(s1);
+  EXPECT_THAT(s.Get(), testing::UnorderedElementsAreArray(s1));
+  s.Merge(s2);
+  EXPECT_THAT(s.Get(), testing::UnorderedElementsAreArray(s3));
+}
+
 TEST(Scratch, SelfMerge) {
   Scratch<int, int> s("s");
   std::set<std::tuple<int, int>> ts = {{1, 1}, {2, 2}};

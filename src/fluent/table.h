@@ -9,6 +9,7 @@
 
 #include "range/v3/all.hpp"
 
+#include "common/type_traits.h"
 #include "ra/iterable.h"
 #include "ra/ra_util.h"
 
@@ -29,22 +30,39 @@ class Table {
 
   template <typename RA>
   void Merge(const RA& ra) {
+    static_assert(!IsSet<typename std::decay<RA>::type>::value, "");
+    static_assert(!IsVector<typename std::decay<RA>::type>::value, "");
     ra::BufferRaInto(ra, &ts_);
+  }
+
+  void Merge(const std::set<std::tuple<Ts...>>& ts) {
+    ts_.insert(ts.begin(), ts.end());
   }
 
   template <typename RA>
   void DeferredMerge(const RA& ra) {
+    static_assert(!IsSet<typename std::decay<RA>::type>::value, "");
+    static_assert(!IsVector<typename std::decay<RA>::type>::value, "");
     ra::StreamRaInto(ra, &deferred_merge_);
+  }
+
+  void DeferredMerge(const std::set<std::tuple<Ts...>>& ts) {
+    deferred_merge_.insert(ts.begin(), ts.end());
   }
 
   template <typename RA>
   void DeferredDelete(const RA& ra) {
+    static_assert(!IsSet<typename std::decay<RA>::type>::value, "");
+    static_assert(!IsVector<typename std::decay<RA>::type>::value, "");
     ra::StreamRaInto(ra, &deferred_delete_);
   }
 
+  void DeferredDelete(const std::set<std::tuple<Ts...>>& ts) {
+    deferred_delete_.insert(ts.begin(), ts.end());
+  }
+
   void Tick() {
-    ts_.insert(std::begin(deferred_merge_),
-               std::end(deferred_merge_));
+    ts_.insert(std::begin(deferred_merge_), std::end(deferred_merge_));
     for (const std::tuple<Ts...>& t : deferred_delete_) {
       ts_.erase(t);
     }

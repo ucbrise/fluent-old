@@ -19,10 +19,9 @@ namespace fluent {
 
 TEST(FluentBuilder, SimpleBuildCheck) {
   zmq::context_t context(1);
-  postgres::ConnectionConfig connection_config;
-  postgres::NoopClient noop(connection_config);
+  postgres::ConnectionConfig conf;
   // clang-format off
-  auto f = fluent("name", "inproc://yolo", &context, &noop)
+  auto f = fluent<postgres::NoopClient>("name", "inproc://yolo", &context, conf)
     .table<std::string, int>("t")
     .scratch<std::string, int>("s")
     .channel<std::string, int>("c")

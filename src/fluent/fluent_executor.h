@@ -29,87 +29,43 @@
 #include "fluent/stdin.h"
 #include "fluent/stdout.h"
 #include "fluent/table.h"
-#include "postgres/client.h"
+#include "postgres/connection_config.h"
 
 namespace fluent {
 namespace detail {
 
 // DO_NOT_SUBMIT(mwhittaker): Document.
-template <template <typename> class SqlType, typename... Ts>
-struct TypesToSqlTypes {};
+template <typename Collection>
+struct CollectionTypes;
 
-template <template <typename> class SqlType>
-struct TypesToSqlTypes<SqlType> {
-  std::vector<std::string> operator()() { return {}; }
+template <typename... Ts>
+struct CollectionTypes<Table<Ts...>> {
+  using type = TypeList<Ts...>;
 };
 
-template <template <typename> class SqlType, typename T, typename... Ts>
-struct TypesToSqlTypes<SqlType, T, Ts...> {
-  std::vector<std::string> operator()() {
-    std::vector<std::string> types = TypesToSqlTypes<SqlType, Ts...>()();
-    types.insert(types.begin(), SqlType<T>().type());
-    return types;
-  }
+template <typename... Ts>
+struct CollectionTypes<Scratch<Ts...>> {
+  using type = TypeList<Ts...>;
 };
 
-// DO_NOT_SUBMIT(mwhittaker): Document.
-template <template <typename> class SqlType, typename Collection>
-struct SqlTypes;
-
-template <template <typename> class SqlType, typename... Ts>
-struct SqlTypes<SqlType, Table<Ts...>> {
-  std::vector<std::string> operator()() {
-    return TypesToSqlTypes<SqlType, Ts...>()();
-  };
+template <typename... Ts>
+struct CollectionTypes<Channel<Ts...>> {
+  using type = TypeList<Ts...>;
 };
 
-template <template <typename> class SqlType, typename... Ts>
-struct SqlTypes<SqlType, Scratch<Ts...>> {
-  std::vector<std::string> operator()() {
-    return TypesToSqlTypes<SqlType, Ts...>()();
-  };
+template <>
+struct CollectionTypes<Stdin> {
+  using type = TypeList<std::string>;
 };
 
-template <template <typename> class SqlType, typename... Ts>
-struct SqlTypes<SqlType, Channel<Ts...>> {
-  std::vector<std::string> operator()() {
-    return TypesToSqlTypes<SqlType, Ts...>()();
-  };
+template <>
+struct CollectionTypes<Stdout> {
+  using type = TypeList<std::string>;
 };
 
-template <template <typename> class SqlType>
-struct SqlTypes<SqlType, Stdin> {
-  std::vector<std::string> operator()() {
-    return {SqlType<std::string>().type()};
-  };
-};
-
-template <template <typename> class SqlType>
-struct SqlTypes<SqlType, Stdout> {
-  std::vector<std::string> operator()() {
-    return {SqlType<std::string>().type()};
-  };
-};
-
-template <template <typename> class SqlType>
-struct SqlTypes<SqlType, Periodic> {
-  std::vector<std::string> operator()() {
-    return {SqlType<Periodic::id>().type(), SqlType<Periodic::time>().type()};
-  };
-};
-
-// DO_NOT_SUBMIT(mwhittaker): Document.
-template <template <typename> class SqlType, typename Types>
-struct SqlValues;
-
-template <template <typename> class SqlType, typename... Ts>
-struct SqlValues<SqlType, std::tuple<Ts...>> {
-  std::vector<std::string> operator()(const std::tuple<Ts...>& t) {
-    auto strings = TupleMap(t, [](const auto& x) {
-      return SqlType<typename std::decay<decltype(x)>::type>().value(x);
-    });
-    return TupleToVector(strings);
-  }
+template <>
+struct CollectionTypes<Periodic> {
+  using type = TypeList<Periodic::id, Periodic::time>;
 };
 
 // DO_NOT_SUBMIT(mwhittaker): Document.
@@ -124,7 +80,9 @@ struct UnwrapUniquePtr<std::unique_ptr<T>> {
 }  // namespace detail
 
 template <typename Collections, typename BootstrapRules, typename Rules,
-          template <typename> class Hash, template <typename> class SqlType>
+          template <template <typename> class, template <typename> class>
+          class PostgresClient,
+          template <typename> class Hash, template <typename> class ToSql>
 class FluentExecutor;
 
 // # Overview
@@ -192,11 +150,14 @@ class FluentExecutor;
 template <typename... Cs, typename... BootstrapLhss,
           typename... BootstrapRuleTags, typename... BootstrapRhss,
           typename... Lhss, typename... RuleTags, typename... Rhss,
-          template <typename> class Hash, template <typename> class SqlType>
+          template <template <typename> class, template <typename> class>
+          class PostgresClient,
+          template <typename> class Hash, template <typename> class ToSql>
 class FluentExecutor<
     TypeList<Cs...>,
     std::tuple<std::tuple<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>,
-    std::tuple<std::tuple<Lhss, RuleTags, Rhss>...>, Hash, SqlType> {
+    std::tuple<std::tuple<Lhss, RuleTags, Rhss>...>, PostgresClient, Hash,
+    ToSql> {
   static_assert(sizeof...(BootstrapLhss) == sizeof...(BootstrapRuleTags) &&
                     sizeof...(BootstrapRuleTags) == sizeof...(BootstrapRhss),
                 "The ith entry of BootstrapLhss corresponds to the left-hand "
@@ -227,7 +188,8 @@ class FluentExecutor<
                  std::map<std::string, Parser> parsers,
                  std::unique_ptr<NetworkState> network_state, Stdin* stdin,
                  std::vector<Periodic*> periodics,
-                 postgres::Client* postgres_client, Rules rules)
+                 std::unique_ptr<PostgresClient<Hash, ToSql>> postgres_client,
+                 Rules rules)
       : name_(std::move(name)),
         collections_(std::move(collections)),
         bootstrap_rules_(std::move(bootstrap_rules)),
@@ -235,7 +197,7 @@ class FluentExecutor<
         network_state_(std::move(network_state)),
         stdin_(stdin),
         periodics_(periodics),
-        postgres_client_(postgres_client),
+        postgres_client_(std::move(postgres_client)),
         rules_(rules) {
     // Initialize periodic timeouts. See the comment above `PeriodicTimeout`
     // below for more information.
@@ -337,16 +299,21 @@ class FluentExecutor<
     TupleIter(collections_, [this](const auto& collection) {
       using collection_type = typename detail::UnwrapUniquePtr<
           typename std::decay<decltype(collection)>::type>::type;
-      postgres_client_->AddCollection(
-          collection->Name(), detail::SqlTypes<SqlType, collection_type>()());
+      AddCollection(collection,
+                    typename detail::CollectionTypes<collection_type>::type{});
     });
 
     // Rules.
     TupleIteri(rules_, [this](std::size_t i, const auto& rule) {
       // TODO(mwhittaker): Right now, we pass the relational alebgra part of
       // the rule, but we should be passing the entire rule.
-      postgres_client_->AddRule(i, std::get<2>(rule));
+      postgres_client_->AddRule(i, rule);
     });
+  }
+
+  template <typename Collection, typename... Ts>
+  void AddCollection(const Collection& c, TypeList<Ts...>) {
+    postgres_client_->template AddCollection<Ts...>(c->Name());
   }
 
   // `GetPollTimoutInMicros` returns the minimum time (in microseconds) that we
@@ -393,9 +360,7 @@ class FluentExecutor<
     std::set<tuple_type> s;
     ra::StreamRaInto(ra, &s);
     for (const auto& t : s) {
-      postgres_client_->InsertTuple(
-          collection->Name(), Hash<tuple_type>()(t), time_,
-          detail::SqlValues<SqlType, tuple_type>()(t));
+      postgres_client_->InsertTuple(collection->Name(), time_, t);
     }
 
     collection->Merge(ra);
@@ -409,9 +374,7 @@ class FluentExecutor<
     std::set<tuple_type> s;
     ra::StreamRaInto(ra, &s);
     for (const auto& t : s) {
-      postgres_client_->InsertTuple(
-          collection->Name(), Hash<tuple_type>()(t), time_,
-          detail::SqlValues<SqlType, tuple_type>()(t));
+      postgres_client_->InsertTuple(collection->Name(), time_, t);
     }
 
     collection->DeferredMerge(ra);
@@ -424,8 +387,7 @@ class FluentExecutor<
     std::set<tuple_type> s;
     ra::StreamRaInto(ra, &s);
     for (const auto& t : s) {
-      postgres_client_->DeleteTuple(collection->Name(), Hash<tuple_type>()(t),
-                                    time_);
+      postgres_client_->DeleteTuple(collection->Name(), time_, t);
     }
 
     collection->DeferredDelete(ra);
@@ -449,7 +411,7 @@ class FluentExecutor<
   std::unique_ptr<NetworkState> network_state_;
   Stdin* const stdin_;
   std::vector<Periodic*> periodics_;
-  postgres::Client* const postgres_client_;
+  std::unique_ptr<PostgresClient<Hash, ToSql>> postgres_client_;
 
   // A collection of rules (lhs, type, rhs) where
   //

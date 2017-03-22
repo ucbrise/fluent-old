@@ -24,6 +24,5 @@ int main(int argc, char* argv[]) {
   PingClientArgs args{argv[4], argv[5], argv[6], argv[7]};
   fluent::postgres::ConnectionConfig config{"localhost", 5432, argv[1], argv[2],
                                             argv[3]};
-  fluent::postgres::PqxxClient client(config);
-  return PingClientMain(args, &client);
+  return PingClientMain<fluent::postgres::PqxxClient>(args, config);
 }

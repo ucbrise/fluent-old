@@ -18,6 +18,5 @@ int main(int argc, char* argv[]) {
 
   PingClientArgs args{argv[1], argv[2], argv[3], argv[4]};
   fluent::postgres::ConnectionConfig config;
-  fluent::postgres::NoopClient client(config);
-  return PingClientMain(args, &client);
+  return PingClientMain<fluent::postgres::NoopClient>(args, config);
 }

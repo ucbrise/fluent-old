@@ -1,11 +1,11 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
-ADD_EXECUTABLE(examples_chat_noop_client noop_client.cc client.cc)
-ADD_EXECUTABLE(examples_chat_lineage_client lineage_client.cc client.cc)
-ADD_EXECUTABLE(examples_chat_noop_server noop_server.cc server.cc)
-ADD_EXECUTABLE(examples_chat_lineage_server lineage_server.cc server.cc)
-ADD_EXECUTABLE(examples_chat_noop_ping_client noop_ping_client.cc ping_client.cc)
-ADD_EXECUTABLE(examples_chat_lineage_ping_client lineage_ping_client.cc ping_client.cc)
+ADD_EXECUTABLE(examples_chat_noop_client noop_client.cc)
+ADD_EXECUTABLE(examples_chat_lineage_client lineage_client.cc)
+ADD_EXECUTABLE(examples_chat_noop_server noop_server.cc)
+ADD_EXECUTABLE(examples_chat_lineage_server lineage_server.cc)
+ADD_EXECUTABLE(examples_chat_noop_ping_client noop_ping_client.cc)
+ADD_EXECUTABLE(examples_chat_lineage_ping_client lineage_ping_client.cc)
 
 TARGET_LINK_LIBRARIES(examples_chat_noop_client fluent)
 TARGET_LINK_LIBRARIES(examples_chat_lineage_client fluent)

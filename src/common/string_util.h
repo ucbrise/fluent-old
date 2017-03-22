@@ -6,6 +6,11 @@
 
 namespace fluent {
 
+// Join() = ""
+// Join(1) = "1"
+// Join(1, "2") = "1, 2"
+// Join(1, "2", '3') = "1, 2, 3"
+// Join(std::vector<std::string>{"1", "2", "3"}) = "1, 2, 3"
 inline std::string Join() { return ""; }
 
 inline std::string Join(const std::string& x) { return x; }
@@ -26,6 +31,25 @@ std::string Join(const T& x, const Ts&... xs) {
 }
 
 std::string Join(const std::vector<std::string>& ss);
+
+// CrunchWhitespace converts newlines to spaces and then destutters spaces.
+//
+// CrunchWhitespace("")       == ""
+// CrunchWhitespace(" ")      == " "
+// CrunchWhitespace("  ")     == " "
+// CrunchWhitespace("   ")    == " "
+// CrunchWhitespace("a")      == "a"
+// CrunchWhitespace(" a")     == " a"
+// CrunchWhitespace(" a ")    == " a "
+// CrunchWhitespace("  a ")   == " a "
+// CrunchWhitespace("   a ")  == " a "
+// CrunchWhitespace(" a  ")   == " a "
+// CrunchWhitespace("  a  ")  == " a "
+// CrunchWhitespace("   a  ") == " a "
+// CrunchWhitespace("\n")     == " "
+// CrunchWhitespace("\n\n")   == " "
+// CrunchWhitespace("\n \n")  == " "
+std::string CrunchWhitespace(std::string s);
 
 }  // namespace fluent
 

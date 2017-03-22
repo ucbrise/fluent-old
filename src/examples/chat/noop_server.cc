@@ -16,6 +16,5 @@ int main(int argc, char* argv[]) {
 
   ServerArgs args{argv[1]};
   fluent::postgres::ConnectionConfig config;
-  fluent::postgres::NoopClient client(config);
-  return ServerMain(args, &client);
+  return ServerMain<fluent::postgres::NoopClient>(args, config);
 }

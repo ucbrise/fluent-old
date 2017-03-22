@@ -6,6 +6,45 @@
 #include "gtest/gtest.h"
 
 namespace fluent {
+namespace detail {
+
+template <typename T>
+struct ToString;
+
+template <>
+struct ToString<int> {
+  std::string operator()() { return "int"; }
+};
+
+template <>
+struct ToString<bool> {
+  std::string operator()() { return "bool"; }
+};
+
+template <>
+struct ToString<char> {
+  std::string operator()() { return "char"; }
+};
+
+template <typename T>
+struct ToPointer;
+
+template <>
+struct ToPointer<int> {
+  int* operator()() { return nullptr; }
+};
+
+template <>
+struct ToPointer<bool> {
+  bool* operator()() { return nullptr; }
+};
+
+template <>
+struct ToPointer<char> {
+  char* operator()() { return nullptr; }
+};
+
+}  // namespace detail
 
 TEST(TupleUtil, TupleIter) {
   {
@@ -101,6 +140,22 @@ TEST(TupleUtil, TupleToVector) {
   std::vector<int> actual = TupleToVector(t);
   std::vector<int> expected = {1, 2, 3};
   EXPECT_EQ(actual, expected);
+}
+
+TEST(TupleUtil, TupleFromTypes) {
+  {
+    using tuple_t = std::tuple<std::string, std::string, std::string>;
+    tuple_t actual = TupleFromTypes<detail::ToString, int, bool, char>();
+    tuple_t expected = {"int", "bool", "char"};
+    EXPECT_EQ(actual, expected);
+  }
+
+  {
+    using tuple_t = std::tuple<int*, bool*, char*>;
+    tuple_t actual = TupleFromTypes<detail::ToPointer, int, bool, char>();
+    tuple_t expected = {nullptr, nullptr, nullptr};
+    EXPECT_EQ(actual, expected);
+  }
 }
 
 }  // namespace fluent

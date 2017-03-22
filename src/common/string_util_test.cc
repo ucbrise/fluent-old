@@ -26,6 +26,25 @@ TEST(StringUtil, Join) {
   }
 }
 
+TEST(StringUtil, CrunchWhitespace) {
+  using namespace std::literals::string_literals;
+  EXPECT_EQ(CrunchWhitespace(""), ""s);
+  EXPECT_EQ(CrunchWhitespace(" "), " "s);
+  EXPECT_EQ(CrunchWhitespace("  "), " "s);
+  EXPECT_EQ(CrunchWhitespace("   "), " "s);
+  EXPECT_EQ(CrunchWhitespace("a"), "a"s);
+  EXPECT_EQ(CrunchWhitespace(" a"), " a"s);
+  EXPECT_EQ(CrunchWhitespace(" a "), " a "s);
+  EXPECT_EQ(CrunchWhitespace("  a "), " a "s);
+  EXPECT_EQ(CrunchWhitespace("   a "), " a "s);
+  EXPECT_EQ(CrunchWhitespace(" a  "), " a "s);
+  EXPECT_EQ(CrunchWhitespace("  a  "), " a "s);
+  EXPECT_EQ(CrunchWhitespace("   a  "), " a "s);
+  EXPECT_EQ(CrunchWhitespace("\n"), " "s);
+  EXPECT_EQ(CrunchWhitespace("\n\n"), " "s);
+  EXPECT_EQ(CrunchWhitespace("\n \n"), " "s);
+}
+
 }  // namespace fluent
 
 int main(int argc, char** argv) {

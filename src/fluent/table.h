@@ -2,6 +2,7 @@
 #define FLUENT_TABLE_H_
 
 #include <algorithm>
+#include <algorithm>
 #include <iterator>
 #include <set>
 #include <type_traits>
@@ -61,14 +62,17 @@ class Table {
     deferred_delete_.insert(ts.begin(), ts.end());
   }
 
-  void Tick() {
+  std::set<std::tuple<Ts...>> Tick() {
     ts_.insert(std::begin(deferred_merge_), std::end(deferred_merge_));
     for (const std::tuple<Ts...>& t : deferred_delete_) {
       ts_.erase(t);
     }
 
     deferred_merge_.clear();
-    deferred_delete_.clear();
+
+    std::set<std::tuple<Ts...>> ts;
+    std::swap(deferred_delete_, ts);
+    return ts;
   }
 
  private:

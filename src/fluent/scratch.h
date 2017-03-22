@@ -1,6 +1,7 @@
 #ifndef FLUENT_SCRATCH_H_
 #define FLUENT_SCRATCH_H_
 
+#include <algorithm>
 #include <set>
 #include <string>
 #include <tuple>
@@ -35,7 +36,11 @@ class Scratch {
     ts_.insert(ts.begin(), ts.end());
   }
 
-  void Tick() { ts_.clear(); }
+  std::set<std::tuple<Ts...>> Tick() {
+    std::set<std::tuple<Ts...>> ts;
+    std::swap(ts, ts_);
+    return ts;
+  }
 
  private:
   const std::string name_;

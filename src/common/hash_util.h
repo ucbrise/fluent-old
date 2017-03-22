@@ -3,6 +3,7 @@
 
 #include <cstddef>
 
+#include <chrono>
 #include <functional>
 #include <tuple>
 #include <type_traits>
@@ -14,6 +15,15 @@ namespace fluent {
 template <typename K>
 struct Hash {
   std::size_t operator()(const K& k) { return std::hash<K>()(k); }
+};
+
+template <typename Clock>
+struct Hash<std::chrono::time_point<Clock>> {
+  std::size_t operator()(const std::chrono::time_point<Clock>& time) {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+               time.time_since_epoch())
+        .count();
+  }
 };
 
 template <typename... Ts>

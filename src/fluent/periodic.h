@@ -3,6 +3,7 @@
 
 #include <cstddef>
 
+#include <algorithm>
 #include <chrono>
 #include <set>
 #include <string>
@@ -61,7 +62,11 @@ class Periodic {
         std::tuple<id, time>(id_++, std::chrono::system_clock::now()));
   }
 
-  void Tick() { tocks_.clear(); }
+  std::set<std::tuple<id, time>> Tick() {
+    std::set<std::tuple<id, time>> tocks;
+    std::swap(tocks, tocks_);
+    return tocks;
+  }
 
  private:
   const std::string name_;

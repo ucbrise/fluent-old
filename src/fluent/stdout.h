@@ -1,6 +1,7 @@
 #ifndef FLUENT_STDOUT_H_
 #define FLUENT_STDOUT_H_
 
+#include <algorithm>
 #include <iostream>
 #include <iterator>
 #include <set>
@@ -50,11 +51,15 @@ class Stdout {
     deferred_merge_.insert(ts.begin(), ts.end());
   }
 
-  void Tick() {
+  std::set<std::tuple<std::string>> Tick() {
     for (const std::tuple<std::string>& t : deferred_merge_) {
       std::cout << std::get<0>(t) << std::endl;
     }
     deferred_merge_.clear();
+
+    // TODO(mwhittaker): We could buffer lines written to stdout and return
+    // them here to be reclaimed.
+    return {};
   }
 
  private:

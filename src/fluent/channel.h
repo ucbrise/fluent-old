@@ -3,6 +3,7 @@
 
 #include <cstddef>
 
+#include <algorithm>
 #include <set>
 #include <type_traits>
 #include <utility>
@@ -75,7 +76,11 @@ class Channel {
               std::make_index_sequence<sizeof...(Ts) + 1>());
   }
 
-  void Tick() { ts_.clear(); }
+  std::set<std::tuple<T, Ts...>> Tick() {
+    std::set<std::tuple<T, Ts...>> ts;
+    std::swap(ts, ts_);
+    return ts;
+  }
 
   // `Collection<T1, ..., Tn>.GetParser()(columns)` parses a vector of `n`
   // strings into a tuple of type `std::tuple<T1, ..., Tn>` and inserts it into

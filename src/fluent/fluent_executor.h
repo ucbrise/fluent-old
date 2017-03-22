@@ -219,14 +219,14 @@ class FluentExecutor<
   // `Tick` method of every collection.
   void BootstrapTick() {
     TupleIter(bootstrap_rules_, [this](auto& rule) { ExecuteRule(&rule); });
-    TupleIter(collections_, [](auto& c) { c->Tick(); });
+    TupleIter(collections_, [this](auto& c) { TickCollection(c.get()); });
   }
 
   // Sequentially execute each registered query and then invoke the `Tick`
   // method of every collection.
   void Tick() {
     TupleIter(rules_, [this](auto& rule) { ExecuteRule(&rule); });
-    TupleIter(collections_, [](auto& c) { c->Tick(); });
+    TupleIter(collections_, [this](auto& c) { TickCollection(c.get()); });
   }
 
   // (Potentially) block and receive messages sent by other Fluent nodes.
@@ -291,6 +291,7 @@ class FluentExecutor<
   }
 
  private:
+  // DO_NOT_SUBMIT(mwhittaker): Document.
   void InitPostgres() {
     // Nodes.
     postgres_client_->Init(name_);
@@ -305,15 +306,23 @@ class FluentExecutor<
 
     // Rules.
     TupleIteri(rules_, [this](std::size_t i, const auto& rule) {
-      // TODO(mwhittaker): Right now, we pass the relational alebgra part of
-      // the rule, but we should be passing the entire rule.
       postgres_client_->AddRule(i, rule);
     });
   }
 
+  // DO_NOT_SUBMIT(mwhittaker): Document.
   template <typename Collection, typename... Ts>
   void AddCollection(const Collection& c, TypeList<Ts...>) {
     postgres_client_->template AddCollection<Ts...>(c->Name());
+  }
+
+  // DO_NOT_SUBMIT(mwhittaker): Document.
+  template <typename Collection>
+  void TickCollection(Collection* c) {
+    auto deleted = c->Tick();
+    for (const auto& t : deleted) {
+      postgres_client_->DeleteTuple(c->Name(), time_, t);
+    }
   }
 
   // `GetPollTimoutInMicros` returns the minimum time (in microseconds) that we

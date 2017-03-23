@@ -264,7 +264,7 @@ class FluentExecutor<
 
     // Read from stdin.
     if (stdin_ != nullptr && pollitems[1].revents & ZMQ_POLLIN) {
-      stdin_->GetLine();
+      postgres_client_->InsertTuple(stdin_->Name(), time_, stdin_->GetLine());
     }
 
     // Trigger periodics.

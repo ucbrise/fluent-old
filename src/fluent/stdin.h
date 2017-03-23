@@ -35,10 +35,12 @@ class Stdin {
             /* revents */ 0};
   }
 
-  void GetLine() {
+  std::tuple<std::string> GetLine() {
     std::string line;
     std::getline(std::cin, line);
-    lines_.insert(std::tuple<std::string>(line));
+    std::tuple<std::string> t(line);
+    lines_.insert(t);
+    return t;
   }
 
   std::set<std::tuple<std::string>> Tick() {

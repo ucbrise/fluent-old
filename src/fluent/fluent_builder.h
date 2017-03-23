@@ -136,7 +136,8 @@ class FluentBuilder<
  public:
   using BootstrapRules = std::tuple<
       std::tuple<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>;
-  using Parser = std::function<void(const std::vector<std::string>& columns)>;
+  using Parser =
+      std::function<void(std::size_t, const std::vector<std::string>& columns)>;
 
   // Create a table, scratch, channel, stdin, stdout, or periodic. Note the
   // `&&` at the end of each declaration. This means that these methods can
@@ -169,7 +170,13 @@ class FluentBuilder<
     CHECK(parsers_.find(c->Name()) == parsers_.end())
         << "The channel name '" << c->Name()
         << "' is used multiple times. Channel names must be unique.";
-    parsers_.insert(std::make_pair(c->Name(), c->GetParser()));
+
+    Channel<Us...>* cp = c.get();
+    PostgresClient<Hash, ToSql>* client = postgres_client_.get();
+    parsers_.insert(std::make_pair(
+        c->Name(), c->GetParser([cp, client](std::size_t time, const auto& t) {
+          client->InsertTuple(cp->Name(), time, t);
+        })));
     return AddCollection(std::move(c));
   }
 

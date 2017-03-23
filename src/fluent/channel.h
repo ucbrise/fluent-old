@@ -87,10 +87,15 @@ class Channel {
   // the collection. The ith element of the tuple is parsed using a global `Ti
   // FromString<Ti>(const std::string&)` function which is assumed to exists
   // (see `serialization.h` for more information).
-  std::function<void(const std::vector<std::string>& columns)> GetParser() {
-    return [this](const std::vector<std::string>& columns) {
-      ts_.insert(detail::parse_tuple<T, Ts...>(columns));
-    };
+  template <typename F>
+  std::function<void(std::size_t, const std::vector<std::string>& columns)>
+  GetParser(F f) {
+    return
+        [this, f](std::size_t time, const std::vector<std::string>& columns) {
+          const auto t = detail::parse_tuple<T, Ts...>(columns);
+          f(time, t);
+          ts_.insert(t);
+        };
   }
 
  private:

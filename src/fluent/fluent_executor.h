@@ -180,7 +180,8 @@ class FluentExecutor<
   using BootstrapRules = std::tuple<
       std::tuple<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>;
   using Rules = std::tuple<std::tuple<Lhss, RuleTags, Rhss>...>;
-  using Parser = std::function<void(const std::vector<std::string>& columns)>;
+  using Parser =
+      std::function<void(std::size_t, const std::vector<std::string>& columns)>;
 
   FluentExecutor(std::string name,
                  std::tuple<std::unique_ptr<Cs>...> collections,
@@ -254,7 +255,7 @@ class FluentExecutor<
 
       const std::string channel_name = zmq_util::message_to_string(msgs[0]);
       if (parsers_.find(channel_name) != std::end(parsers_)) {
-        parsers_[channel_name](strings);
+        parsers_[channel_name](time_, strings);
       } else {
         LOG(WARNING) << "A message was received for a channel named "
                      << channel_name

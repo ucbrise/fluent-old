@@ -57,9 +57,10 @@ class Periodic {
     return ra::make_iterable(&tocks_);
   }
 
-  void Tock() {
-    tocks_.insert(
-        std::tuple<id, time>(id_++, std::chrono::system_clock::now()));
+  std::tuple<id, time> Tock() {
+    std::tuple<id, time> t(id_++, std::chrono::system_clock::now());
+    tocks_.insert(t);
+    return t;
   }
 
   std::set<std::tuple<id, time>> Tick() {

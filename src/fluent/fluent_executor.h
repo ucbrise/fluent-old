@@ -355,7 +355,8 @@ class FluentExecutor<
     while (timeout_queue_.size() != 0 && timeout_queue_.top().timeout <= now) {
       PeriodicTimeout timeout = timeout_queue_.top();
       timeout_queue_.pop();
-      timeout.periodic->Tock();
+      postgres_client_->InsertTuple(timeout.periodic->Name(), time_,
+                                    timeout.periodic->Tock());
       timeout.timeout = now + timeout.periodic->Period();
       timeout_queue_.push(timeout);
     }

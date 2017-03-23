@@ -296,6 +296,10 @@ class FluentBuilder<
                 PostgresClient, Hash, ToSql>
   RegisterBootstrapRulesImpl(const F& f, std::index_sequence<Is...>) {
     auto boostrap_rules = f(*std::get<Is>(collections_)...);
+    TupleIter(boostrap_rules, [](const auto& rule) {
+      LOG(INFO) << "Registering a bootstrap rule: "
+                << std::get<2>(rule).ToDebugString();
+    });
     return {std::move(name_),          std::move(collections_),
             std::move(boostrap_rules), std::move(parsers_),
             std::move(network_state_), stdin_,
@@ -309,6 +313,9 @@ class FluentBuilder<
                  ToSql>
   RegisterRulesImpl(const F& f, std::index_sequence<Is...>) {
     auto relalgs = f(*std::get<Is>(collections_)...);
+    TupleIter(relalgs, [](const auto& rule) {
+      LOG(INFO) << "Registering a rule: " << std::get<2>(rule).ToDebugString();
+    });
     return {std::move(name_),           std::move(collections_),
             std::move(boostrap_rules_), std::move(parsers_),
             std::move(network_state_),  stdin_,

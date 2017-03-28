@@ -17,12 +17,12 @@
 namespace fluent {
 
 TEST(Count, EmptyCount) {
-  std::vector<std::tuple<int>> xs = {};
+  std::vector<std::tuple<int, int>> xs = {};
   auto count = ra::make_count(ra::make_iterable(&xs));
   static_assert(
       std::is_same<decltype(count)::column_types, TypeList<std::size_t>>::value,
       "");
-  const std::set<std::tuple<int>> expected = {{0}};
+  const std::set<std::tuple<std::size_t>> expected = {{0}};
   ExpectRngsEqual(count.ToPhysical().ToRange(), expected);
   EXPECT_EQ(count.ToDebugString(), "Count(Iterable)");
 }
@@ -33,7 +33,7 @@ TEST(Count, SimpleCount) {
   static_assert(
       std::is_same<decltype(count)::column_types, TypeList<std::size_t>>::value,
       "");
-  const std::set<std::tuple<int>> expected = {{3}};
+  const std::set<std::tuple<std::size_t>> expected = {{3}};
   ExpectRngsEqual(count.ToPhysical().ToRange(), expected);
 }
 
@@ -43,7 +43,17 @@ TEST(Count, SimplePipedCount) {
   static_assert(
       std::is_same<decltype(count)::column_types, TypeList<std::size_t>>::value,
       "");
-  const std::set<std::tuple<int>> expected = {{3}};
+  const std::set<std::tuple<std::size_t>> expected = {{3}};
+  ExpectRngsEqual(count.ToPhysical().ToRange(), expected);
+}
+
+TEST(Count, ComplexPipedCount) {
+  std::set<std::tuple<int, int>> xs = {{1, 1}, {2, 2}, {3, 3}};
+  auto count = ra::make_iterable(&xs) | ra::count();
+  static_assert(
+      std::is_same<decltype(count)::column_types, TypeList<std::size_t>>::value,
+      "");
+  const std::set<std::tuple<std::size_t>> expected = {{3}};
   ExpectRngsEqual(count.ToPhysical().ToRange(), expected);
 }
 

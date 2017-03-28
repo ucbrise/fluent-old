@@ -34,7 +34,7 @@ TEST(MockPqxxClient, Init) {
   client.Init("name");
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
-  std::int64_t hash = detail::hash_to_sql(Hash<std::string>()("name"));
+  std::int64_t hash = detail::size_t_to_int64(Hash<std::string>()("name"));
 
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(2));
   ExpectStringsEqualIgnoreWhiteSpace(queries[0].second, fmt::format(R"(
@@ -63,7 +63,7 @@ TEST(MockPqxxClient, AddCollection) {
   client.AddCollection<int, char, bool>("t");
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
-  std::int64_t hash = detail::hash_to_sql(Hash<std::string>()("name"));
+  std::int64_t hash = detail::size_t_to_int64(Hash<std::string>()("name"));
 
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(4));
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, fmt::format(R"(
@@ -91,7 +91,7 @@ TEST(MockPqxxClient, AddRule) {
   client.AddRule(0, std::make_tuple(42, 42, detail::MockRule()));
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
-  std::int64_t hash = detail::hash_to_sql(Hash<std::string>()("name"));
+  std::int64_t hash = detail::size_t_to_int64(Hash<std::string>()("name"));
 
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(3));
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, fmt::format(R"(
@@ -111,7 +111,7 @@ TEST(MockPqxxClient, InsertTuple) {
   client.InsertTuple("t", 42, t);
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
-  std::int64_t hash = detail::hash_to_sql(Hash<tuple_t>()(t));
+  std::int64_t hash = detail::size_t_to_int64(Hash<tuple_t>()(t));
 
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(3));
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, fmt::format(R"(
@@ -131,7 +131,7 @@ TEST(MockPqxxClient, DeleteTuple) {
   client.DeleteTuple("t", 42, t);
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
-  std::int64_t hash = detail::hash_to_sql(Hash<tuple_t>()(t));
+  std::int64_t hash = detail::size_t_to_int64(Hash<tuple_t>()(t));
 
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(3));
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, fmt::format(R"(

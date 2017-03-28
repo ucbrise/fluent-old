@@ -102,12 +102,12 @@ typename std::enable_if<I != sizeof...(Ts), Acc>::type TupleFoldImpl(
 // `TupleIteri((x1, ..., xn), f)` executes `f(1, x1); ...; f(n, xn)`.
 template <typename F, typename... Ts>
 void TupleIteri(const std::tuple<Ts...>& t, F f) {
-  TupleIteriImpl<0>(t, f);
+  detail::TupleIteriImpl<0>(t, f);
 }
 
 template <typename F, typename... Ts>
 void TupleIteri(std::tuple<Ts...>& t, F f) {
-  TupleIteriImpl<0>(t, f);
+  detail::TupleIteriImpl<0>(t, f);
 }
 
 // `TupleIter((a, ..., z), f)` executes `f(a); ...; f(z)`.
@@ -125,13 +125,13 @@ void TupleIter(std::tuple<Ts...>& t, F f) {
 template <typename F, typename... Ts>
 std::tuple<typename std::result_of<F(const Ts&)>::type...> TupleMap(
     const std::tuple<Ts...>& t, F f) {
-  return TupleMapImpl<0>(t, f);
+  return detail::TupleMapImpl<0>(t, f);
 }
 
 // `TupleFold(a, (x, y, z), f)` returns `f(f(f(a, x), y), z)`.
 template <typename F, typename Acc, typename... Ts>
 Acc TupleFold(const Acc& acc, const std::tuple<Ts...>& t, F f) {
-  return TupleFoldImpl<0>(acc, t, f);
+  return detail::TupleFoldImpl<0>(acc, t, f);
 }
 
 // `TupleToVector(t)` converts `t` into a vector.

@@ -16,7 +16,7 @@ TEST(All, SimpleAll) {
   std::vector<std::tuple<int>> xs = {{1}, {2}, {3}};
 
   // clang-format off
-  auto relalg = ra::make_iterable(&xs)
+  auto relalg = ra::make_iterable("xs", &xs)
     | ra::map([](const auto& t) {
         int x = std::get<0>(t);
         return std::tuple<int, int>(x, x);

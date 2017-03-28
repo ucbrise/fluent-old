@@ -17,7 +17,7 @@ namespace ra {
 //
 //   std::set<tuple<int, int>> t = {{3, 3}, {4, 4}, {5, 5}};
 //   std::set<tuple<int, int>> s = {{1, 1}, {2, 2}, {3, 3}};
-//   BufferRaInto(ra::make_iterable(&t), &s);
+//   BufferRaInto(ra::make_iterable("t", &t), &s);
 //   // s contains {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}}
 //
 // Note that because the results of `ra` are stored into an intermediate buffer

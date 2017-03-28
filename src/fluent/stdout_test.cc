@@ -21,7 +21,7 @@ TEST(Stdout, SimpleMerge) {
   std::set<std::tuple<std::string>> ss = {{"hello"}, {"there"}};
 
   EXPECT_STREQ("", captured.Get().c_str());
-  stdout.Merge(ra::make_iterable(&ss));
+  stdout.Merge(ra::make_iterable("ss", &ss));
   EXPECT_STREQ("hello\nthere\n", captured.Get().c_str());
   stdout.Tick();
   EXPECT_STREQ("hello\nthere\n", captured.Get().c_str());
@@ -45,7 +45,7 @@ TEST(Table, SimpleDeferredMerge) {
   std::set<std::tuple<std::string>> ss = {{"hello"}, {"there"}};
 
   EXPECT_STREQ("", captured.Get().c_str());
-  stdout.DeferredMerge(ra::make_iterable(&ss));
+  stdout.DeferredMerge(ra::make_iterable("ss", &ss));
   EXPECT_STREQ("", captured.Get().c_str());
   stdout.Tick();
   EXPECT_STREQ("hello\nthere\n", captured.Get().c_str());

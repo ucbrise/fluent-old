@@ -26,7 +26,7 @@ class Table {
   const std::set<std::tuple<Ts...>>& Get() const { return ts_; }
 
   ra::Iterable<std::set<std::tuple<Ts...>>> Iterable() const {
-    return ra::make_iterable(&ts_);
+    return ra::make_iterable(name_, &ts_);
   }
 
   template <typename RA>

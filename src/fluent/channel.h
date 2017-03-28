@@ -56,7 +56,7 @@ class Channel {
   const std::set<std::tuple<T, Ts...>>& Get() const { return ts_; }
 
   ra::Iterable<std::set<std::tuple<T, Ts...>>> Iterable() const {
-    return ra::make_iterable(&ts_);
+    return ra::make_iterable(name_, &ts_);
   }
 
   // Merge assumes a `std::string ToString(const U&)` function exists for `U`

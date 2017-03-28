@@ -28,7 +28,7 @@ TEST(GroupBy, SimpleSumCountAvg) {
       {1, 6, 3, 2.0}, {2, 11, 3, 4.0}, {3, 6, 5, 6.0},
   };
 
-  auto grouped = ra::make_iterable(&xs) |
+  auto grouped = ra::make_iterable("xs", &xs) |
                  ra::group_by<ra::Keys<0>, ra::agg::Sum<1>, ra::agg::Count<2>,
                               ra::agg::Avg<3>>();
   static_assert(std::is_same<decltype(grouped)::column_types,
@@ -36,14 +36,14 @@ TEST(GroupBy, SimpleSumCountAvg) {
                 "");
   ExpectRngsUnorderedEqual(grouped.ToPhysical().ToRange(), expected);
   EXPECT_EQ(grouped.ToDebugString(),
-            "GroupBy<Keys<0>, Sum<1>, Count<2>, Avg<3>>(Iterable)");
+            "GroupBy<Keys<0>, Sum<1>, Count<2>, Avg<3>>(xs)");
 }
 
 TEST(GroupBy, EmptyKeys) {
   std::set<std::tuple<int>> xs = {{1}, {2}, {3}, {4}, {5}};
   std::set<std::tuple<std::size_t>> expected = {{5}};
-  auto grouped =
-      ra::make_iterable(&xs) | ra::group_by<ra::Keys<>, ra::agg::Count<0>>();
+  auto grouped = ra::make_iterable("xs", &xs) |
+                 ra::group_by<ra::Keys<>, ra::agg::Count<0>>();
   static_assert(std::is_same<decltype(grouped)::column_types,
                              TypeList<std::size_t>>::value,
                 "");
@@ -53,8 +53,8 @@ TEST(GroupBy, EmptyKeys) {
 TEST(GroupBy, EmptyEmptyKeys) {
   std::set<std::tuple<int>> xs = {};
   std::set<std::tuple<std::size_t>> expected = {};
-  auto grouped =
-      ra::make_iterable(&xs) | ra::group_by<ra::Keys<>, ra::agg::Count<0>>();
+  auto grouped = ra::make_iterable("xs", &xs) |
+                 ra::group_by<ra::Keys<>, ra::agg::Count<0>>();
   static_assert(std::is_same<decltype(grouped)::column_types,
                              TypeList<std::size_t>>::value,
                 "");

@@ -37,7 +37,7 @@ TEST(Channel, SimpleMerge) {
       {a_address, 7, 7}, {b_address, 8, 8}};
 
   EXPECT_THAT(c.Get(), UnorderedElementsAreArray(empty));
-  c.Merge(ra::make_iterable(&msgs));
+  c.Merge(ra::make_iterable("msgs", &msgs));
   EXPECT_THAT(c.Get(), UnorderedElementsAreArray(empty));
 
   for (int i = 1; i < 9; ++i) {

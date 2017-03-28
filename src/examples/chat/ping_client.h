@@ -48,8 +48,8 @@ int PingClientMain(
           .periodic("p", std::chrono::milliseconds(1000))
           .RegisterBootstrapRules([&](auto& connect, auto&, auto&) {
             using namespace fluent::infix;
-            return std::make_tuple(connect <=
-                                   ra::make_iterable(&connect_tuple));
+            return std::make_tuple(
+                connect <= ra::make_iterable("connect_tuple", &connect_tuple));
           })
           .RegisterRules([&](auto&, auto& mcast, auto& p) {
             using namespace fluent::infix;

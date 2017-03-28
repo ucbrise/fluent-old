@@ -18,7 +18,7 @@ namespace agg {
 //
 // in C++
 //
-//   make_iterable(r) | group_by<Keys<0, 1>, Sum<2>, Avg<3>, Count<4>>();
+//   make_iterable("r", r) | group_by<Keys<0, 1>, Sum<2>, Avg<3>, Count<4>>();
 //
 // Each of those aggregates should look like this:
 //

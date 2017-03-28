@@ -27,7 +27,7 @@ class Stdin {
   }
 
   ra::Iterable<std::set<std::tuple<std::string>>> Iterable() const {
-    return ra::make_iterable(&lines_);
+    return ra::make_iterable(Name(), &lines_);
   }
 
   zmq::pollitem_t Pollitem() {

@@ -39,9 +39,9 @@ TEST(Table, SimpleMerge) {
   std::set<std::tuple<int, int>> s2 = {{2, 2}, {3, 3}};
   std::set<std::tuple<int, int>> s3 = {{1, 1}, {2, 2}, {3, 3}};
 
-  t.Merge(ra::make_iterable(&s1));
+  t.Merge(ra::make_iterable("s1", &s1));
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s1));
-  t.Merge(ra::make_iterable(&s2));
+  t.Merge(ra::make_iterable("s2", &s2));
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s3));
 }
 
@@ -63,9 +63,9 @@ TEST(Table, SimpleMergeWithVectors) {
   std::vector<std::tuple<int, int>> s2 = {{2, 2}, {3, 3}};
   std::vector<std::tuple<int, int>> s3 = {{1, 1}, {2, 2}, {3, 3}};
 
-  t.Merge(ra::make_iterable(&s1));
+  t.Merge(ra::make_iterable("s1", &s1));
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s1));
-  t.Merge(ra::make_iterable(&s2));
+  t.Merge(ra::make_iterable("s2", &s2));
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s3));
 }
 
@@ -73,9 +73,9 @@ TEST(Table, SelfMerge) {
   Table<int, int> t("t");
   std::set<std::tuple<int, int>> s = {{1, 1}, {2, 2}};
 
-  t.Merge(ra::make_iterable(&s));
+  t.Merge(ra::make_iterable("s", &s));
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s));
-  t.Merge(ra::make_iterable(&t.Get()));
+  t.Merge(ra::make_iterable("t", &t.Get()));
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s));
 }
 
@@ -89,7 +89,7 @@ TEST(Table, CompositeQueryMerge) {
   }
 
   Table<int, int, int> t("t");
-  t.Merge(ra::make_iterable(&ts));
+  t.Merge(ra::make_iterable("ts", &ts));
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(ts));
 
   // clang-format off
@@ -119,7 +119,7 @@ TEST(Table, CompositeQueryMerge) {
 TEST(Table, TickDoesntClearTable) {
   Table<int, int> t("t");
   std::set<std::tuple<int, int>> s = {{1, 1}, {2, 2}};
-  t.Merge(ra::make_iterable(&s));
+  t.Merge(ra::make_iterable("s", &s));
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s));
   t.Tick();
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s));
@@ -132,9 +132,9 @@ TEST(Table, SimpleDeferredMerge) {
   std::set<std::tuple<int, int>> s2 = {{2, 2}, {3, 3}};
   std::set<std::tuple<int, int>> s3 = {{1, 1}, {2, 2}, {3, 3}};
 
-  t.DeferredMerge(ra::make_iterable(&s1));
+  t.DeferredMerge(ra::make_iterable("s1", &s1));
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(empty));
-  t.DeferredMerge(ra::make_iterable(&s2));
+  t.DeferredMerge(ra::make_iterable("s2", &s2));
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(empty));
   t.Tick();
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s3));
@@ -147,14 +147,14 @@ TEST(Table, SimpleDeferredDelete) {
   std::set<std::tuple<int, int>> s2 = {{2, 2}, {3, 3}};
   std::set<std::tuple<int, int>> s3 = {{1, 1}, {2, 2}, {3, 3}};
 
-  t.Merge(ra::make_iterable(&s1));
+  t.Merge(ra::make_iterable("s1", &s1));
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s1));
-  t.Merge(ra::make_iterable(&s2));
+  t.Merge(ra::make_iterable("s2", &s2));
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s3));
 
-  t.DeferredDelete(ra::make_iterable(&s1));
+  t.DeferredDelete(ra::make_iterable("s1", &s1));
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s3));
-  t.DeferredDelete(ra::make_iterable(&s2));
+  t.DeferredDelete(ra::make_iterable("s2", &s2));
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s3));
   t.Tick();
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(empty));
@@ -167,9 +167,9 @@ TEST(Table, DeferredMergeAndDelete) {
   std::set<std::tuple<int, int>> s2 = {{2, 2}, {3, 3}};
   std::set<std::tuple<int, int>> s3 = {{1, 1}};
 
-  t.DeferredMerge(ra::make_iterable(&s1));
+  t.DeferredMerge(ra::make_iterable("s1", &s1));
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(empty));
-  t.DeferredDelete(ra::make_iterable(&s2));
+  t.DeferredDelete(ra::make_iterable("s2", &s2));
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(empty));
   t.Tick();
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s3));

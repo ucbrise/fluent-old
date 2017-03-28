@@ -19,7 +19,8 @@ TEST(Cross, SimpleCross) {
   std::vector<std::tuple<int>> xs = {{1}, {2}, {3}};
   std::vector<std::tuple<std::string>> ys = {{"a"}, {"b"}};
 
-  auto crossed = ra::make_cross(ra::make_iterable(&xs), ra::make_iterable(&ys));
+  auto crossed = ra::make_cross(ra::make_iterable("xs", &xs),
+                                ra::make_iterable("ys", &ys));
   static_assert(std::is_same<decltype(crossed)::column_types,
                              TypeList<int, std::string>>::value,
                 "");
@@ -27,7 +28,7 @@ TEST(Cross, SimpleCross) {
       {1, "a"}, {2, "a"}, {3, "a"}, {1, "b"}, {2, "b"}, {3, "b"},
   };
   ExpectRngsUnorderedEqual(crossed.ToPhysical().ToRange(), expected);
-  EXPECT_EQ(crossed.ToDebugString(), "Cross(Iterable, Iterable)");
+  EXPECT_EQ(crossed.ToDebugString(), "Cross(xs, ys)");
 }
 
 }  // namespace fluent

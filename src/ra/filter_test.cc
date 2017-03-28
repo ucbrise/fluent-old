@@ -16,19 +16,19 @@ namespace fluent {
 TEST(Filter, SimpleFilter) {
   std::vector<std::tuple<int>> xs = {{1}, {2}, {3}};
   auto filter = ra::make_filter(
-      ra::make_iterable(&xs),
+      ra::make_iterable("xs", &xs),
       [](const std::tuple<int>& t) { return std::get<0>(t) % 2 == 1; });
   static_assert(
       std::is_same<decltype(filter)::column_types, TypeList<int>>::value, "");
   std::vector<std::tuple<int>> expected = {{1}, {3}};
   ExpectRngsEqual(filter.ToPhysical().ToRange(), ranges::view::all(expected));
-  EXPECT_EQ(filter.ToDebugString(), "Filter(Iterable)");
+  EXPECT_EQ(filter.ToDebugString(), "Filter(xs)");
 }
 
 TEST(Filter, SimplePipedFilter) {
   std::vector<std::tuple<int>> xs = {{1}, {2}, {3}};
   auto filter =
-      ra::make_iterable(&xs) | ra::filter([](const std::tuple<int>& t) {
+      ra::make_iterable("xs", &xs) | ra::filter([](const std::tuple<int>& t) {
         return std::get<0>(t) % 2 == 1;
       });
   static_assert(

@@ -13,7 +13,7 @@ namespace fluent {
 TEST(RaUtil, SimpleRa) {
   std::vector<std::tuple<int, char>> xs = {
       {1, '1'}, {2, '2'}, {3, '3'}, {4, '4'}};
-  auto ra = ra::make_iterable(&xs);
+  auto ra = ra::make_iterable("xs", &xs);
 
   std::set<std::tuple<int, char>> buffered;
   std::set<std::tuple<int, char>> streamed;

@@ -18,18 +18,18 @@ namespace fluent {
 
 TEST(Count, EmptyCount) {
   std::vector<std::tuple<int, int>> xs = {};
-  auto count = ra::make_count(ra::make_iterable(&xs));
+  auto count = ra::make_count(ra::make_iterable("xs", &xs));
   static_assert(
       std::is_same<decltype(count)::column_types, TypeList<std::size_t>>::value,
       "");
   const std::set<std::tuple<std::size_t>> expected = {{0}};
   ExpectRngsEqual(count.ToPhysical().ToRange(), expected);
-  EXPECT_EQ(count.ToDebugString(), "Count(Iterable)");
+  EXPECT_EQ(count.ToDebugString(), "Count(xs)");
 }
 
 TEST(Count, SimpleCount) {
   std::vector<std::tuple<int>> xs = {{1}, {2}, {3}};
-  auto count = ra::make_count(ra::make_iterable(&xs));
+  auto count = ra::make_count(ra::make_iterable("xs", &xs));
   static_assert(
       std::is_same<decltype(count)::column_types, TypeList<std::size_t>>::value,
       "");
@@ -39,7 +39,7 @@ TEST(Count, SimpleCount) {
 
 TEST(Count, SimplePipedCount) {
   std::vector<std::tuple<int>> xs = {{1}, {2}, {3}};
-  auto count = ra::make_iterable(&xs) | ra::count();
+  auto count = ra::make_iterable("xs", &xs) | ra::count();
   static_assert(
       std::is_same<decltype(count)::column_types, TypeList<std::size_t>>::value,
       "");
@@ -49,7 +49,7 @@ TEST(Count, SimplePipedCount) {
 
 TEST(Count, ComplexPipedCount) {
   std::set<std::tuple<int, int>> xs = {{1, 1}, {2, 2}, {3, 3}};
-  auto count = ra::make_iterable(&xs) | ra::count();
+  auto count = ra::make_iterable("xs", &xs) | ra::count();
   static_assert(
       std::is_same<decltype(count)::column_types, TypeList<std::size_t>>::value,
       "");

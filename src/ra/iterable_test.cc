@@ -16,16 +16,16 @@ namespace fluent {
 
 TEST(Relalg, EmptyIterable) {
   std::vector<std::tuple<int>> xs = {};
-  auto iter = ra::make_iterable(&xs);
+  auto iter = ra::make_iterable("xs", &xs);
   static_assert(
       std::is_same<decltype(iter)::column_types, TypeList<int>>::value, "");
   ExpectRngsEqual(iter.ToPhysical().ToRange(), ranges::view::all(xs));
-  EXPECT_EQ(iter.ToDebugString(), "Iterable");
+  EXPECT_EQ(iter.ToDebugString(), "xs");
 }
 
 TEST(Relalg, SimpleIterable) {
   std::vector<std::tuple<int>> xs = {{1}, {2}, {3}};
-  auto iter = ra::make_iterable(&xs);
+  auto iter = ra::make_iterable("xs", &xs);
   static_assert(
       std::is_same<decltype(iter)::column_types, TypeList<int>>::value, "");
   ExpectRngsEqual(iter.ToPhysical().ToRange(), ranges::view::all(xs));

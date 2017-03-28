@@ -54,7 +54,7 @@ class Periodic {
   const std::set<std::tuple<id, time>>& Get() const { return tocks_; }
 
   ra::Iterable<std::set<std::tuple<id, time>>> Iterable() const {
-    return ra::make_iterable(&tocks_);
+    return ra::make_iterable(name_, &tocks_);
   }
 
   std::tuple<id, time> Tock() {

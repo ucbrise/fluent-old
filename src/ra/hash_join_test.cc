@@ -20,7 +20,7 @@ TEST(HashJoin, EmptyEmptyJoin) {
   std::vector<std::tuple<int>> right = {};
   std::vector<std::tuple<int, int>> expected = {};
   auto joined = ra::make_hash_join<ra::LeftKeys<0>, ra::RightKeys<0>>(
-      ra::make_iterable(&left), ra::make_iterable(&right));
+      ra::make_iterable("left", &left), ra::make_iterable("right", &right));
   static_assert(
       std::is_same<decltype(joined)::column_types, TypeList<int, int>>::value,
       "");
@@ -32,7 +32,7 @@ TEST(HashJoin, RightEmptyJoin) {
   std::vector<std::tuple<int>> right = {};
   std::vector<std::tuple<int, int>> expected = {};
   auto joined = ra::make_hash_join<ra::LeftKeys<0>, ra::RightKeys<0>>(
-      ra::make_iterable(&left), ra::make_iterable(&right));
+      ra::make_iterable("left", &left), ra::make_iterable("right", &right));
   static_assert(
       std::is_same<decltype(joined)::column_types, TypeList<int, int>>::value,
       "");
@@ -44,7 +44,7 @@ TEST(HashJoin, LeftEmptyJoin) {
   std::vector<std::tuple<int>> right = {{1}, {2}, {3}};
   std::vector<std::tuple<int, int>> expected = {};
   auto joined = ra::make_hash_join<ra::LeftKeys<0>, ra::RightKeys<0>>(
-      ra::make_iterable(&left), ra::make_iterable(&right));
+      ra::make_iterable("left", &left), ra::make_iterable("right", &right));
   static_assert(
       std::is_same<decltype(joined)::column_types, TypeList<int, int>>::value,
       "");
@@ -61,7 +61,7 @@ TEST(HashJoin, NonEmptyJoin) {
       {2, 3.0, 2, 'c'}, {2, 3.0, 2, 'd'}, {3, 4.0, 3, 'e'}, {3, 5.0, 3, 'e'}};
 
   auto joined = ra::make_hash_join<ra::LeftKeys<0>, ra::RightKeys<0>>(
-      ra::make_iterable(&left), ra::make_iterable(&right));
+      ra::make_iterable("left", &left), ra::make_iterable("right", &right));
   static_assert(std::is_same<decltype(joined)::column_types,
                              TypeList<int, float, int, char>>::value,
                 "");
@@ -75,7 +75,7 @@ TEST(HashJoin, MultiColumnJoin) {
                                                               {3, 3.0, 3.0, 3}};
 
   auto joined = ra::make_hash_join<ra::LeftKeys<0, 1>, ra::RightKeys<1, 0>>(
-      ra::make_iterable(&left), ra::make_iterable(&right));
+      ra::make_iterable("left", &left), ra::make_iterable("right", &right));
   static_assert(std::is_same<decltype(joined)::column_types,
                              TypeList<int, float, float, int>>::value,
                 "");
@@ -90,7 +90,7 @@ TEST(HashJoin, RepeatedColumnJoin) {
       {1, 1, 1}, {2, 2, 2}, {3, 3, 3}};
 
   auto joined = ra::make_hash_join<ra::LeftKeys<0, 0>, ra::RightKeys<0, 1>>(
-      ra::make_iterable(&left), ra::make_iterable(&right));
+      ra::make_iterable("left", &left), ra::make_iterable("right", &right));
   static_assert(std::is_same<decltype(joined)::column_types,
                              TypeList<int, int, int>>::value,
                 "");

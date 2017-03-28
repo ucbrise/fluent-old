@@ -135,7 +135,7 @@ TEST(FluentExecutor, SimpleCommunication) {
 
   using C = std::set<std::tuple<std::string, int>>;
   C catalyst = {{"inproc://pong", 42}};
-  ping.MutableGet<0>().Merge(ra::make_iterable(&catalyst));
+  ping.MutableGet<0>().Merge(ra::make_iterable("catalyst", &catalyst));
 
   for (int i = 0; i < 3; ++i) {
     pong.Receive();
@@ -207,8 +207,8 @@ TEST(FluentExecutor, SimpleBootstrap) {
           .scratch<int>("s")
           .RegisterBootstrapRules([&xs](auto& t, auto& s) {
             using namespace fluent::infix;
-            return std::make_tuple(t <= ra::make_iterable(&xs),
-                                   s <= ra::make_iterable(&xs));
+            return std::make_tuple(t <= ra::make_iterable("xs", &xs),
+                                   s <= ra::make_iterable("xs", &xs));
           })
           .RegisterRules([&xs](auto&, auto&) { return std::make_tuple(); });
 

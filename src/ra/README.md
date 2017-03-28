@@ -13,7 +13,7 @@ We can construct a corresponding relational algebra expression:
 
 ```c++
 vector<tuple<int>> xs = {{1}, {2}, {3}};
-auto relalg = ra::make_iterable(&xs)
+auto relalg = ra::make_iterable("xs", &xs)
 | ra::map([](const auto& t) { return tuple<int, int>(get<0>(t), get<0>(t)); })
 | ra::filter([](const auto& t) { return get<0>(t) % 2 == 1; })
 | ra::map([](const auto& t) { return get<0>(t) + get<1>(t); });

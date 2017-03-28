@@ -120,7 +120,7 @@ class FluentExecutor;
 //     .scratch<int, int, float>("s")
 //     .channel<std::string, float, char>("c")
 //     .RegisterBootstrapRules([&](auto& t1, auto& t2, auto& s, auto& c) {
-//       return std::make_tuple(t1 <= ra::make_iterable(&tuples));
+//       return std::make_tuple(t1 <= ra::make_iterable("ts", &tuples));
 //     });
 //     .RegisterRules([](auto& t1, auto& t2, auto& s, auto& c) {
 //       return std::make_tuple(t2 <= t1.iterable | ra::project<2, 0>());

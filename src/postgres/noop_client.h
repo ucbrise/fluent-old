@@ -6,7 +6,10 @@
 namespace fluent {
 namespace postgres {
 
-// DO_NOT_SUBMIT(mwhittaker): Document.
+// A NoopClient has the same interface as a PqxxClient, but it does, well,
+// nothing at all. A NoopClient can be used in place of a PqxxClient when you
+// don't really want to connect to a postgres database and don't really care
+// about history or lineage. For example, it is useful in unit tests.
 template <template <typename> class Hash, template <typename> class ToSql>
 class NoopClient {
  public:

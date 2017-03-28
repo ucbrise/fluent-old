@@ -12,7 +12,19 @@
 namespace fluent {
 namespace postgres {
 
-// DO_NOT_SUBMIT(mwhittaker): Document.
+// C++ code has a certain set of types and a certain set of values of each
+// type. For example, the value `42` is a C++ `int`. Postgres has a certain
+// set of types and a certain set of values of each type. For example, the
+// value `42` is a postgres `integer`.
+//
+// The `ToSql` struct template provides a mechanism to convert C++ types to
+// postgres types and C++ values to postgres values. More specifically,
+// `ToSql<T>.Type()` will return the name of the postgres type corresponding to
+// the C++ type `T`, and `ToSql<T>.Value(x)` will convert the C++ value `x`
+// into a string which can be used to insert the value into postgres.
+//
+// For example, `ToSql<std::string>.Type()` is `"text"` and
+// `ToSql<std::string>.Value("hello")` is `'hello'`.
 
 // TODO(mwhittaker): Escape strings. This is actually pretty annoying to do
 // because pqxx's functions to escape strings require a database connection.
@@ -81,8 +93,7 @@ struct ToSql<unsigned long long> {
   static_assert(sizeof(unsigned long long) == 8,
                 "We assume unsigned long longs are 8 bytes.");
   // The maximum unsigned long long is 18,446,744,073,709,551,615 which is 20
-  // digits
-  // of precision.
+  // digits of precision.
   std::string Type() { return "numeric(20)"; }
   std::string Value(unsigned long long x) { return std::to_string(x); }
 };
@@ -104,6 +115,9 @@ struct ToSql<double> {
 template <typename Clock>
 struct ToSql<std::chrono::time_point<Clock>> {
   std::string Type() { return "timestamp with time zone"; }
+
+  // See https://www.postgresql.org/docs/current/static/functions-datetime.html
+  // for more information.
   std::string Value(const std::chrono::time_point<Clock>& t) {
     return fmt::format(
         "TIMESTAMP WITH TIME ZONE 'epoch' + {} * INTERVAL '1 microsecond'",

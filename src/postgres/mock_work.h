@@ -8,7 +8,8 @@
 namespace fluent {
 namespace postgres {
 
-// DO_NOT_SUBMIT(mwhittaker): Document.
+// A mock of the `pqxx::work` class. See `InjectiblePqxxClient` for more
+// information.
 class MockWork {
  public:
   MockWork(const MockConnection&, const std::string&) {}

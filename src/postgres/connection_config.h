@@ -8,10 +8,11 @@
 namespace fluent {
 namespace postgres {
 
-// PostgreSQL connections parameters. Each field corresponds to a connection
-// parameter documented here:
-// https://www.postgresql.org/docs/9.3/static/libpq-connect.html#LIBPQ-PARAMKEYWORDS
-// DO_NOT_SUBMIT(mwhittaker): Document more.
+// PostgreSQL's libpq library and the libpqxx library use connection parameters
+// to configure a connection to postgres [1]. This struct includes some of the
+// more common connection parameters.
+//
+// [1]: http://bit.ly/2ncmbDL
 struct ConnectionConfig {
   std::string host;
   std::uint16_t port;
@@ -19,7 +20,10 @@ struct ConnectionConfig {
   std::string password;
   std::string dbname;
 
-  // DO_NOT_SUBMIT(mwhittaker): Document more.
+  // Convert a `ConnectionConfig` into a connection string understood by libpq
+  // and libpqxx. See [1] for more information.
+  //
+  // [1]: http://bit.ly/2osDosy
   std::string ToString() const;
 };
 

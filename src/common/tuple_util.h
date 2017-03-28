@@ -9,10 +9,44 @@
 
 #include "common/type_list.h"
 
-namespace fluent {
-namespace {
+// From functional programming languages like Hasell and OCaml, we're used to
+// seeing a generic set of functions that operate on lists:
+//
+//   - map: ('a -> 'b) -> 'a list -> 'b list
+//   - iter: ('a -> unit) -> 'a list -> unit
+//   - fold_left: ('a -> 'b -> 'a) -> 'a -> 'b list -> 'a
+//
+// These functions exist in C++ for iterables too (see <algorithm>). However,
+// once we stop using iterators and start using tuples, we lose all these nice
+// functions. Want to call `iter` on a tuple to print out its elements? Too
+// bad. Want to map a function over the elements of a tuple to construct a
+// different tuple? Sorry, out of luck.
+//
+// This file implements the set of list functions we're used to but for tuples:
+//
+//   // Print every element of a tuples.
+//   tuple<int, char, bool> t{1, 'a', true};
+//   TupleIter(t, [](auto x) { cout << x << endl; });
+//
+//   // Map a function over a tuple.
+//   tuple<string, string, string> s = TupleMap(t, [](auto x) {
+//     return to_string(x);
+//   });
+//
+//   // Sum the values in a tuple.
+//   tuple<int, float, double> nums{1, 2.0, 3.0};
+//   double sum = TupleFold(0.0, nums, [](auto acc, auto x) {
+//     return acc + x;
+//   });
+//
+//   // Convert a tuple to a vector.
+//   tuple<int, int, int> int_tuple{1, 2, 3};
+//   std::vector<int> int_vector = TupletoVector(int_tuple);
 
-// Iter
+namespace fluent {
+namespace detail {
+
+// Iteri
 template <std::size_t I, typename F, typename... Ts>
 typename std::enable_if<I == sizeof...(Ts)>::type TupleIteriImpl(
     const std::tuple<Ts...>&, F&) {}
@@ -63,7 +97,7 @@ typename std::enable_if<I != sizeof...(Ts), Acc>::type TupleFoldImpl(
   return TupleFoldImpl<I + 1>(f(acc, std::get<I>(t)), t, f);
 }
 
-}  // namespace
+}  // namespace detail
 
 // `TupleIteri((x1, ..., xn), f)` executes `f(1, x1); ...; f(n, xn)`.
 template <typename F, typename... Ts>

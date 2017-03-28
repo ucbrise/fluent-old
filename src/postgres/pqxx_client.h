@@ -15,10 +15,11 @@ namespace fluent {
 namespace postgres {
 namespace detail {
 
-inline std::int64_t hash_to_sql(std::size_t hash) {
+inline std::int64_t size_t_to_int64(std::size_t hash) {
   return static_cast<std::int64_t>(hash);
 }
 
+// `ToSqlType<ToSql, T>()()` is equivalent to `ToSql<T>.Type()`.
 template <template <typename> class ToSql, typename T>
 struct ToSqlType {
   std::string operator()() { return ToSql<T>().Type(); }
@@ -26,7 +27,64 @@ struct ToSqlType {
 
 }  // namespace detail
 
-// DO_NOT_SUBMIT(mwhittaker): Document.
+// # Overview
+// Ignore the Connection and Work template arguments for now and pretend the
+// InjectablePqxxClient class template really looks like this:
+//
+//   template <template <typename> class Hash, tempalte <typename> class ToSql>
+//   class PqxxClient { ... }
+//
+// A `PqxxClient<Hash, ToSql>` object can be used to shuttle tuples and lineage
+// information from a fluent node to a postgres database. It's best explained
+// through an example:
+//
+//   // Construct a `ConnectionConfig` which tells our client to which postgres
+//   // database it should connect and which credentials it should use to do
+//   // so.
+//   ConnectionConfig config {
+//     "localhost", // host
+//     5432,        // port
+//     "username",  // username
+//     "password",  // password
+//     "sailors",   // the database
+//   }
+//
+//   // Construct a client which will connect to the postgres database.
+//   PqxxClient<Hash, ToSql> client(config);
+//
+//   // Initialize the postgres client with the name of our fluent node. A
+//   // postgres client should be used by exactly one fluent node. Also, the
+//   // name "lineage" is reserved; sorry about that.
+//   client.Init("my_fluent_node");
+//
+//   // Add the types of our collections.
+//   client.AddCollection<string, float>("t") // a table t[string, float].
+//   client.AddCollection<string, float>("c") // a channel c[string, float].
+//
+//   // Add all our rules.
+//   client.AddRule(0, t += c.Iterable());
+//   client.AddRule(1, t -= (c.Iterable() | ra::filter(f)));
+//
+//   // Add and delete some tuples.
+//   client.InsertTuple("t", 0 /* time_inserted */, make_tuple("hi",  42.0));
+//   client.InsertTuple("t", 1 /* time_inserted */, make_tuple("bye", 14.0));
+//   client.DeleteTuple("t", 2 /* time_deleted */,  make_tuple("bye", 14.0));
+//
+// Cool! But what about those Connection and Work template arguments? And why
+// is it called InjectablePqxxClient? In short, InjectablePqxxClient is a
+// dependency injected version of PqxxClient.
+//
+// The PqxxClient struct template we used above uses `pqxx::connection` and
+// `pqxx::work` for `Connection` and `Work` to actually connect to a postgres
+// database. If we don't want to actually connect to a database (say for unit
+// tests), we can substitute a mock connection and work class in for
+// `Connection` and `Work`. In fact, we do exactly that in
+// `mock_pqxx_client.h`.
+//
+// # Implementation
+// Refer to `README.md` in the `fluent` directory for a description of (and the
+// schema of) the tables used to store a node's history and lineage. This class
+// issues SQL queries to create and populate those tables.
 template <typename Connection, typename Work, template <typename> class Hash,
           template <typename> class ToSql>
 class InjectablePqxxClient {
@@ -38,11 +96,11 @@ class InjectablePqxxClient {
         << connection_config.ToString();
   }
 
+  // TODO(mwhittaker): Handle hash collisions.
   void Init(const std::string& name) {
-    // TODO(mwhittaker): Handle the scenario where there is a hash collision.
-    // TODO(mwhittaker): Handle the scenario where the hash is 0.
+    initialized_ = true;
+    id_ = detail::size_t_to_int64(Hash<std::string>()(name));
     name_ = name;
-    id_ = detail::hash_to_sql(Hash<std::string>()(name));
 
     ExecuteQuery("Init",
                  fmt::format(R"(
@@ -68,8 +126,12 @@ class InjectablePqxxClient {
 
   template <typename... Ts>
   void AddCollection(const std::string& collection_name) {
-    static_assert(sizeof...(Ts) > 0, "Collections should have >=1 column.");
-    CHECK_NE(id_, static_cast<std::int64_t>(0)) << "Call Init first.";
+    static_assert(sizeof...(Ts) > 0, "Collections should have >= 1 column.");
+    CHECK(initialized_) << "Call Init first.";
+
+    // For a fluent node `n` and collection `c`, we create a postgres relation
+    // `n_c`. We also make a relation for the lineage of `n` called
+    // `n_lineage`. Thus, we have a naming conflict if `c == lineage`.
     CHECK_NE(collection_name, std::string("lineage"))
         << "Lineage is a reserved collection name.";
 
@@ -101,7 +163,7 @@ class InjectablePqxxClient {
 
   template <typename RA>
   void AddRule(std::size_t rule_number, const RA& rule) {
-    CHECK_NE(id_, static_cast<std::int64_t>(0)) << "Call Init first.";
+    CHECK(initialized_) << "Call Init first.";
     auto rule_string = std::get<2>(rule).ToDebugString();
     ExecuteQuery("AddRule", fmt::format(R"(
       INSERT INTO Rules (node_id, rule_number, rule)
@@ -115,7 +177,7 @@ class InjectablePqxxClient {
   void InsertTuple(const std::string& collection_name, int time_inserted,
                    const std::tuple<Ts...>& t) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >=1 column.");
-    std::int64_t hash = detail::hash_to_sql(Hash<std::tuple<Ts...>>()(t));
+    std::int64_t hash = detail::size_t_to_int64(Hash<std::tuple<Ts...>>()(t));
     ExecuteQuery("InsertTuple", fmt::format(R"(
       INSERT INTO {}_{}
       VALUES ({}, {}, NULL, {});
@@ -128,7 +190,7 @@ class InjectablePqxxClient {
   void DeleteTuple(const std::string& collection_name, int time_deleted,
                    const std::tuple<Ts...>& t) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >=1 column.");
-    std::int64_t hash = detail::hash_to_sql(Hash<std::tuple<Ts...>>()(t));
+    std::int64_t hash = detail::size_t_to_int64(Hash<std::tuple<Ts...>>()(t));
     ExecuteQuery("DeleteTuple",
                  fmt::format(R"(
       UPDATE {}_{}
@@ -139,6 +201,7 @@ class InjectablePqxxClient {
   }
 
  protected:
+  // Transactionally execute the query `query` named `name`.
   virtual void ExecuteQuery(const std::string& name, const std::string& query) {
     Work txn(connection_, name);
     VLOG(1) << "Executing query: " << query;
@@ -147,14 +210,19 @@ class InjectablePqxxClient {
   }
 
  private:
+  // detail::ToSqlType partially applied to ToSql.
   template <typename T>
   using ToSqlType = detail::ToSqlType<ToSql, T>;
 
+  // SqlTypes<T1, ... Tn> returns the vector
+  // [ToSql<T1>.Type(), ..., ToSql<Tn>().Type()]
   template <typename... Ts>
   std::vector<std::string> SqlTypes() {
     return TupleToVector(TupleFromTypes<ToSqlType, Ts...>());
   }
 
+  // SqlValues((x1: T1, ..., xn: Tn)) returns the vector
+  // [ToSql<T1>().Value(x1), ..., ToSql<Tn>().Value(xn)].
   template <typename... Ts>
   std::vector<std::string> SqlValues(const std::tuple<Ts...>& t) {
     return TupleToVector(TupleMap(t, [](const auto& x) {
@@ -162,11 +230,20 @@ class InjectablePqxxClient {
     }));
   }
 
+  // A connection to postgres database.
   Connection connection_;
+
+  // True after `Init()` is called;
+  bool initialized_ = false;
+
+  // Each fluent node named `n` has a unique id `hash(n)`.
   std::int64_t id_;
+
+  // The name of fluent node using this client.
   std::string name_;
 };
 
+// See InjectablePqxxClient documentation above.
 template <template <typename> class Hash, template <typename> class ToSql>
 using PqxxClient =
     InjectablePqxxClient<pqxx::connection, pqxx::work, Hash, ToSql>;

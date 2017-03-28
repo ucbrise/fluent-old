@@ -14,7 +14,25 @@
 namespace fluent {
 namespace postgres {
 
-// DO_NOT_SUBMIT(mwhittaker): Document.
+// A MockPqxxClient is like a PqxxClient, except that instead of issuing SQL
+// queries, it stores them in a vector. For example:
+//
+//   // Create and initialize a MockPqxxClient.
+//   ConnectionConfig config;
+//   MockPqxxClient<Hash, ToSql> mock_client(config);
+//   mock_client.Init("my_fluent_node");
+//
+//   // All the queries generate by `Init` are stored.
+//   for (const auto& query : mock_client.Queries()) {
+//     // Print the name of the query.
+//     std::cout << query.first << std::endl;
+//
+//     // Print the SQL of the query.
+//     std::cout << query.second << std::endl;
+//   }
+//
+// A MockPqxxClient is used to unit test a PqxxClient. See
+// `mock_pqxx_client_test.cc`.
 template <template <typename> class Hash, template <typename> class ToSql>
 class MockPqxxClient
     : public InjectablePqxxClient<MockConnection, MockWork, Hash, ToSql> {

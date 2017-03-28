@@ -1,8 +1,6 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
-ADD_LIBRARY(postgres
-    connection_config.cc
-)
+ADD_LIBRARY(postgres connection_config.cc)
 
 TARGET_LINK_LIBRARIES(postgres
     ${FMT_LINK_DIRS}/libfmt.a
@@ -17,5 +15,5 @@ MACRO(CREATE_POSTGRES_TEST NAME)
     TARGET_LINK_LIBRARIES(postgres_${NAME} postgres)
 ENDMACRO(CREATE_POSTGRES_TEST)
 
-CREATE_POSTGRES_TEST(to_sql_test)
 CREATE_POSTGRES_TEST(mock_pqxx_client_test)
+CREATE_POSTGRES_TEST(to_sql_test)

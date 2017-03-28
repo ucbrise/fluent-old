@@ -22,6 +22,8 @@ TEST(ToSql, ToSqlType) {
   EXPECT_EQ(ToSql<std::int64_t>().Type(), "bigint");
   EXPECT_EQ(ToSql<float>().Type(), "real");
   EXPECT_EQ(ToSql<double>().Type(), "double precision");
+  EXPECT_EQ(ToSql<double>().Type(), "double precision");
+  // TODO(mwhittaker): Test ToSql<std::chrono::time_point<Clock>>.
 }
 
 TEST(ToSql, ToSqlValue) {
@@ -35,6 +37,7 @@ TEST(ToSql, ToSqlValue) {
   EXPECT_EQ(ToSql<std::int64_t>().Value(5), "5");
   EXPECT_EQ(ToSql<float>().Value(6.0), "6.000000");
   EXPECT_EQ(ToSql<double>().Value(7.0), "7.000000");
+  // TODO(mwhittaker): Test ToSql<std::chrono::time_point<Clock>>.
 }
 
 }  // namespace postgres

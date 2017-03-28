@@ -44,6 +44,7 @@ ranges::for_each(physical.ToRange(), [](int x) {
 - [`cross`](cross.h)
 - [`filter`](filter.h)
 - [`group_by`](group_by.h)
+- [`hash_join`](hash_join.h)
 - [`iterable`](iterable.h)
 - [`map`](map.h)
 - [`project`](project.h)

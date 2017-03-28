@@ -14,8 +14,12 @@
 #include "fluent/channel.h"
 #include "fluent/fluent_builder.h"
 #include "fluent/infix.h"
+#include "postgres/connection_config.h"
+#include "postgres/noop_client.h"
 #include "ra/all.h"
 #include "testing/captured_stdout.h"
+
+namespace pg = fluent::postgres;
 
 using ::testing::UnorderedElementsAreArray;
 
@@ -23,21 +27,19 @@ namespace fluent {
 
 TEST(FluentExecutor, SimpleProgram) {
   zmq::context_t context(1);
+  postgres::ConnectionConfig connection_config;
 
-  // clang-format off
-  auto f = fluent("inproc://yolo", &context)
-    .table<int>("t")
-    .scratch<int, int, float>("s")
-    .channel<std::string, float, char>("c")
-    .RegisterRules([](auto& t, auto& s, auto& c) {
-      using namespace fluent::infix;
-      return std::make_tuple(
-        t <= (t.Iterable() | ra::count()),
-        t <= (s.Iterable() | ra::count()),
-        t <= (c.Iterable() | ra::count())
-      );
-    });
-  // clang-format on
+  auto f = fluent<pg::NoopClient, Hash, pg::ToSql>("name", "inproc://yolo",
+                                                   &context, connection_config)
+               .table<std::size_t>("t")
+               .scratch<int, int, float>("s")
+               .channel<std::string, float, char>("c")
+               .RegisterRules([](auto& t, auto& s, auto& c) {
+                 using namespace fluent::infix;
+                 return std::make_tuple(t <= (t.Iterable() | ra::count()),
+                                        t <= (s.Iterable() | ra::count()),
+                                        t <= (c.Iterable() | ra::count()));
+               });
 
   using T = std::set<std::tuple<int>>;
   using S = std::set<std::tuple<int, int, float>>;
@@ -61,27 +63,29 @@ TEST(FluentExecutor, SimpleProgram) {
 
 TEST(FluentExecutor, AllOperations) {
   zmq::context_t context(1);
+  postgres::ConnectionConfig connection_config;
 
   auto int_tuple_to_string = [](const std::tuple<int>& t) {
     return std::tuple<std::string>(std::to_string(std::get<0>(t)));
   };
 
-  // clang-format off
-  auto f = fluent("inproc://yolo", &context)
-    .table<int>("t")
-    .scratch<int>("s")
-    .stdout()
-    .RegisterRules([&int_tuple_to_string](auto& t, auto& s, auto& stdout) {
-      using namespace fluent::infix;
-      auto a = t <= (t.Iterable() | ra::count());
-      auto b = t += t.Iterable();
-      auto c = t -= s.Iterable();
-      auto d = s <= (t.Iterable() | ra::count());
-      auto e = stdout <= (s.Iterable() | ra::map(int_tuple_to_string));
-      auto f = stdout += (s.Iterable() | ra::map(int_tuple_to_string));
-      return std::make_tuple(a, b, c, d, e, f);
-    });
-  // clang-format on
+  auto f =
+      fluent<pg::NoopClient, Hash, pg::ToSql>("name", "inproc://yolo", &context,
+                                              connection_config)
+          .table<std::size_t>("t")
+          .scratch<std::size_t>("s")
+          .stdout()
+          .RegisterRules([&int_tuple_to_string](auto& t, auto& s,
+                                                auto& stdout) {
+            using namespace fluent::infix;
+            auto a = t <= (t.Iterable() | ra::count());
+            auto b = t += t.Iterable();
+            auto c = t -= s.Iterable();
+            auto d = s <= (t.Iterable() | ra::count());
+            auto e = stdout <= (s.Iterable() | ra::map(int_tuple_to_string));
+            auto f = stdout += (s.Iterable() | ra::map(int_tuple_to_string));
+            return std::make_tuple(a, b, c, d, e, f);
+          });
 
   using T = std::set<std::tuple<int>>;
   CapturedStdout captured;
@@ -109,24 +113,25 @@ TEST(FluentExecutor, SimpleCommunication) {
   };
 
   zmq::context_t context(1);
-  // clang-format off
-  auto ping = fluent("inproc://ping", &context)
-    .channel<std::string, int>("c")
-    .RegisterRules([&reroute](auto& c) {
-      using namespace fluent::infix;
-      return std::make_tuple(
-        c <= (c.Iterable() | ra::map(reroute("inproc://pong")))
-      );
-    });
-  auto pong = fluent("inproc://pong", &context)
-    .channel<std::string, int>("c")
-    .RegisterRules([&reroute](auto& c) {
-      using namespace fluent::infix;
-      return std::make_tuple(
-        c <= (c.Iterable() | ra::map(reroute("inproc://ping")))
-      );
-    });
-  // clang-format on
+  postgres::ConnectionConfig connection_config;
+  auto ping =
+      fluent<pg::NoopClient, Hash, pg::ToSql>("name", "inproc://ping", &context,
+                                              connection_config)
+          .channel<std::string, int>("c")
+          .RegisterRules([&reroute](auto& c) {
+            using namespace fluent::infix;
+            return std::make_tuple(
+                c <= (c.Iterable() | ra::map(reroute("inproc://pong"))));
+          });
+  auto pong =
+      fluent<pg::NoopClient, Hash, pg::ToSql>("name", "inproc://pong", &context,
+                                              connection_config)
+          .channel<std::string, int>("c")
+          .RegisterRules([&reroute](auto& c) {
+            using namespace fluent::infix;
+            return std::make_tuple(
+                c <= (c.Iterable() | ra::map(reroute("inproc://ping"))));
+          });
 
   using C = std::set<std::tuple<std::string, int>>;
   C catalyst = {{"inproc://pong", 42}};
@@ -153,14 +158,16 @@ TEST(FluentExecutor, ComplexProgram) {
   using S = std::set<Tuple>;
 
   zmq::context_t context(1);
+  postgres::ConnectionConfig connection_config;
 
-  auto plus_one_times_two = [](const std::tuple<int>& t) {
-    return std::tuple<int>((1 + std::get<0>(t)) * 2);
+  auto plus_one_times_two = [](const std::tuple<std::size_t>& t) {
+    return std::tuple<std::size_t>((1 + std::get<0>(t)) * 2);
   };
   auto is_even = [](const auto& t) { return std::get<0>(t) % 2 == 0; };
-  auto f = fluent("inproc://yolo", &context)
-               .table<int>("t")
-               .scratch<int>("s")
+  auto f = fluent<pg::NoopClient, Hash, pg::ToSql>("name", "inproc://yolo",
+                                                   &context, connection_config)
+               .table<std::size_t>("t")
+               .scratch<std::size_t>("s")
                .RegisterRules([plus_one_times_two, is_even](auto& t, auto& s) {
                  using namespace fluent::infix;
                  auto a = t += (s.Iterable() | ra::count());
@@ -188,25 +195,22 @@ TEST(FluentExecutor, ComplexProgram) {
 
 TEST(FluentExecutor, SimpleBootstrap) {
   zmq::context_t context(1);
+  postgres::ConnectionConfig connection_config;
 
   using Tuples = std::set<std::tuple<int>>;
   Tuples xs = {{1}, {2}, {3}, {4}, {5}};
 
-  // clang-format off
-  auto f = fluent("inproc://yolo", &context)
-    .table<int>("t")
-    .scratch<int>("s")
-    .RegisterBootstrapRules([&xs](auto& t, auto& s) {
-      using namespace fluent::infix;
-      return std::make_tuple(
-        t <= ra::make_iterable(&xs),
-        s <= ra::make_iterable(&xs)
-      );
-    })
-    .RegisterRules([&xs](auto&, auto&) {
-      return std::make_tuple();
-    });
-  // clang-format on
+  auto f =
+      fluent<pg::NoopClient, Hash, pg::ToSql>("name", "inproc://yolo", &context,
+                                              connection_config)
+          .table<int>("t")
+          .scratch<int>("s")
+          .RegisterBootstrapRules([&xs](auto& t, auto& s) {
+            using namespace fluent::infix;
+            return std::make_tuple(t <= ra::make_iterable(&xs),
+                                   s <= ra::make_iterable(&xs));
+          })
+          .RegisterRules([&xs](auto&, auto&) { return std::make_tuple(); });
 
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(Tuples{}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(Tuples{}));

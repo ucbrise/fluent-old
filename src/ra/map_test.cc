@@ -25,6 +25,7 @@ TEST(Map, SimpleMap) {
       std::is_same<decltype(map)::column_types, TypeList<int, int>>::value, "");
   std::vector<std::tuple<int, int>> expected = {{1, 1}, {2, 2}, {3, 3}};
   ExpectRngsEqual(map.ToPhysical().ToRange(), ranges::view::all(expected));
+  EXPECT_EQ(map.ToDebugString(), "Map(Iterable)");
 }
 
 TEST(Map, SimplePipedMap) {

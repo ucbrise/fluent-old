@@ -82,6 +82,22 @@ TEST(TypeList, TypeListLen) {
   static_assert(TypeListLen<four>::value == 4, "");
 }
 
+TEST(TypeList, TypeListAllSame) {
+  using a = TypeList<>;
+  using b = TypeList<int>;
+  using c = TypeList<int, int>;
+  using d = TypeList<int, char>;
+  using e = TypeList<int, int, char>;
+  using f = TypeList<int, int, int>;
+
+  static_assert(TypeListAllSame<a>::value, "");
+  static_assert(TypeListAllSame<b>::value, "");
+  static_assert(TypeListAllSame<c>::value, "");
+  static_assert(!TypeListAllSame<d>::value, "");
+  static_assert(!TypeListAllSame<e>::value, "");
+  static_assert(TypeListAllSame<f>::value, "");
+}
+
 }  // namespace fluent
 
 int main(int argc, char** argv) {

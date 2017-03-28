@@ -15,6 +15,7 @@
 #include "glog/logging.h"
 #include "zmq.hpp"
 
+#include "common/hash_util.h"
 #include "common/type_list.h"
 #include "fluent/channel.h"
 #include "fluent/fluent_executor.h"
@@ -25,49 +26,23 @@
 #include "fluent/stdin.h"
 #include "fluent/stdout.h"
 #include "fluent/table.h"
+#include "postgres/connection_config.h"
+#include "postgres/to_sql.h"
 
 namespace fluent {
 
-template <typename Collections, typename BootstrapRules>
+// See below.
+template <typename Collections, typename BootstrapRules,
+          template <template <typename> class, template <typename> class>
+          class PostgresClient,
+          template <typename> class Hash = Hash,
+          template <typename> class ToSql = postgres::ToSql>
 class FluentBuilder;
 
 // # Overview
-// A FluentBuilder is a class that you can use to build up a FluentExecutor. It
-// is best explained through an example.
-//
-//   // We'll use this to bootstrap our fluent program later.
-//   std::vector<std::tuple<int, char, float>> tuples = {
-//     {1, 'a', 1.0}, {2, 'b', 2.0}, {3, 'c', 3.0}, {4, 'd', 4.0}
-//   }
-//
-//   // Each FluentExecutor contains a socket which listens for messages from
-//   // other Fluent nodes. Here, our FluentExecutor will listen on
-//   // "tcp://*:8000", so we pass that address to the FluentBuilder.
-//   const std::string address = "tcp://*:8000";
-//
-//   // This FluentExecutor will have four collections:
-//   //   - a 3-column table named "t1" with types [int, char, float]
-//   //   - a 2-column table named "t2" with types [float, int]
-//   //   - a 3-column scratch named "s" with types [int, int, float]
-//   //   - a 3-column channel named "c" with types [std::string, float, char]
-//   // The FluentExecutor will also have two rules:
-//   //   - The first is a bootstrap rule (registered with
-//   //     RegisterBootstrapRules) that will move the contents of `tuples`
-//   //     into `t1`. This rule will be executed exactly once at the beginning
-//   //     of the fluent program.
-//   //   - The second rule projects out the third and first columns of t1 and
-//   //     puts them into t2. It will be run every tick of the program.
-//   auto f = fluent(address)
-//     .table<int, char, float>("t1")
-//     .table<float, int>("t2")
-//     .scratch<int, int, float>("s")
-//     .channel<std::string, float, char>("c")
-//     .RegisterBootstrapRules([&](auto& t1, auto& t2, auto& s, auto& c) {
-//       return std::make_tuple(t1 <= ra::make_iterable(&tuples));
-//     });
-//     .RegisterRules([](auto& t1, auto& t2, auto& s, auto& c) {
-//       return std::make_tuple(t2 <= t1.iterable | ra::project<2, 0>());
-//     });
+// A FluentBuilder is a class that you can use to build up a FluentExecutor.
+// See FluentExecutor documentation for an overview of how to use a
+// FluentBuilder.
 //
 // # Implementation
 // Each FluentBuilder maintains two key fields (in addition to a bunch of other
@@ -76,7 +51,7 @@ class FluentBuilder;
 // `collections_` contains pointers to every collection registered with this
 // FluentBuilder. For example, given the following FluentBuilder:
 //
-//   auto f = fluent(address)
+//   auto f = fluent<...>(...)
 //     .table<int, char, float>("t1")
 //     .table<float, int>("t2")
 //     .scratch<int, int, float>("s")
@@ -108,10 +83,14 @@ class FluentBuilder;
 // we return a brand new FluentBuilder with the newly registered rules
 // replacing `boostrap_rules_`.
 template <typename... Cs, typename... BootstrapLhss,
-          typename... BootstrapRuleTags, typename... BootstrapRhss>
-class FluentBuilder<TypeList<Cs...>,
-                    std::tuple<std::tuple<BootstrapLhss, BootstrapRuleTags,
-                                          BootstrapRhss>...>> {
+          typename... BootstrapRuleTags, typename... BootstrapRhss,
+          template <template <typename> class, template <typename> class>
+          class PostgresClient,
+          template <typename> class Hash, template <typename> class ToSql>
+class FluentBuilder<
+    TypeList<Cs...>,
+    std::tuple<std::tuple<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>,
+    PostgresClient, Hash, ToSql> {
   static_assert(sizeof...(BootstrapLhss) == sizeof...(BootstrapRuleTags) &&
                     sizeof...(BootstrapRuleTags) == sizeof...(BootstrapRhss),
                 "The ith entry of BootstrapLhss corresponds to the left-hand "
@@ -125,7 +104,8 @@ class FluentBuilder<TypeList<Cs...>,
  public:
   using BootstrapRules = std::tuple<
       std::tuple<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>;
-  using Parser = std::function<void(const std::vector<std::string>& columns)>;
+  using Parser =
+      std::function<void(std::size_t, const std::vector<std::string>& columns)>;
 
   // Create a table, scratch, channel, stdin, stdout, or periodic. Note the
   // `&&` at the end of each declaration. This means that these methods can
@@ -133,46 +113,60 @@ class FluentBuilder<TypeList<Cs...>,
   // methods move their contents.
 
   template <typename... Us>
-  FluentBuilder<TypeList<Cs..., Table<Us...>>, BootstrapRules> table(
-      const std::string& name) && {
+  FluentBuilder<TypeList<Cs..., Table<Us...>>, BootstrapRules, PostgresClient,
+                Hash, ToSql>
+  table(const std::string& name) && {
     LOG(INFO) << "Adding a table named " << name << ".";
     return AddCollection(std::make_unique<Table<Us...>>(name));
   }
 
   template <typename... Us>
-  FluentBuilder<TypeList<Cs..., Scratch<Us...>>, BootstrapRules> scratch(
-      const std::string& name) && {
+  FluentBuilder<TypeList<Cs..., Scratch<Us...>>, BootstrapRules, PostgresClient,
+                Hash, ToSql>
+  scratch(const std::string& name) && {
     LOG(INFO) << "Adding a scratch named " << name << ".";
     return AddCollection(std::make_unique<Scratch<Us...>>(name));
   }
 
   template <typename... Us>
-  FluentBuilder<TypeList<Cs..., Channel<Us...>>, BootstrapRules> channel(
-      const std::string& name) && {
+  FluentBuilder<TypeList<Cs..., Channel<Us...>>, BootstrapRules, PostgresClient,
+                Hash, ToSql>
+  channel(const std::string& name) && {
     LOG(INFO) << "Adding a channel named " << name << ".";
     auto c =
         std::make_unique<Channel<Us...>>(name, &network_state_->socket_cache);
     CHECK(parsers_.find(c->Name()) == parsers_.end())
         << "The channel name '" << c->Name()
         << "' is used multiple times. Channel names must be unique.";
-    parsers_.insert(std::make_pair(c->Name(), c->GetParser()));
+
+    Channel<Us...>* cp = c.get();
+    PostgresClient<Hash, ToSql>* client = postgres_client_.get();
+    parsers_.insert(std::make_pair(
+        c->Name(), c->GetParser([cp, client](std::size_t time, const auto& t) {
+          client->InsertTuple(cp->Name(), time, t);
+        })));
     return AddCollection(std::move(c));
   }
 
-  FluentBuilder<TypeList<Cs..., Stdin>, BootstrapRules> stdin() && {
+  FluentBuilder<TypeList<Cs..., Stdin>, BootstrapRules, PostgresClient, Hash,
+                ToSql>
+  stdin() && {
     LOG(INFO) << "Adding stdin.";
     auto stdin = std::make_unique<Stdin>();
     stdin_ = stdin.get();
     return AddCollection(std::move(stdin));
   }
 
-  FluentBuilder<TypeList<Cs..., Stdout>, BootstrapRules> stdout() && {
+  FluentBuilder<TypeList<Cs..., Stdout>, BootstrapRules, PostgresClient, Hash,
+                ToSql>
+  stdout() && {
     LOG(INFO) << "Adding stdout.";
     return AddCollection(std::make_unique<Stdout>());
   }
 
-  FluentBuilder<TypeList<Cs..., Periodic>, BootstrapRules> periodic(
-      const std::string& name, const Periodic::period& period) && {
+  FluentBuilder<TypeList<Cs..., Periodic>, BootstrapRules, PostgresClient, Hash,
+                ToSql>
+  periodic(const std::string& name, const Periodic::period& period) && {
     LOG(INFO) << "Adding Periodic named " << name << ".";
     auto p = std::make_unique<Periodic>(name, period);
     periodics_.push_back(p.get());
@@ -181,7 +175,8 @@ class FluentBuilder<TypeList<Cs...>,
 
   // See `RegisterRules`
   template <typename F>
-  FluentBuilder<TypeList<Cs...>, typename std::result_of<F(Cs&...)>::type>
+  FluentBuilder<TypeList<Cs...>, typename std::result_of<F(Cs&...)>::type,
+                PostgresClient, Hash, ToSql>
   RegisterBootstrapRules(const F& f) && {
     static_assert(sizeof...(BootstrapLhss) == 0,
                   "You are registering bootstrap rules with a FluentBuilder "
@@ -213,7 +208,8 @@ class FluentBuilder<TypeList<Cs...>,
   // `f` to generate the rules and use them to construct a `FluentExecutor`.
   template <typename F>
   FluentExecutor<TypeList<Cs...>, BootstrapRules,
-                 typename std::result_of<F(Cs&...)>::type>
+                 typename std::result_of<F(Cs&...)>::type, PostgresClient, Hash,
+                 ToSql>
   RegisterRules(const F& f) && {
     return RegisterRulesImpl(f, std::make_index_sequence<sizeof...(Cs)>());
   }
@@ -222,9 +218,14 @@ class FluentBuilder<TypeList<Cs...>,
   // Constructs an empty FluentBuilder. Note that this constructor should
   // only be called when Cs is empty (i.e. sizeof...(Cs) == 0). This private
   // constructor is used primarily by the `fluent` function down below.
-  FluentBuilder(const std::string& address, zmq::context_t* const context)
-      : network_state_(std::make_unique<NetworkState>(address, context)),
-        stdin_(nullptr) {
+  FluentBuilder(const std::string& name, const std::string& address,
+                zmq::context_t* context,
+                const postgres::ConnectionConfig& connection_config)
+      : name_(name),
+        network_state_(std::make_unique<NetworkState>(address, context)),
+        stdin_(nullptr),
+        postgres_client_(
+            std::make_unique<PostgresClient<Hash, ToSql>>(connection_config)) {
     static_assert(sizeof...(Cs) == 0,
                   "The FluentBuilder(const std::string& address, "
                   "zmq::context_t* const context) constructor should only be "
@@ -232,17 +233,21 @@ class FluentBuilder<TypeList<Cs...>,
   }
 
   // Moves the guts of one FluentBuilder into another.
-  FluentBuilder(std::tuple<std::unique_ptr<Cs>...> collections,
+  FluentBuilder(std::string name,
+                std::tuple<std::unique_ptr<Cs>...> collections,
                 BootstrapRules boostrap_rules,
                 std::map<std::string, Parser> parsers,
                 std::unique_ptr<NetworkState> network_state, Stdin* stdin,
-                std::vector<Periodic*> periodics)
-      : collections_(std::move(collections)),
+                std::vector<Periodic*> periodics,
+                std::unique_ptr<PostgresClient<Hash, ToSql>> postgres_client)
+      : name_(std::move(name)),
+        collections_(std::move(collections)),
         boostrap_rules_(std::move(boostrap_rules)),
         parsers_(std::move(parsers)),
         network_state_(std::move(network_state)),
         stdin_(stdin),
-        periodics_(std::move(periodics)) {}
+        periodics_(std::move(periodics)),
+        postgres_client_(std::move(postgres_client)) {}
 
   FluentBuilder(FluentBuilder&&) = default;
   FluentBuilder& operator=(FluentBuilder&&) = default;
@@ -250,45 +255,51 @@ class FluentBuilder<TypeList<Cs...>,
 
   // Return a new FluentBuilder with `c` appended to `collections`.
   template <typename C>
-  FluentBuilder<TypeList<Cs..., C>, BootstrapRules> AddCollection(
-      std::unique_ptr<C> c) {
+  FluentBuilder<TypeList<Cs..., C>, BootstrapRules, PostgresClient, Hash, ToSql>
+  AddCollection(std::unique_ptr<C> c) {
     std::tuple<std::unique_ptr<Cs>..., std::unique_ptr<C>> collections =
         std::tuple_cat(std::move(collections_), std::make_tuple(std::move(c)));
-    return {std::move(collections),
-            std::move(boostrap_rules_),
-            std::move(parsers_),
-            std::move(network_state_),
-            stdin_,
-            std::move(periodics_)};
+    return {std::move(name_),           std::move(collections),
+            std::move(boostrap_rules_), std::move(parsers_),
+            std::move(network_state_),  stdin_,
+            std::move(periodics_),      std::move(postgres_client_)};
   }
 
   // See `RegisterBootstrapRules`.
   template <typename F, std::size_t... Is>
-  FluentBuilder<TypeList<Cs...>, typename std::result_of<F(Cs&...)>::type>
+  FluentBuilder<TypeList<Cs...>, typename std::result_of<F(Cs&...)>::type,
+                PostgresClient, Hash, ToSql>
   RegisterBootstrapRulesImpl(const F& f, std::index_sequence<Is...>) {
     auto boostrap_rules = f(*std::get<Is>(collections_)...);
-    return {std::move(collections_),
-            std::move(boostrap_rules),
-            std::move(parsers_),
-            std::move(network_state_),
-            stdin_,
-            std::move(periodics_)};
+    TupleIter(boostrap_rules, [](const auto& rule) {
+      LOG(INFO) << "Registering a bootstrap rule: "
+                << std::get<2>(rule).ToDebugString();
+    });
+    return {std::move(name_),          std::move(collections_),
+            std::move(boostrap_rules), std::move(parsers_),
+            std::move(network_state_), stdin_,
+            std::move(periodics_),     std::move(postgres_client_)};
   }
 
   // See `RegisterRules`.
   template <typename F, std::size_t... Is>
   FluentExecutor<TypeList<Cs...>, BootstrapRules,
-                 typename std::result_of<F(Cs&...)>::type>
+                 typename std::result_of<F(Cs&...)>::type, PostgresClient, Hash,
+                 ToSql>
   RegisterRulesImpl(const F& f, std::index_sequence<Is...>) {
     auto relalgs = f(*std::get<Is>(collections_)...);
-    return {std::move(collections_),
-            std::move(boostrap_rules_),
-            std::move(parsers_),
-            std::move(network_state_),
-            stdin_,
-            std::move(periodics_),
+    TupleIter(relalgs, [](const auto& rule) {
+      LOG(INFO) << "Registering a rule: " << std::get<2>(rule).ToDebugString();
+    });
+    return {std::move(name_),           std::move(collections_),
+            std::move(boostrap_rules_), std::move(parsers_),
+            std::move(network_state_),  stdin_,
+            std::move(periodics_),      std::move(postgres_client_),
             std::move(relalgs)};
   }
+
+  // The name of the fluent program.
+  const std::string name_;
 
   // See class documentation above.
   //
@@ -323,8 +334,13 @@ class FluentBuilder<TypeList<Cs...>,
   // order.
   std::vector<Periodic*> periodics_;
 
+  // A postgres client used to record history and lineage information.
+  std::unique_ptr<PostgresClient<Hash, ToSql>> postgres_client_;
+
   // All FluentBuilders are friends of one another.
-  template <typename Collections, typename BootstrapRules>
+  template <typename, typename, template <template <typename> class,
+                                          template <typename> class> class,
+            template <typename> class, template <typename> class>
   friend class FluentBuilder;
 
   // The `fluent` function is used to construct a FluentBuilder without any
@@ -334,15 +350,26 @@ class FluentBuilder<TypeList<Cs...>,
   //     .table<int, char, float>("t")
   //     .scratch<int, int, float>("s")
   //     // and so on...
-  friend FluentBuilder<TypeList<>, std::tuple<>> fluent(
-      const std::string& address, zmq::context_t* const context);
+  template <template <template <typename> class, template <typename> class>
+            class PostgresClient_,
+            template <typename> class Hash_, template <typename> class ToSql_>
+  friend FluentBuilder<TypeList<>, std::tuple<>, PostgresClient_, Hash_, ToSql_>
+  fluent(const std::string& name, const std::string& address,
+         zmq::context_t* context,
+         const postgres::ConnectionConfig& connection_config);
 };
 
 // Create an empty FluentBuilder listening on ZeroMQ address `address` using
 // the ZeroMQ context `context`.
-inline FluentBuilder<TypeList<>, std::tuple<>> fluent(
-    const std::string& address, zmq::context_t* const context) {
-  return {address, context};
+template <template <template <typename> class, template <typename> class>
+          class PostgresClient,
+          template <typename> class Hash = Hash,
+          template <typename> class ToSql = postgres::ToSql>
+FluentBuilder<TypeList<>, std::tuple<>, PostgresClient, Hash, ToSql> fluent(
+    const std::string& name, const std::string& address,
+    zmq::context_t* context,
+    const postgres::ConnectionConfig& connection_config) {
+  return {name, address, context, connection_config};
 }
 
 }  // namespace fluent

@@ -4,8 +4,10 @@
 #include <type_traits>
 #include <utility>
 
-#include "common/type_list.h"
+#include "fmt/format.h"
 #include "range/v3/all.hpp"
+
+#include "common/type_list.h"
 
 namespace fluent {
 namespace ra {
@@ -50,6 +52,11 @@ class Cross {
 
   auto ToPhysical() const {
     return make_physical_cross(left_.ToPhysical(), right_.ToPhysical());
+  }
+
+  std::string ToDebugString() const {
+    return fmt::format("Cross({}, {})", left_.ToDebugString(),
+                       right_.ToDebugString());
   }
 
  private:

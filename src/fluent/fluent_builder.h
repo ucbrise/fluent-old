@@ -31,6 +31,7 @@
 
 namespace fluent {
 
+// See below.
 template <typename Collections, typename BootstrapRules,
           template <template <typename> class, template <typename> class>
           class PostgresClient,
@@ -39,42 +40,9 @@ template <typename Collections, typename BootstrapRules,
 class FluentBuilder;
 
 // # Overview
-// A FluentBuilder is a class that you can use to build up a FluentExecutor. It
-// is best explained through an example.
-//
-//   // We'll use this to bootstrap our fluent program later.
-//   std::vector<std::tuple<int, char, float>> tuples = {
-//     {1, 'a', 1.0}, {2, 'b', 2.0}, {3, 'c', 3.0}, {4, 'd', 4.0}
-//   }
-//
-//   // Each FluentExecutor contains a socket which listens for messages from
-//   // other Fluent nodes. Here, our FluentExecutor will listen on
-//   // "tcp://*:8000", so we pass that address to the FluentBuilder.
-//   const std::string address = "tcp://*:8000";
-//
-//   // This FluentExecutor will have four collections:
-//   //   - a 3-column table named "t1" with types [int, char, float]
-//   //   - a 2-column table named "t2" with types [float, int]
-//   //   - a 3-column scratch named "s" with types [int, int, float]
-//   //   - a 3-column channel named "c" with types [std::string, float, char]
-//   // The FluentExecutor will also have two rules:
-//   //   - The first is a bootstrap rule (registered with
-//   //     RegisterBootstrapRules) that will move the contents of `tuples`
-//   //     into `t1`. This rule will be executed exactly once at the beginning
-//   //     of the fluent program.
-//   //   - The second rule projects out the third and first columns of t1 and
-//   //     puts them into t2. It will be run every tick of the program.
-//   auto f = fluent(address)
-//     .table<int, char, float>("t1")
-//     .table<float, int>("t2")
-//     .scratch<int, int, float>("s")
-//     .channel<std::string, float, char>("c")
-//     .RegisterBootstrapRules([&](auto& t1, auto& t2, auto& s, auto& c) {
-//       return std::make_tuple(t1 <= ra::make_iterable(&tuples));
-//     });
-//     .RegisterRules([](auto& t1, auto& t2, auto& s, auto& c) {
-//       return std::make_tuple(t2 <= t1.iterable | ra::project<2, 0>());
-//     });
+// A FluentBuilder is a class that you can use to build up a FluentExecutor.
+// See FluentExecutor documentation for an overview of how to use a
+// FluentBuilder.
 //
 // # Implementation
 // Each FluentBuilder maintains two key fields (in addition to a bunch of other
@@ -83,7 +51,7 @@ class FluentBuilder;
 // `collections_` contains pointers to every collection registered with this
 // FluentBuilder. For example, given the following FluentBuilder:
 //
-//   auto f = fluent(address)
+//   auto f = fluent<...>(...)
 //     .table<int, char, float>("t1")
 //     .table<float, int>("t2")
 //     .scratch<int, int, float>("s")
@@ -330,7 +298,7 @@ class FluentBuilder<
             std::move(relalgs)};
   }
 
-  // DO_NOT_SUBMIT(mwhittaker): Document.
+  // The name of the fluent program.
   const std::string name_;
 
   // See class documentation above.
@@ -366,7 +334,7 @@ class FluentBuilder<
   // order.
   std::vector<Periodic*> periodics_;
 
-  // DO_NOT_SUBMIT(mwhittaker): Document.
+  // A postgres client used to record history and lineage information.
   std::unique_ptr<PostgresClient<Hash, ToSql>> postgres_client_;
 
   // All FluentBuilders are friends of one another.

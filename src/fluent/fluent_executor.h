@@ -34,7 +34,14 @@
 namespace fluent {
 namespace detail {
 
-// DO_NOT_SUBMIT(mwhittaker): Document.
+// `CollectionTypes` returns the types of the columns of a collection.
+//
+//   - CollectionTypes<Table<Ts...>>   == TypeList<Ts...>
+//   - CollectionTypes<Scratch<Ts...>> == TypeList<Ts...>
+//   - CollectionTypes<Channel<Ts...>> == TypeList<Ts...>
+//   - CollectionTypes<Stdin>          == TypeList<std::string>
+//   - CollectionTypes<Stdout>         == TypeList<std::string>
+//   - CollectionTypes<Periodic>       == TypeList<Periodic::id, Periodic::time>
 template <typename Collection>
 struct CollectionTypes;
 
@@ -68,7 +75,7 @@ struct CollectionTypes<Periodic> {
   using type = TypeList<Periodic::id, Periodic::time>;
 };
 
-// DO_NOT_SUBMIT(mwhittaker): Document.
+// `UnwrapUniquePtr<std::unique_ptr<T>>::type == T`.
 template <typename T>
 struct UnwrapUniquePtr;
 
@@ -79,6 +86,7 @@ struct UnwrapUniquePtr<std::unique_ptr<T>> {
 
 }  // namespace detail
 
+// See below.
 template <typename Collections, typename BootstrapRules, typename Rules,
           template <template <typename> class, template <typename> class>
           class PostgresClient,
@@ -87,8 +95,8 @@ class FluentExecutor;
 
 // # Overview
 // A FluentExecutor runs a Fluent program. You build up a Fluent program using
-// a FluentBuilder and then use it to execute the program. It is best
-// explained through an example.
+// a FluentBuilder and then use it to execute the program. It is best explained
+// through an example.
 //
 //   // This FluentExecutor will have four collections:
 //   //   - a 3-column table named "t1" with types [int, char, float]
@@ -102,7 +110,11 @@ class FluentExecutor;
 //   //     of the fluent program.
 //   //   - The second rule projects out the third and first columns of t1 and
 //   //     puts them into t2. It will be run every tick of the program.
-//   auto f = fluent(address)
+//   // The FluentExecutor will also record the history of its state and the
+//   // lineage of every tuple it derives using a PqxxClient.
+//   zmq::context_t context(1);
+//   ConnectionConfig config;
+//   auto f = fluent<PqxxClient>("name", "address", &context, config)
 //     .table<int, char, float>("t1")
 //     .table<float, int>("t2")
 //     .scratch<int, int, float>("s")
@@ -131,22 +143,22 @@ class FluentExecutor;
 //   f.Run();
 //
 // # Implementation
-// A few preliminaries.
-//   - Every C in Cs is of the form
-//       - Table<Us...>,
-//       - Scratch<Us...>,
-//       - Channel<Us...>,
-//       - Stdin,
-//       - Stdout, or
-//       - Periodic.
-//   - A FluentExecutor stores pointers to the collections in `collections_`.
-//   - sizeof...(Lhss) == sizeof...(RuleTags) == sizeof...(Rhss) and
-//     - Lhss are pointers to collections,
-//     - Every type in RuleTags is one of the rule tags in `rule_tags.h`, and
-//     - Rhss are relational algebra expressions.
-//   - Bootstrap{Lhss,RuleTags,Rhss} work exactly like their non-Bootstrap
-//     counterparts.
-//   - A FluentExecutor steals most of its guts from a FluentBuilder.
+// - Every C in Cs is one of the following forms:
+//     - Table<Us...>  - Scratch<Us...>  - Channel<Us...>
+//     - Stdin         - Stdout          - Periodic
+// - A FluentExecutor stores pointers to the collections in `collections_`.
+// - A FluentExecutor stores bootstrap rules in `boostrap_rules_`.
+// - A FluentExecutor stores rules in `rules_`.
+// - sizeof...(Lhss) == sizeof...(RuleTags) == sizeof...(Rhss) and
+//   - Lhss are pointers to collections,
+//   - Every type in RuleTags is one of the rule tags in `rule_tags.h`, and
+//   - Rhss are relational algebra expressions.
+// - Bootstrap{Lhss,RuleTags,Rhss} work exactly like their non-Bootstrap
+//   counterparts.
+// - A FluentExecutor steals most of its guts from a FluentBuilder.
+// - A FluentExecutor uses a PostgresClient<Hash, Sql> object to record history
+//   and lineage. If you don't want to record history or lineage, then use a
+//   NoopClient. Otherwise use a PqxxClient.
 template <typename... Cs, typename... BootstrapLhss,
           typename... BootstrapRuleTags, typename... BootstrapRhss,
           typename... Lhss, typename... RuleTags, typename... Rhss,
@@ -292,7 +304,7 @@ class FluentExecutor<
   }
 
  private:
-  // DO_NOT_SUBMIT(mwhittaker): Document.
+  // Initialize a node with the postgres database.
   void InitPostgres() {
     // Nodes.
     postgres_client_->Init(name_);
@@ -311,13 +323,14 @@ class FluentExecutor<
     });
   }
 
-  // DO_NOT_SUBMIT(mwhittaker): Document.
+  // Register a collection with the postgres database.
   template <typename Collection, typename... Ts>
   void AddCollection(const Collection& c, TypeList<Ts...>) {
     postgres_client_->template AddCollection<Ts...>(c->Name());
   }
 
-  // DO_NOT_SUBMIT(mwhittaker): Document.
+  // Tick a collection and insert the deleted tuples into the postgres
+  // database.
   template <typename Collection>
   void TickCollection(Collection* c) {
     auto deleted = c->Tick();
@@ -411,7 +424,9 @@ class FluentExecutor<
                 std::get<2>(*rule));
   }
 
-  // DO_NOT_SUBMIT(mwhittaker): Document.
+  // The logical time of the fluent program. The logical time begins at 0 and
+  // is ticked before every rule execution and before every round of receiving
+  // tuples. More concretely, grep for `time_++`.
   int time_ = 0;
 
   // See `FluentBuilder`.

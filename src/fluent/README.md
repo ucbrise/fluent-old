@@ -119,3 +119,5 @@ Additionally, for each program `p`, we generate a `p_lineage` table:
 where a tuple `(dn, dc, dt, r, i, c, t, time)` represents that the tuple `dt`
 in collection `dc` on node `dn` was used by rule `r` to insert (if `i` is true)
 or delete (if `i` is false) the tuple `t` into collection `c` at time `time`.
+
+TODO(mwhittaker): Explain how logical time works.

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 
 #include "glog/logging.h"
 
@@ -6,6 +7,8 @@
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"
 #include "ra/all.h"
+
+#define THRESHOLD 10 
 
 namespace ra = fluent::ra;
 
@@ -31,6 +34,15 @@ int main(int argc, char* argv[]) {
   std::vector<std::tuple<server_address_t, server_address_t>>
     connect_tuple = {std::make_tuple(seed_address, server_address)};
 
+  std::vector<std::tuple<std::string>>
+    getchannel_tuple = {std::make_tuple("getchannel")};
+
+  std::vector<std::tuple<std::string>>
+    putchannel_tuple = {std::make_tuple("putchannel")};
+
+  std::vector<std::tuple<server_address_t>>
+    serveraddress_tuple = {std::make_tuple(server_address)};
+
   std::vector<std::tuple<std::string, int>>
     test_tuple = {std::make_tuple("A", 10)};
 
@@ -40,6 +52,12 @@ int main(int argc, char* argv[]) {
           .table<server_address_t>("serverlist")
           // Keeps track of a set of keys that get changed within a gossip period
           .table<k_t>("changeset")
+          // Keeps track of the number of messages in the get&put channels
+          .table<std::string, std::size_t>("messagecount")
+          // Keeps track of the load info across servers
+          .table<server_address_t, std::size_t>("load")
+          // Records the number of workers spawned
+          .table<std::size_t>("spawn")
           // Communication from a new worker node to the seed node
           .channel<server_address_t, server_address_t>("addrgossipseed")
           // Communication from the seed node to a new worker node
@@ -56,11 +74,15 @@ int main(int argc, char* argv[]) {
           .channel<client_address_t, succeed_t>("putresponse")
           // Gossip updates to other worker nodes
           .channel<server_address_t, k_t, v_t>("gossip")
+          // Gossip load info to other worker nodes
+          .channel<server_address_t, server_address_t, std::size_t>("gossipload")
           // KVS using MaxLattice for conflict resolution
           .lattice<fluent::MapLattice<std::string, fluent::MaxLattice<int>>>("mapl")
           // Trigger gossip every 100 milliseconds
-          .periodic("p", std::chrono::milliseconds(100))
-          .RegisterBootstrapRules([&](auto& serverlist, auto&, auto& addrgossipseed, auto&, auto&, auto&, auto&, auto&, auto&, auto&, auto&, auto&) {
+          .periodic("pg", std::chrono::milliseconds(100))
+          // Trigger load checking every 1000 milliseconds
+          .periodic("pl", std::chrono::milliseconds(1000))
+          .RegisterBootstrapRules([&](auto& serverlist, auto&, auto&, auto&, auto&, auto& addrgossipseed, auto&, auto&, auto&, auto&, auto&, auto&, auto&, auto&, auto&, auto&, auto&) {
             using namespace fluent::infix;
 
             auto add_self = 
@@ -73,7 +95,7 @@ int main(int argc, char* argv[]) {
                                                      }));
             return std::make_tuple(add_self, to_seed);
           })
-          .RegisterRules([&](auto& serverlist, auto& changeset, auto& addrgossipseed, auto& addrgossip, auto& sync, auto& getrequest, auto& getresponse, auto& putrequest, auto& putresponse, auto& gossip, auto& mapl, auto& p) {
+          .RegisterRules([&](auto& serverlist, auto& changeset, auto& messagecount, auto& load, auto& spawn, auto& addrgossipseed, auto& addrgossip, auto& sync, auto& getrequest, auto& getresponse, auto& putrequest, auto& putresponse, auto& gossip, auto& gossipload, auto& mapl, auto& pg, auto& pl) {
             using namespace fluent::infix;
 
             auto receive_addr_seed = 
@@ -122,7 +144,7 @@ int main(int argc, char* argv[]) {
 
             auto sendgossip =
                 gossip <=
-                (ra::make_cross(p.Iterable(), 
+                (ra::make_cross(pg.Iterable(), 
                                 ra::make_cross((serverlist.Iterable() | ra::filter([&](const std::tuple<server_address_t>& t) {
                                                            return std::get<0>(t) != server_address;
                                                          }))
@@ -133,7 +155,7 @@ int main(int argc, char* argv[]) {
 
             auto clearchangeset =
                 changeset -=
-                (ra::make_cross(p.Iterable(), changeset.Iterable())
+                (ra::make_cross(pg.Iterable(), changeset.Iterable())
                  | ra::map([](const auto& t) {
                      return std::make_tuple(std::get<2>(t));
                    }));
@@ -142,8 +164,47 @@ int main(int argc, char* argv[]) {
                 mapl <=
                 (gossip.Iterable() | ra::project<1,2>());
 
+            auto updategetchannelload =
+                messagecount <=
+                ra::make_cross(ra::make_iterable(&getchannel_tuple), (ra::make_cross(pl.Iterable(), getrequest.Iterable()) | ra::count()));
 
-            return std::make_tuple(receive_addr_seed, send_addr_seed, send_sync, receive_sync, receive_addr, processget, processput, updatechangeset, sendgossip, clearchangeset, receivegossip);
+            auto updateputchannelload =
+                messagecount <=
+                ra::make_cross(ra::make_iterable(&putchannel_tuple), (ra::make_cross(pl.Iterable(), putrequest.Iterable()) | ra::count()));
+
+            auto updateload = 
+                load <=
+                ra::make_cross(ra::make_iterable(&serveraddress_tuple), (ra::make_cross(pl.Iterable(), messagecount.Iterable()) | ra::project<3>() | ra::sum()));
+
+            auto receiveload =
+                load <=
+                (ra::make_cross(pl.Iterable(), gossipload.Iterable()) | ra::project<3,4>());
+
+            auto sendload =
+                gossipload <=
+                ra::make_cross(serverlist.Iterable() | ra::filter([&](const std::tuple<server_address_t>& t) {
+                                                           return std::get<0>(t) != server_address;
+                                                         }), 
+                                ra::make_cross(ra::make_iterable(&serveraddress_tuple), (ra::make_cross(pl.Iterable(), messagecount.Iterable()) | ra::project<3>() | ra::sum())));
+
+            auto spawnworker =
+                spawn <=
+                (ra::make_cross((ra::make_cross(pl.Iterable(), load.Iterable()) 
+                  | ra::project<3>() 
+                  | ra::avg()
+                  | ra::filter([&](const auto& t) {
+                      return (seed_address == server_address && std::get<0>(t) >= THRESHOLD);
+                    })), (spawn.Iterable() | ra::count()))
+                  | ra::map([&](const auto& t) {
+                      std::ostringstream oss;
+                      oss << "GLOG_logtostderr=1 ./build/examples/indy/examples_indy_server " << server_address + std::to_string(std::get<1>(t) + 1) << " " << server_address;
+                      std::string exe = oss.str();
+                      system(exe.c_str());
+                      return std::make_tuple(std::get<1>(t) + 1);
+                    }));
+
+
+            return std::make_tuple(receive_addr_seed, send_addr_seed, send_sync, receive_sync, receive_addr, processget, processput, updatechangeset, sendgossip, clearchangeset, receivegossip, updategetchannelload, updateputchannelload, updateload, receiveload, sendload, spawnworker);
           });
 
   f.Run();

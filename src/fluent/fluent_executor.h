@@ -186,20 +186,23 @@ class FluentExecutor<
 
     // Read from the network.
     if (pollitems[0].revents & ZMQ_POLLIN) {
-      std::vector<zmq::message_t> msgs =
-          zmq_util::recv_msgs(&network_state_->socket);
-      std::vector<std::string> strings;
-      for (std::size_t i = 1; i < msgs.size(); ++i) {
-        strings.push_back(zmq_util::message_to_string(msgs[i]));
-      }
+      bool res;
+      while (true) {
+        std::vector<zmq::message_t> msgs;
+        if ((res = zmq_util::recv_msgs(&network_state_->socket, msgs)) == false) break;
+        std::vector<std::string> strings;
+        for (std::size_t i = 1; i < msgs.size(); ++i) {
+          strings.push_back(zmq_util::message_to_string(msgs[i]));
+        }
 
-      const std::string channel_name = zmq_util::message_to_string(msgs[0]);
-      if (parsers_.find(channel_name) != std::end(parsers_)) {
-        parsers_[channel_name](strings);
-      } else {
-        LOG(WARNING) << "A message was received for a channel named "
-                     << channel_name
-                     << " but a parser for the channel was never registered.";
+        const std::string channel_name = zmq_util::message_to_string(msgs[0]);
+        if (parsers_.find(channel_name) != std::end(parsers_)) {
+          parsers_[channel_name](strings);
+        } else {
+          LOG(WARNING) << "A message was received for a channel named "
+                       << channel_name
+                       << " but a parser for the channel was never registered.";
+        }
       }
     }
 

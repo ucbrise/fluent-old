@@ -41,8 +41,8 @@ TEST(Channel, SimpleMerge) {
   EXPECT_THAT(c.Get(), UnorderedElementsAreArray(empty));
 
   for (int i = 1; i < 9; ++i) {
-    std::vector<zmq::message_t> messages =
-        i % 2 == 0 ? zmq_util::recv_msgs(&b) : zmq_util::recv_msgs(&a);
+    std::vector<zmq::message_t> messages;
+    i % 2 == 0 ? zmq_util::recv_msgs(&b, messages) : zmq_util::recv_msgs(&a, messages);
     ASSERT_EQ(messages.size(), static_cast<std::size_t>(4));
     EXPECT_EQ("c", zmq_util::message_to_string(messages[0]));
     EXPECT_EQ(i % 2 == 0 ? b_address : a_address,

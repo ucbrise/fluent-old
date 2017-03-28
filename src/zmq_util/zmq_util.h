@@ -28,7 +28,7 @@ std::string recv_string(zmq::socket_t* socket);
 void send_msgs(std::vector<zmq::message_t> msgs, zmq::socket_t* socket);
 
 // `recv` a multipart message.
-std::vector<zmq::message_t> recv_msgs(zmq::socket_t* socket);
+bool recv_msgs(zmq::socket_t* socket, std::vector<zmq::message_t>& msgs);
 
 // `poll` is a wrapper around `zmq::poll` that takes a vector instead of a
 // pointer and a size.

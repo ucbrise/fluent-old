@@ -37,17 +37,17 @@ void send_msgs(std::vector<zmq::message_t> msgs, zmq::socket_t* socket) {
   }
 }
 
-std::vector<zmq::message_t> recv_msgs(zmq::socket_t* socket) {
+bool recv_msgs(zmq::socket_t* socket, std::vector<zmq::message_t>& msgs) {
   CHECK_NOTNULL(socket);
-  std::vector<zmq::message_t> msgs;
+  bool res;
   int more = true;
   std::size_t more_size = sizeof(more);
   while (more) {
     msgs.emplace_back();
-    socket->recv(&msgs.back());
+    if ((res = socket->recv(&msgs.back(), ZMQ_DONTWAIT)) == false) return false;
     socket->getsockopt(ZMQ_RCVMORE, static_cast<void*>(&more), &more_size);
   }
-  return msgs;
+  return true;
 }
 
 int poll(long timeout, std::vector<zmq::pollitem_t>* items) {

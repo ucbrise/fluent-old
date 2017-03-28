@@ -21,7 +21,12 @@ class PhysicalCount {
 
   auto ToRange() {
     if (count_.size() == 0) {
-      count_.insert(std::tuple<std::size_t>(ranges::size(child_.ToRange())));
+      std::size_t c = 0;
+      auto rng = child_.ToRange();
+      for (auto iter = ranges::begin(rng); iter != ranges::end(rng); ++iter) {
+        c ++;
+      }
+      count_.insert(std::tuple<std::size_t>(c));
     }
     return ranges::view::all(count_);
   }

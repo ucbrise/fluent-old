@@ -89,25 +89,26 @@ template <typename Connection, typename Work, template <typename> class Hash,
           template <typename> class ToSql>
 class InjectablePqxxClient {
  public:
-  InjectablePqxxClient(const ConnectionConfig& connection_config)
-      : connection_(connection_config.ToString()), id_(0) {
+  InjectablePqxxClient(std::string name, std::size_t id,
+                       const ConnectionConfig& connection_config)
+      : connection_(connection_config.ToString()),
+        name_(std::move(name)),
+        id_(id) {
     LOG(INFO)
         << "Established a postgres connection with the following parameters: "
         << connection_config.ToString();
   }
 
   // TODO(mwhittaker): Handle hash collisions.
-  void Init(const std::string& name) {
+  void Init() {
     initialized_ = true;
-    id_ = detail::size_t_to_int64(Hash<std::string>()(name));
-    name_ = name;
 
     ExecuteQuery("Init",
                  fmt::format(R"(
       INSERT INTO Nodes (id, name)
       VALUES ({});
     )",
-                             Join(SqlValues(std::make_tuple(id_, name)))));
+                             Join(SqlValues(std::make_tuple(id_, name_)))));
 
     ExecuteQuery("CreateLineageTable", fmt::format(R"(
       CREATE TABLE {}_lineage (
@@ -121,7 +122,7 @@ class InjectablePqxxClient {
         time                 integer  NOT NULL
       );
     )",
-                                                   name));
+                                                   name_));
   }
 
   std::size_t GetId() {
@@ -265,11 +266,11 @@ class InjectablePqxxClient {
   // True after `Init()` is called;
   bool initialized_ = false;
 
-  // Each fluent node named `n` has a unique id `hash(n)`.
-  std::int64_t id_;
-
   // The name of fluent node using this client.
   std::string name_;
+
+  // Each fluent node named `n` has a unique id `hash(n)`.
+  std::int64_t id_;
 };
 
 // See InjectablePqxxClient documentation above.

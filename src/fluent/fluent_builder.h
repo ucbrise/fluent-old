@@ -104,8 +104,6 @@ class FluentBuilder<
  public:
   using BootstrapRules = std::tuple<
       std::tuple<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>;
-  using Parser =
-      std::function<void(std::size_t, const std::vector<std::string>& columns)>;
 
   // Create a table, scratch, channel, stdin, stdout, or periodic. Note the
   // `&&` at the end of each declaration. This means that these methods can
@@ -133,8 +131,8 @@ class FluentBuilder<
                 Hash, ToSql>
   channel(const std::string& name) && {
     LOG(INFO) << "Adding a channel named " << name << ".";
-    auto c =
-        std::make_unique<Channel<Us...>>(name, &network_state_->socket_cache);
+    auto c = std::make_unique<Channel<Us...>>(id_, name,
+                                              &network_state_->socket_cache);
     CHECK(parsers_.find(c->Name()) == parsers_.end())
         << "The channel name '" << c->Name()
         << "' is used multiple times. Channel names must be unique.";
@@ -142,8 +140,15 @@ class FluentBuilder<
     Channel<Us...>* cp = c.get();
     PostgresClient<Hash, ToSql>* client = postgres_client_.get();
     parsers_.insert(std::make_pair(
-        c->Name(), c->GetParser([cp, client](std::size_t time, const auto& t) {
+        c->Name(), c->GetParser([cp, client](std::size_t dep_node_id,
+                                             const std::string& channel_name,
+                                             std::size_t time, const auto& t) {
+          using tuple_type = typename std::decay<decltype(t)>::type;
+          std::size_t tuple_hash = Hash<tuple_type>()(t);
           client->InsertTuple(cp->Name(), time, t);
+          client->AddLineage(dep_node_id, channel_name, tuple_hash, -1, true,
+                             channel_name, tuple_hash, time);
+
         })));
     return AddCollection(std::move(c));
   }
@@ -222,10 +227,11 @@ class FluentBuilder<
                 zmq::context_t* context,
                 const postgres::ConnectionConfig& connection_config)
       : name_(name),
+        id_(Hash<std::string>()(name)),
         network_state_(std::make_unique<NetworkState>(address, context)),
         stdin_(nullptr),
-        postgres_client_(
-            std::make_unique<PostgresClient<Hash, ToSql>>(connection_config)) {
+        postgres_client_(std::make_unique<PostgresClient<Hash, ToSql>>(
+            name_, id_, connection_config)) {
     static_assert(sizeof...(Cs) == 0,
                   "The FluentBuilder(const std::string& address, "
                   "zmq::context_t* const context) constructor should only be "
@@ -233,7 +239,7 @@ class FluentBuilder<
   }
 
   // Moves the guts of one FluentBuilder into another.
-  FluentBuilder(std::string name,
+  FluentBuilder(std::string name, std::size_t id,
                 std::tuple<std::unique_ptr<Cs>...> collections,
                 BootstrapRules boostrap_rules,
                 std::map<std::string, Parser> parsers,
@@ -241,6 +247,7 @@ class FluentBuilder<
                 std::vector<Periodic*> periodics,
                 std::unique_ptr<PostgresClient<Hash, ToSql>> postgres_client)
       : name_(std::move(name)),
+        id_(id),
         collections_(std::move(collections)),
         boostrap_rules_(std::move(boostrap_rules)),
         parsers_(std::move(parsers)),
@@ -259,10 +266,15 @@ class FluentBuilder<
   AddCollection(std::unique_ptr<C> c) {
     std::tuple<std::unique_ptr<Cs>..., std::unique_ptr<C>> collections =
         std::tuple_cat(std::move(collections_), std::make_tuple(std::move(c)));
-    return {std::move(name_),           std::move(collections),
-            std::move(boostrap_rules_), std::move(parsers_),
-            std::move(network_state_),  stdin_,
-            std::move(periodics_),      std::move(postgres_client_)};
+    return {std::move(name_),
+            id_,
+            std::move(collections),
+            std::move(boostrap_rules_),
+            std::move(parsers_),
+            std::move(network_state_),
+            stdin_,
+            std::move(periodics_),
+            std::move(postgres_client_)};
   }
 
   // See `RegisterBootstrapRules`.
@@ -275,10 +287,15 @@ class FluentBuilder<
       LOG(INFO) << "Registering a bootstrap rule: "
                 << std::get<2>(rule).ToDebugString();
     });
-    return {std::move(name_),          std::move(collections_),
-            std::move(boostrap_rules), std::move(parsers_),
-            std::move(network_state_), stdin_,
-            std::move(periodics_),     std::move(postgres_client_)};
+    return {std::move(name_),
+            id_,
+            std::move(collections_),
+            std::move(boostrap_rules),
+            std::move(parsers_),
+            std::move(network_state_),
+            stdin_,
+            std::move(periodics_),
+            std::move(postgres_client_)};
   }
 
   // See `RegisterRules`.
@@ -291,15 +308,23 @@ class FluentBuilder<
     TupleIter(relalgs, [](const auto& rule) {
       LOG(INFO) << "Registering a rule: " << std::get<2>(rule).ToDebugString();
     });
-    return {std::move(name_),           std::move(collections_),
-            std::move(boostrap_rules_), std::move(parsers_),
-            std::move(network_state_),  stdin_,
-            std::move(periodics_),      std::move(postgres_client_),
+    return {std::move(name_),
+            id_,
+            std::move(collections_),
+            std::move(boostrap_rules_),
+            std::move(parsers_),
+            std::move(network_state_),
+            stdin_,
+            std::move(periodics_),
+            std::move(postgres_client_),
             std::move(relalgs)};
   }
 
   // The name of the fluent program.
   const std::string name_;
+
+  // The id of the fluent program.
+  const std::size_t id_;
 
   // See class documentation above.
   //

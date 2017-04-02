@@ -194,10 +194,8 @@ class FluentExecutor<
   using BootstrapRules = std::tuple<
       std::tuple<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>;
   using Rules = std::tuple<std::tuple<Lhss, RuleTags, Rhss>...>;
-  using Parser =
-      std::function<void(std::size_t, const std::vector<std::string>& columns)>;
 
-  FluentExecutor(std::string name,
+  FluentExecutor(std::string name, std::size_t id,
                  std::tuple<std::unique_ptr<Cs>...> collections,
                  BootstrapRules bootstrap_rules,
                  std::map<std::string, Parser> parsers,
@@ -206,6 +204,7 @@ class FluentExecutor<
                  std::unique_ptr<PostgresClient<Hash, ToSql>> postgres_client,
                  Rules rules)
       : name_(std::move(name)),
+        id_(id),
         collections_(std::move(collections)),
         bootstrap_rules_(std::move(bootstrap_rules)),
         parsers_(std::move(parsers)),
@@ -264,16 +263,23 @@ class FluentExecutor<
 
     // Read from the network.
     if (pollitems[0].revents & ZMQ_POLLIN) {
+      // msgs[0] = node id
+      // msgs[1] = collection name
+      // msgs[2] = tuple element 0
+      // ...
       std::vector<zmq::message_t> msgs =
           zmq_util::recv_msgs(&network_state_->socket);
+
       std::vector<std::string> strings;
-      for (std::size_t i = 1; i < msgs.size(); ++i) {
+      for (std::size_t i = 2; i < msgs.size(); ++i) {
         strings.push_back(zmq_util::message_to_string(msgs[i]));
       }
 
-      const std::string channel_name = zmq_util::message_to_string(msgs[0]);
+      const std::size_t dep_node_id =
+          FromString<std::size_t>(zmq_util::message_to_string(msgs[0]));
+      const std::string channel_name = zmq_util::message_to_string(msgs[1]);
       if (parsers_.find(channel_name) != std::end(parsers_)) {
-        parsers_[channel_name](time_, strings);
+        parsers_[channel_name](dep_node_id, channel_name, time_, strings);
       } else {
         LOG(WARNING) << "A message was received for a channel named "
                      << channel_name
@@ -313,7 +319,7 @@ class FluentExecutor<
   // Initialize a node with the postgres database.
   void InitPostgres() {
     // Nodes.
-    postgres_client_->Init(name_);
+    postgres_client_->Init();
 
     // Collections.
     TupleIter(collections_, [this](const auto& collection) {
@@ -442,7 +448,8 @@ class FluentExecutor<
   int time_ = 0;
 
   // See `FluentBuilder`.
-  std::string name_;
+  const std::string name_;
+  const std::size_t id_;
   std::tuple<std::unique_ptr<Cs>...> collections_;
   BootstrapRules bootstrap_rules_;
   std::map<std::string, Parser> parsers_;

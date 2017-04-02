@@ -21,7 +21,7 @@ using ::testing::UnorderedElementsAreArray;
 TEST(Channel, SimpleMerge) {
   zmq::context_t context(1);
   SocketCache cache(&context);
-  Channel<std::string, int, int> c("c", &cache);
+  Channel<std::string, int, int> c(42, "c", &cache);
 
   const std::string a_address = "inproc://a";
   const std::string b_address = "inproc://b";
@@ -43,12 +43,13 @@ TEST(Channel, SimpleMerge) {
   for (int i = 1; i < 9; ++i) {
     std::vector<zmq::message_t> messages =
         i % 2 == 0 ? zmq_util::recv_msgs(&b) : zmq_util::recv_msgs(&a);
-    ASSERT_EQ(messages.size(), static_cast<std::size_t>(4));
-    EXPECT_EQ("c", zmq_util::message_to_string(messages[0]));
+    ASSERT_EQ(messages.size(), static_cast<std::size_t>(5));
+    EXPECT_EQ("42", zmq_util::message_to_string(messages[0]));
+    EXPECT_EQ("c", zmq_util::message_to_string(messages[1]));
     EXPECT_EQ(i % 2 == 0 ? b_address : a_address,
-              zmq_util::message_to_string(messages[1]));
-    EXPECT_EQ(std::to_string(i), zmq_util::message_to_string(messages[2]));
+              zmq_util::message_to_string(messages[2]));
     EXPECT_EQ(std::to_string(i), zmq_util::message_to_string(messages[3]));
+    EXPECT_EQ(std::to_string(i), zmq_util::message_to_string(messages[4]));
   }
 }
 
@@ -58,7 +59,7 @@ TEST(Channel, TickClearsChannel) {
 
   zmq::context_t context(1);
   SocketCache cache(&context);
-  Channel<std::string, int, int> c("c", &cache);
+  Channel<std::string, int, int> c(42, "c", &cache);
 
   c.ts_.insert(Tuple("foo", 1, 1));
   c.ts_.insert(Tuple("bar", 2, 2));

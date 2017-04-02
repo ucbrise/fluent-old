@@ -30,18 +30,15 @@ struct MockRule {
 
 TEST(MockPqxxClient, Init) {
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client(c);
-  client.Init("name");
+  MockPqxxClient<Hash, ToSql> client("name", 9001, c);
+  client.Init();
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
-  std::int64_t hash = detail::size_t_to_int64(Hash<std::string>()("name"));
-
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(2));
-  ExpectStringsEqualIgnoreWhiteSpace(queries[0].second, fmt::format(R"(
+  ExpectStringsEqualIgnoreWhiteSpace(queries[0].second, R"(
     INSERT INTO Nodes (id, name)
-    VALUES ({}, 'name');
-  )",
-                                                                    hash));
+    VALUES (9001, 'name');
+  )");
   ExpectStringsEqualIgnoreWhiteSpace(queries[1].second, R"(
     CREATE TABLE name_lineage (
       dep_node_id          bigint   NOT NULL,
@@ -58,19 +55,16 @@ TEST(MockPqxxClient, Init) {
 
 TEST(MockPqxxClient, AddCollection) {
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client(c);
-  client.Init("name");
+  MockPqxxClient<Hash, ToSql> client("name", 9001, c);
+  client.Init();
   client.AddCollection<int, char, bool>("t");
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
-  std::int64_t hash = detail::size_t_to_int64(Hash<std::string>()("name"));
-
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(4));
-  ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, fmt::format(R"(
+  ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, R"(
     INSERT INTO Collections (node_id, collection_name)
-    VALUES ({}, 't');
-  )",
-                                                                    hash));
+    VALUES (9001, 't');
+  )");
   ExpectStringsEqualIgnoreWhiteSpace(queries[3].second, R"(
     CREATE TABLE name_t (
       hash          bigint  NOT NULL,
@@ -86,19 +80,16 @@ TEST(MockPqxxClient, AddCollection) {
 
 TEST(MockPqxxClient, AddRule) {
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client(c);
-  client.Init("name");
+  MockPqxxClient<Hash, ToSql> client("name", 9001, c);
+  client.Init();
   client.AddRule(0, std::make_tuple(42, 42, detail::MockRule()));
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
-  std::int64_t hash = detail::size_t_to_int64(Hash<std::string>()("name"));
-
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(3));
-  ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, fmt::format(R"(
+  ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, R"(
     INSERT INTO Rules (node_id, rule_number, rule)
-    VALUES ({}, 0, 'yolo');
-  )",
-                                                                    hash));
+    VALUES (9001, 0, 'yolo');
+  )");
 }
 
 TEST(MockPqxxClient, InsertTuple) {
@@ -106,8 +97,8 @@ TEST(MockPqxxClient, InsertTuple) {
   tuple_t t = {1, true, 'a'};
 
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client(c);
-  client.Init("name");
+  MockPqxxClient<Hash, ToSql> client("name", 9001, c);
+  client.Init();
   client.InsertTuple("t", 42, t);
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
@@ -126,8 +117,8 @@ TEST(MockPqxxClient, DeleteTuple) {
   tuple_t t = {1, true, 'a'};
 
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client(c);
-  client.Init("name");
+  MockPqxxClient<Hash, ToSql> client("name", 9001, c);
+  client.Init();
   client.DeleteTuple("t", 42, t);
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
@@ -147,8 +138,8 @@ TEST(MockPqxxClient, AddLineage) {
   tuple_t t = {1, true, 'a'};
 
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client(c);
-  client.Init("name");
+  MockPqxxClient<Hash, ToSql> client("name", 9001, c);
+  client.Init();
   client.AddLineage(0, "foo", 1, 2, true, "bar", 3, 4);
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();

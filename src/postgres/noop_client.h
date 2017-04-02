@@ -13,9 +13,9 @@ namespace postgres {
 template <template <typename> class Hash, template <typename> class ToSql>
 class NoopClient {
  public:
-  NoopClient(const ConnectionConfig&) {}
+  NoopClient(std::string, std::size_t, const ConnectionConfig&) {}
 
-  void Init(const std::string&) {}
+  void Init() {}
 
   std::size_t GetId() { return 42; }
 

@@ -182,6 +182,7 @@ class InjectablePqxxClient {
   void InsertTuple(const std::string& collection_name, int time_inserted,
                    const std::tuple<Ts...>& t) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >=1 column.");
+    CHECK(initialized_) << "Call Init first.";
     std::int64_t hash = detail::size_t_to_int64(Hash<std::tuple<Ts...>>()(t));
     ExecuteQuery("InsertTuple", fmt::format(R"(
       INSERT INTO {}_{}
@@ -195,6 +196,7 @@ class InjectablePqxxClient {
   void DeleteTuple(const std::string& collection_name, int time_deleted,
                    const std::tuple<Ts...>& t) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >=1 column.");
+    CHECK(initialized_) << "Call Init first.";
     std::int64_t hash = detail::size_t_to_int64(Hash<std::tuple<Ts...>>()(t));
     ExecuteQuery("DeleteTuple",
                  fmt::format(R"(
@@ -210,12 +212,13 @@ class InjectablePqxxClient {
                   std::size_t dep_tuple_hash, int rule_number, bool inserted,
                   const std::string& collection_name, std::size_t tuple_hash,
                   int time) {
+    CHECK(initialized_) << "Call Init first.";
     ExecuteQuery(
         "AddLineage",
         fmt::format(
             R"(
       INSERT INTO {}_lineage (dep_node_id, dep_collection_name, dep_tuple_hash,
-                              rule number, inserted, collection_name,
+                              rule_number, inserted, collection_name,
                               tuple_hash, time)
       VALUES ({});
     )",

@@ -142,6 +142,26 @@ TEST(MockPqxxClient, DeleteTuple) {
                                                                     hash));
 }
 
+TEST(MockPqxxClient, AddLineage) {
+  using tuple_t = std::tuple<int, bool, char>;
+  tuple_t t = {1, true, 'a'};
+
+  ConnectionConfig c;
+  MockPqxxClient<Hash, ToSql> client(c);
+  client.Init("name");
+  client.AddLineage(0, "foo", 1, 2, true, "bar", 3, 4);
+
+  std::vector<std::pair<std::string, std::string>> queries = client.Queries();
+
+  ASSERT_EQ(queries.size(), static_cast<std::size_t>(3));
+  ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, fmt::format(R"(
+    INSERT INTO name_lineage (dep_node_id, dep_collection_name, dep_tuple_hash,
+                              rule_number, inserted, collection_name,
+                              tuple_hash, time)
+    VALUES (0, 'foo', 1, 2, true, 'bar', 3, 4);
+  )"));
+}
+
 }  // namespace postgres
 }  // namespace fluent
 

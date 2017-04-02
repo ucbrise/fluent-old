@@ -1,0 +1,46 @@
+#ifndef COMMON_COLLECTION_UTIL_H_
+#define COMMON_COLLECTION_UTIL_H_
+
+#include <cstddef>
+
+#include <ostream>
+#include <set>
+#include <vector>
+
+namespace fluent {
+
+template <typename... Ts>
+std::ostream& operator<<(std::ostream& out, const std::set<Ts...>& xs) {
+  out << "{";
+  std::size_t i = 0;
+  for (const auto& x : xs) {
+    if (i == xs.size() - 1) {
+      out << x;
+    } else {
+      out << x << ", ";
+    }
+    ++i;
+  }
+  out << "}";
+  return out;
+}
+
+template <typename... Ts>
+std::ostream& operator<<(std::ostream& out, const std::vector<Ts...>& xs) {
+  out << "[";
+  std::size_t i = 0;
+  for (const auto& x : xs) {
+    if (i == xs.size() - 1) {
+      out << x;
+    } else {
+      out << x << ", ";
+    }
+    ++i;
+  }
+  out << "]";
+  return out;
+}
+
+}  // namespace fluent
+
+#endif  //  COMMON_COLLECTION_UTIL_H_

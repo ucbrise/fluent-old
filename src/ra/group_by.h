@@ -11,7 +11,9 @@
 #include "range/v3/all.hpp"
 
 #include "common/string_util.h"
+#include "common/tuple_util.h"
 #include "common/type_list.h"
+#include "ra/lineaged_tuple.h"
 
 // TODO(mwhittaker): Document this file.
 
@@ -30,7 +32,7 @@ struct TypeOfGet {
 
 template <std::size_t... Ks, typename... Ts>
 auto Project(Keys<Ks...>, const std::tuple<Ts...>& t) {
-  return std::tuple_cat(std::make_tuple(std::get<Ks>(t))...);
+  return TupleProject<Ks...>(t);
 }
 
 }  // namespace detail
@@ -42,6 +44,8 @@ class PhysicalGroupBy {
   using key_types = typename LogicalGroupBy::key_types;
   using key_tuple = typename TypeListToTuple<key_types>::type;
   using child_column_types = typename LogicalGroupBy::child_column_types;
+  using child_lineaged_tuple =
+      typename TypeListTo<LineagedTuple, child_column_types>::type;
   using child_column_tuple = typename TypeListToTuple<child_column_types>::type;
 
   using aggregate_impl_types = typename LogicalGroupBy::aggregate_impl_types;
@@ -55,20 +59,21 @@ class PhysicalGroupBy {
 
   auto ToRange() {
     if (groups_.size() == 0) {
-      auto rng = child_.ToRange();
-      for (auto iter = ranges::begin(rng); iter != ranges::end(rng); ++iter) {
-        auto key = detail::Project(keys(), *iter);
-        Update<0>(&groups_[key], *iter);
-      }
+      ranges::for_each(child_.ToRange(), [this](const auto& lt) {
+        auto& group = groups_[detail::Project(keys(), lt.tuple)];
+        group.first.insert(lt.lineage.begin(), lt.lineage.end());
+        TupleIter(group.second,
+                  [this, &lt](auto& agg) { UpdateAgg(&agg, lt.tuple); });
+      });
     }
 
     return ranges::view::all(groups_) |
            ranges::view::transform([this](const auto& pair) {
-             return std::tuple_cat(
-                 pair.first,
-                 ToAggregate(pair.second,
-                             std::make_index_sequence<
-                                 TypeListLen<aggregate_impl_types>::value>()));
+             auto tuple = std::tuple_cat(
+                 pair.first, TupleMap(pair.second.second, [](const auto& agg) {
+                   return agg.Get();
+                 }));
+             return make_lineaged_tuple(pair.second.first, std::move(tuple));
            });
   }
 
@@ -80,17 +85,6 @@ class PhysicalGroupBy {
     agg->Update(std::get<AggregateColumn>(t));
   }
 
-  template <std::size_t I>
-  typename std::enable_if<I == TypeListLen<aggregate_types>::value>::type
-  Update(aggregate_impl_tuple*, const child_column_tuple&) {}
-
-  template <std::size_t I>
-  typename std::enable_if<I != TypeListLen<aggregate_types>::value>::type
-  Update(aggregate_impl_tuple* agg, const child_column_tuple& t) {
-    UpdateAgg(&std::get<I>(*agg), t);
-    Update<I + 1>(agg, t);
-  }
-
   template <std::size_t... Is>
   aggregate_tuple ToAggregate(const aggregate_impl_tuple& aggs,
                               std::index_sequence<Is...>) {
@@ -98,7 +92,8 @@ class PhysicalGroupBy {
   }
 
   PhysicalChild child_;
-  std::map<key_tuple, aggregate_impl_tuple> groups_;
+  std::map<key_tuple, std::pair<std::set<LineageTuple>, aggregate_impl_tuple>>
+      groups_;
 };
 
 template <typename LogicalChild, typename KeyColumns, typename... Aggregates>

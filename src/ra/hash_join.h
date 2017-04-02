@@ -10,7 +10,9 @@
 #include "range/v3/all.hpp"
 
 #include "common/string_util.h"
+#include "common/tuple_util.h"
 #include "common/type_list.h"
+#include "ra/lineaged_tuple.h"
 
 namespace fluent {
 namespace ra {
@@ -30,24 +32,34 @@ template <typename PhysicalLeft, std::size_t... LeftKs, typename PhysicalRight,
 class PhysicalHashJoin<PhysicalLeft, LeftKeys<LeftKs...>, PhysicalRight,
                        RightKeys<RightKs...>, LogicalHashJoin> {
  public:
+  using left_column_types = typename LogicalHashJoin::left_column_types;
+  using left_column_tuple = typename TypeListToTuple<left_column_types>::type;
+  using left_key_column_types =
+      typename TypeListProject<left_column_types, LeftKs...>::type;
+  using left_key_column_tuple =
+      typename TypeListToTuple<left_key_column_types>::type;
+  using left_column_lineaged_tuple =
+      typename TypeListTo<LineagedTuple,
+                          typename LogicalHashJoin::left_column_types>::type;
+
   PhysicalHashJoin(PhysicalLeft left, PhysicalRight right)
       : left_(std::move(left)), right_(std::move(right)) {}
 
   auto ToRange() {
     if (left_hash_.size() == 0) {
-      auto rng = left_.ToRange();
-      for (auto iter = ranges::begin(rng); iter != ranges::end(rng); ++iter) {
-        left_hash_[std::make_tuple(std::get<LeftKs>(*iter)...)].push_back(
-            *iter);
-      }
+      ranges::for_each(left_.ToRange(), [this](const auto& lt) {
+        left_hash_[TupleProject<LeftKs...>(lt.tuple)].push_back(lt);
+      });
     }
 
     return ranges::view::for_each(right_.ToRange(), [this](const auto& right) {
       return ranges::yield_from(
-          ranges::view::all(
-              left_hash_[std::make_tuple(std::get<RightKs>(right)...)]) |
-          ranges::view::transform([right](const auto& left) {
-            return std::tuple_cat(left, right);
+          ranges::view::all(left_hash_[TupleProject<RightKs...>(right.tuple)]) |
+          ranges::view::transform([right](auto left) {
+            left.lineage.insert(right.lineage.begin(), right.lineage.end());
+            return make_lineaged_tuple(
+                std::move(left.lineage),
+                std::tuple_cat(std::move(left.tuple), right.tuple));
           }));
     });
   }
@@ -55,8 +67,7 @@ class PhysicalHashJoin<PhysicalLeft, LeftKeys<LeftKs...>, PhysicalRight,
  private:
   PhysicalLeft left_;
   PhysicalRight right_;
-  std::map<typename LogicalHashJoin::left_key_column_tuple,
-           std::vector<typename LogicalHashJoin::left_column_tuple>>
+  std::map<left_key_column_tuple, std::vector<left_column_lineaged_tuple>>
       left_hash_;
 };
 
@@ -74,12 +85,6 @@ class HashJoin<LogicalLeft, LeftKeys<LeftKs...>, LogicalRight,
   using column_types =
       typename TypeListConcat<left_column_types, right_column_types>::type;
 
-  using left_column_tuple = typename TypeListToTuple<left_column_types>::type;
-  using left_key_column_types =
-      typename TypeListProject<left_column_types, LeftKs...>::type;
-  using left_key_column_tuple =
-      typename TypeListToTuple<left_key_column_types>::type;
-
   HashJoin(LogicalLeft left, LogicalRight right)
       : left_(std::move(left)), right_(std::move(right)) {}
 
@@ -93,7 +98,7 @@ class HashJoin<LogicalLeft, LeftKeys<LeftKs...>, LogicalRight,
   }
 
   std::string ToDebugString() const {
-    return fmt::format("Join<Left<>, Right<>>({}, {})", Join(LeftKs...),
+    return fmt::format("HashJoin<Left<{}>, Right<{}>>({}, {})", Join(LeftKs...),
                        Join(RightKs...), left_.ToDebugString(),
                        right_.ToDebugString());
   }

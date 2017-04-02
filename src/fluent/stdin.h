@@ -12,7 +12,6 @@
 #include "zmq.hpp"
 
 #include "common/macros.h"
-#include "ra/ra_util.h"
 
 namespace fluent {
 

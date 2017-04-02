@@ -8,7 +8,6 @@
 
 #include "common/type_traits.h"
 #include "ra/iterable.h"
-#include "ra/ra_util.h"
 
 namespace fluent {
 
@@ -23,13 +22,6 @@ class Scratch {
 
   ra::Iterable<std::set<std::tuple<Ts...>>> Iterable() const {
     return ra::make_iterable(name_, &ts_);
-  }
-
-  template <typename RA>
-  void Merge(const RA& ra) {
-    static_assert(!IsSet<typename std::decay<RA>::type>::value, "");
-    static_assert(!IsVector<typename std::decay<RA>::type>::value, "");
-    ra::BufferRaInto(ra, &ts_);
   }
 
   void Merge(const std::set<std::tuple<Ts...>>& ts) {

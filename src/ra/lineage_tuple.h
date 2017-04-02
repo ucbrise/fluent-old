@@ -27,11 +27,8 @@ inline bool operator==(const LineageTuple& lhs, const LineageTuple& rhs) {
 }
 
 inline bool operator<(const LineageTuple& lhs, const LineageTuple& rhs) {
-  if (lhs.collection < rhs.collection) {
-    return true;
-  } else {
-    return lhs.hash < rhs.hash;
-  }
+  return (lhs.collection < rhs.collection) ||
+         (lhs.collection == rhs.collection && lhs.hash < rhs.hash);
 }
 
 }  // namespace ra

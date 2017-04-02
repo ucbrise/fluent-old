@@ -98,8 +98,8 @@ class HashJoin<LogicalLeft, LeftKeys<LeftKs...>, LogicalRight,
   }
 
   std::string ToDebugString() const {
-    return fmt::format("HashJoin<Left<{}>, Right<{}>>({}, {})", Join(LeftKs...),
-                       Join(RightKs...), left_.ToDebugString(),
+    return fmt::format("HashJoin<LeftKeys<{}>, RightKeys<{}>>({}, {})",
+                       Join(LeftKs...), Join(RightKs...), left_.ToDebugString(),
                        right_.ToDebugString());
   }
 

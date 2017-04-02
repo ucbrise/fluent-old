@@ -379,42 +379,44 @@ class FluentExecutor<
   // TODO(mwhittaker): Document.
   template <typename Lhs, typename Rhs>
   void ExecuteRule(Lhs* collection, MergeTag, const Rhs& ra) {
-    using tuple_type =
-        typename TypeListToTuple<typename Rhs::column_types>::type;
-    std::set<tuple_type> s;
-    ra::StreamRaInto(ra, &s);
-
-    for (const auto& t : s) {
-      postgres_client_->InsertTuple(collection->Name(), time_, t);
-    }
-    collection->Merge(s);
+    ranges::for_each(
+        ra.ToPhysical().ToRange(), [this, collection](const auto& lt) {
+          postgres_client_->InsertTuple(collection->Name(), time_, lt.tuple);
+          collection->Merge({lt.tuple});
+        });
+    // for (const auto& t : s) {
+    // postgres_client_->InsertTuple(collection->Name(), time_, t);
+    // }
+    // collection->Merge(s);
   }
 
   template <typename Lhs, typename Rhs>
   void ExecuteRule(Lhs* collection, DeferredMergeTag, const Rhs& ra) {
-    // TODO(mwhittaker): Remove duplication.
-    using tuple_type =
-        typename TypeListToTuple<typename Rhs::column_types>::type;
-    std::set<tuple_type> s;
-    ra::StreamRaInto(ra, &s);
+    ranges::for_each(
+        ra.ToPhysical().ToRange(), [this, collection](const auto& lt) {
+          postgres_client_->InsertTuple(collection->Name(), time_, lt.tuple);
+          collection->DeferredMerge({lt.tuple});
+        });
 
-    for (const auto& t : s) {
-      postgres_client_->InsertTuple(collection->Name(), time_, t);
-    }
-    collection->DeferredMerge(s);
+    // auto s = EvaluateRelationalAlgebra(ra);
+    // for (const auto& t : s) {
+    // postgres_client_->InsertTuple(collection->Name(), time_, t);
+    // }
+    // collection->DeferredMerge(s);
   }
 
   template <typename Lhs, typename Rhs>
   void ExecuteRule(Lhs* collection, DeferredDeleteTag, const Rhs& ra) {
-    using tuple_type =
-        typename TypeListToTuple<typename Rhs::column_types>::type;
-    std::set<tuple_type> s;
-    ra::StreamRaInto(ra, &s);
-
-    for (const auto& t : s) {
-      postgres_client_->DeleteTuple(collection->Name(), time_, t);
-    }
-    collection->DeferredDelete(s);
+    ranges::for_each(
+        ra.ToPhysical().ToRange(), [this, collection](const auto& lt) {
+          postgres_client_->InsertTuple(collection->Name(), time_, lt.tuple);
+          collection->DeferredDelete({lt.tuple});
+        });
+    // auto s = EvaluateRelationalAlgebra(ra);
+    // for (const auto& t : s) {
+    // postgres_client_->DeleteTuple(collection->Name(), time_, t);
+    // }
+    // collection->DeferredDelete(s);
   }
 
   template <typename Lhs, typename RuleTag, typename Rhs>

@@ -20,8 +20,8 @@
 #include "zmq_util/zmq_util.h"
 
 namespace fluent {
-
 namespace detail {
+
 // See `GetParser`.
 template <typename... Ts, std::size_t... Is>
 std::tuple<Ts...> parse_tuple_impl(const std::vector<std::string>& columns,
@@ -35,6 +35,7 @@ std::tuple<Ts...> parse_tuple(const std::vector<std::string>& columns) {
   using Indices = std::make_index_sequence<sizeof...(Ts)>;
   return parse_tuple_impl<Ts...>(columns, Indices());
 }
+
 }  // namespace detail
 
 // A channel is a pseudo-relation. The first column of the channel is a string
@@ -61,19 +62,8 @@ class Channel {
 
   // Merge assumes a `std::string ToString(const U&)` function exists for `U`
   // in `T, Ts...`.
-  template <typename RA>
-  void Merge(const RA& ra) {
-    static_assert(!IsSet<typename std::decay<RA>::type>::value, "");
-    static_assert(!IsVector<typename std::decay<RA>::type>::value, "");
-    auto physical = ra.ToPhysical();
-    auto rng = physical.ToRange();
-    MergeImpl(ranges::begin(rng), ranges::end(rng),
-              std::make_index_sequence<sizeof...(Ts) + 1>());
-  }
-
   void Merge(const std::set<std::tuple<T, Ts...>>& ts) {
-    MergeImpl(std::begin(ts), std::end(ts),
-              std::make_index_sequence<sizeof...(Ts) + 1>());
+    MergeImpl(ts, std::make_index_sequence<sizeof...(Ts) + 1>());
   }
 
   std::set<std::tuple<T, Ts...>> Tick() {
@@ -99,20 +89,21 @@ class Channel {
   }
 
  private:
-  template <typename Iterator, typename Sentinel, std::size_t... Is>
-  void MergeImpl(Iterator iter, Sentinel end, std::index_sequence<Is...>) {
-    for (; iter != end; ++iter) {
+  template <std::size_t... Is>
+  void MergeImpl(const std::set<std::tuple<T, Ts...>>& ts,
+                 std::index_sequence<Is...>) {
+    for (const std::tuple<T, Ts...>& t : ts) {
       VLOG(1) << "Channel " << this->Name() << " sending tuple to "
-              << std::get<0>(*iter) << ".";
+              << std::get<0>(t) << ".";
 
-      std::vector<std::string> strings = {ToString(std::get<Is>(*iter))...};
+      std::vector<std::string> strings = {ToString(std::get<Is>(t))...};
       std::vector<zmq::message_t> msgs;
       msgs.push_back(zmq_util::string_to_message(this->Name()));
       for (const std::string& s : strings) {
         msgs.push_back(zmq_util::string_to_message(s));
       }
 
-      zmq::socket_t& socket = socket_cache_->At(std::get<0>(*iter));
+      zmq::socket_t& socket = socket_cache_->At(std::get<0>(t));
       zmq_util::send_msgs(std::move(msgs), &socket);
     }
   }

@@ -1,6 +1,7 @@
 #ifndef RA_ALL_H_
 #define RA_ALL_H_
 
+#include "aggregates.h"
 #include "count.h"
 #include "cross.h"
 #include "filter.h"

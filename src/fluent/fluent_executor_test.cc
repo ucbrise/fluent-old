@@ -135,7 +135,7 @@ TEST(FluentExecutor, SimpleCommunication) {
 
   using C = std::set<std::tuple<std::string, int>>;
   C catalyst = {{"inproc://pong", 42}};
-  ping.MutableGet<0>().Merge(ra::make_iterable("catalyst", &catalyst));
+  ping.MutableGet<0>().Merge(catalyst);
 
   for (int i = 0; i < 3; ++i) {
     pong.Receive();

@@ -29,11 +29,8 @@ bool operator==(const LineagedTuple<Ts...>& lhs,
 template <typename... Ts>
 bool operator<(const LineagedTuple<Ts...>& lhs,
                const LineagedTuple<Ts...>& rhs) {
-  if (lhs.lineage < rhs.lineage) {
-    return true;
-  } else {
-    return lhs.tuple < rhs.tuple;
-  }
+  return (lhs.lineage < rhs.lineage) ||
+         (lhs.lineage == rhs.lineage && lhs.tuple < rhs.tuple);
 }
 
 template <typename... Ts>

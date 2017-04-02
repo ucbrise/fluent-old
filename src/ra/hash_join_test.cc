@@ -28,7 +28,8 @@ TEST(HashJoin, EmptyEmptyJoin) {
       std::is_same<decltype(joined)::column_types, TypeList<int, int>>::value,
       "");
   ExpectRngsUnorderedEqual(joined.ToPhysical().ToRange(), expected);
-  EXPECT_EQ(joined.ToDebugString(), "HashJoin<Left<0>, Right<0>>(left, right)");
+  EXPECT_EQ(joined.ToDebugString(),
+            "HashJoin<LeftKeys<0>, RightKeys<0>>(left, right)");
 }
 
 TEST(HashJoin, RightEmptyJoin) {
@@ -42,7 +43,8 @@ TEST(HashJoin, RightEmptyJoin) {
       std::is_same<decltype(joined)::column_types, TypeList<int, int>>::value,
       "");
   ExpectRngsUnorderedEqual(joined.ToPhysical().ToRange(), expected);
-  EXPECT_EQ(joined.ToDebugString(), "HashJoin<Left<0>, Right<0>>(left, right)");
+  EXPECT_EQ(joined.ToDebugString(),
+            "HashJoin<LeftKeys<0>, RightKeys<0>>(left, right)");
 }
 
 TEST(HashJoin, LeftEmptyJoin) {
@@ -56,7 +58,8 @@ TEST(HashJoin, LeftEmptyJoin) {
       std::is_same<decltype(joined)::column_types, TypeList<int, int>>::value,
       "");
   ExpectRngsUnorderedEqual(joined.ToPhysical().ToRange(), expected);
-  EXPECT_EQ(joined.ToDebugString(), "HashJoin<Left<0>, Right<0>>(left, right)");
+  EXPECT_EQ(joined.ToDebugString(),
+            "HashJoin<LeftKeys<0>, RightKeys<0>>(left, right)");
 }
 
 TEST(HashJoin, NonEmptyJoin) {
@@ -115,7 +118,8 @@ TEST(HashJoin, NonEmptyJoin) {
                              TypeList<int, float, int, char>>::value,
                 "");
   ExpectRngsUnorderedEqual(joined.ToPhysical().ToRange(), expected);
-  EXPECT_EQ(joined.ToDebugString(), "HashJoin<Left<0>, Right<0>>(left, right)");
+  EXPECT_EQ(joined.ToDebugString(),
+            "HashJoin<LeftKeys<0>, RightKeys<0>>(left, right)");
 }
 
 TEST(HashJoin, MultiColumnJoin) {
@@ -148,7 +152,7 @@ TEST(HashJoin, MultiColumnJoin) {
                 "");
   ExpectRngsUnorderedEqual(joined.ToPhysical().ToRange(), expected);
   EXPECT_EQ(joined.ToDebugString(),
-            "HashJoin<Left<0, 1>, Right<1, 0>>(left, right)");
+            "HashJoin<LeftKeys<0, 1>, RightKeys<1, 0>>(left, right)");
 }
 
 TEST(HashJoin, RepeatedColumnJoin) {
@@ -188,7 +192,7 @@ TEST(HashJoin, RepeatedColumnJoin) {
                 "");
   ExpectRngsUnorderedEqual(joined.ToPhysical().ToRange(), expected);
   EXPECT_EQ(joined.ToDebugString(),
-            "HashJoin<Left<0, 0>, Right<0, 1>>(left, right)");
+            "HashJoin<LeftKeys<0, 0>, RightKeys<0, 1>>(left, right)");
 }
 
 }  // namespace fluent

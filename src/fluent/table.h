@@ -12,7 +12,6 @@
 
 #include "common/type_traits.h"
 #include "ra/iterable.h"
-#include "ra/ra_util.h"
 
 namespace fluent {
 
@@ -29,33 +28,12 @@ class Table {
     return ra::make_iterable(name_, &ts_);
   }
 
-  template <typename RA>
-  void Merge(const RA& ra) {
-    static_assert(!IsSet<typename std::decay<RA>::type>::value, "");
-    static_assert(!IsVector<typename std::decay<RA>::type>::value, "");
-    ra::BufferRaInto(ra, &ts_);
-  }
-
   void Merge(const std::set<std::tuple<Ts...>>& ts) {
     ts_.insert(ts.begin(), ts.end());
   }
 
-  template <typename RA>
-  void DeferredMerge(const RA& ra) {
-    static_assert(!IsSet<typename std::decay<RA>::type>::value, "");
-    static_assert(!IsVector<typename std::decay<RA>::type>::value, "");
-    ra::StreamRaInto(ra, &deferred_merge_);
-  }
-
   void DeferredMerge(const std::set<std::tuple<Ts...>>& ts) {
     deferred_merge_.insert(ts.begin(), ts.end());
-  }
-
-  template <typename RA>
-  void DeferredDelete(const RA& ra) {
-    static_assert(!IsSet<typename std::decay<RA>::type>::value, "");
-    static_assert(!IsVector<typename std::decay<RA>::type>::value, "");
-    ra::StreamRaInto(ra, &deferred_delete_);
   }
 
   void DeferredDelete(const std::set<std::tuple<Ts...>>& ts) {

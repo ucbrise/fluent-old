@@ -30,6 +30,8 @@
 #include "fluent/stdout.h"
 #include "fluent/table.h"
 #include "postgres/connection_config.h"
+#include "ra/lineage_tuple.h"
+#include "ra/lineaged_tuple.h"
 
 namespace fluent {
 namespace detail {
@@ -231,14 +233,18 @@ class FluentExecutor<
   // Sequentially execute each registered bootstrap query and then invoke the
   // `Tick` method of every collection.
   void BootstrapTick() {
-    TupleIter(bootstrap_rules_, [this](auto& rule) { ExecuteRule(&rule); });
+    TupleIteri(bootstrap_rules_, [this](std::size_t rule_number, auto& rule) {
+      ExecuteRule(rule_number, &rule);
+    });
     TupleIter(collections_, [this](auto& c) { TickCollection(c.get()); });
   }
 
   // Sequentially execute each registered query and then invoke the `Tick`
   // method of every collection.
   void Tick() {
-    TupleIter(rules_, [this](auto& rule) { ExecuteRule(&rule); });
+    TupleIteri(rules_, [this](std::size_t rule_number, auto& rule) {
+      ExecuteRule(rule_number, &rule);
+    });
     TupleIter(collections_, [this](auto& c) { TickCollection(c.get()); });
   }
 
@@ -377,52 +383,56 @@ class FluentExecutor<
   }
 
   // TODO(mwhittaker): Document.
-  template <typename Lhs, typename Rhs>
-  void ExecuteRule(Lhs* collection, MergeTag, const Rhs& ra) {
-    ranges::for_each(
-        ra.ToPhysical().ToRange(), [this, collection](const auto& lt) {
-          postgres_client_->InsertTuple(collection->Name(), time_, lt.tuple);
-          collection->Merge({lt.tuple});
-        });
-    // for (const auto& t : s) {
-    // postgres_client_->InsertTuple(collection->Name(), time_, t);
-    // }
-    // collection->Merge(s);
+  template <typename Lhs, typename Rhs, typename UpdateCollection>
+  void ExecuteRule(int rule_number, Lhs* collection, const Rhs& ra,
+                   bool inserted, UpdateCollection update_collection) {
+    using column_types = typename Rhs::column_types;
+    using tuple_type = typename TypeListToTuple<column_types>::type;
+    Hash<tuple_type> hash;
+
+    ranges::for_each(ra.ToPhysical().ToRange(), [&](const auto& lt) {
+      std::size_t tuple_hash = hash(lt.tuple);
+      for (const ra::LineageTuple& l : lt.lineage) {
+        postgres_client_->AddLineage(postgres_client_->GetId(), l.collection,
+                                     l.hash, rule_number, inserted,
+                                     collection->Name(), tuple_hash, time_);
+      }
+
+      if (inserted) {
+        postgres_client_->InsertTuple(collection->Name(), time_, lt.tuple);
+      } else {
+        postgres_client_->DeleteTuple(collection->Name(), time_, lt.tuple);
+      }
+
+      update_collection(*collection, std::set<tuple_type>{lt.tuple});
+    });
   }
 
   template <typename Lhs, typename Rhs>
-  void ExecuteRule(Lhs* collection, DeferredMergeTag, const Rhs& ra) {
-    ranges::for_each(
-        ra.ToPhysical().ToRange(), [this, collection](const auto& lt) {
-          postgres_client_->InsertTuple(collection->Name(), time_, lt.tuple);
-          collection->DeferredMerge({lt.tuple});
-        });
-
-    // auto s = EvaluateRelationalAlgebra(ra);
-    // for (const auto& t : s) {
-    // postgres_client_->InsertTuple(collection->Name(), time_, t);
-    // }
-    // collection->DeferredMerge(s);
+  void ExecuteRule(int rule_number, Lhs* collection, MergeTag, const Rhs& ra) {
+    ExecuteRule(rule_number, collection, ra, true, std::mem_fn(&Lhs::Merge));
   }
 
   template <typename Lhs, typename Rhs>
-  void ExecuteRule(Lhs* collection, DeferredDeleteTag, const Rhs& ra) {
-    ranges::for_each(
-        ra.ToPhysical().ToRange(), [this, collection](const auto& lt) {
-          postgres_client_->InsertTuple(collection->Name(), time_, lt.tuple);
-          collection->DeferredDelete({lt.tuple});
-        });
-    // auto s = EvaluateRelationalAlgebra(ra);
-    // for (const auto& t : s) {
-    // postgres_client_->DeleteTuple(collection->Name(), time_, t);
-    // }
-    // collection->DeferredDelete(s);
+  void ExecuteRule(int rule_number, Lhs* collection, DeferredMergeTag,
+                   const Rhs& ra) {
+    ExecuteRule(rule_number, collection, ra, true,
+                std::mem_fn(&Lhs::DeferredMerge));
+  }
+
+  template <typename Lhs, typename Rhs>
+  void ExecuteRule(int rule_number, Lhs* collection, DeferredDeleteTag,
+                   const Rhs& ra) {
+    ExecuteRule(rule_number, collection, ra, false,
+                std::mem_fn(&Lhs::DeferredDelete));
   }
 
   template <typename Lhs, typename RuleTag, typename Rhs>
-  void ExecuteRule(std::tuple<Lhs, RuleTag, Rhs>* rule) {
+  void ExecuteRule(std::size_t rule_number,
+                   std::tuple<Lhs, RuleTag, Rhs>* rule) {
     time_++;
-    ExecuteRule(CHECK_NOTNULL(std::get<0>(*rule)), std::get<1>(*rule),
+    ExecuteRule(static_cast<int>(rule_number),
+                CHECK_NOTNULL(std::get<0>(*rule)), std::get<1>(*rule),
                 std::get<2>(*rule));
   }
 

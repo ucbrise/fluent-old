@@ -124,6 +124,11 @@ class InjectablePqxxClient {
                                                    name));
   }
 
+  std::size_t GetId() {
+    CHECK(initialized_) << "Call Init first.";
+    return id_;
+  }
+
   template <typename... Ts>
   void AddCollection(const std::string& collection_name) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >= 1 column.");
@@ -198,6 +203,27 @@ class InjectablePqxxClient {
       WHERE hash={} AND time_deleted IS NULL;
     )",
                              name_, collection_name, time_deleted, hash));
+  }
+
+  void AddLineage(std::size_t dep_node_id,
+                  const std::string& dep_collection_name,
+                  std::size_t dep_tuple_hash, int rule_number, bool inserted,
+                  const std::string& collection_name, std::size_t tuple_hash,
+                  int time) {
+    ExecuteQuery(
+        "AddLineage",
+        fmt::format(
+            R"(
+      INSERT INTO {}_lineage (dep_node_id, dep_collection_name, dep_tuple_hash,
+                              rule number, inserted, collection_name,
+                              tuple_hash, time)
+      VALUES ({});
+    )",
+            name_,
+            Join(SqlValues(std::make_tuple(
+                detail::size_t_to_int64(dep_node_id), dep_collection_name,
+                detail::size_t_to_int64(dep_tuple_hash), rule_number, inserted,
+                collection_name, detail::size_t_to_int64(tuple_hash), time)))));
   }
 
  protected:

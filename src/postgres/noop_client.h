@@ -17,6 +17,8 @@ class NoopClient {
 
   void Init(const std::string&) {}
 
+  std::size_t GetId() { return 42; }
+
   template <typename... Ts>
   void AddCollection(const std::string&) {}
 
@@ -28,6 +30,9 @@ class NoopClient {
 
   template <typename... Ts>
   void DeleteTuple(const std::string&, int, const std::tuple<Ts...>&) {}
+
+  void AddLineage(std::size_t, const std::string&, std::size_t, int, bool,
+                  const std::string&, std::size_t, int) {}
 };
 
 }  // namespace postgres

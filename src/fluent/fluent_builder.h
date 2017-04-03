@@ -21,6 +21,7 @@
 #include "fluent/fluent_executor.h"
 #include "fluent/network_state.h"
 #include "fluent/periodic.h"
+#include "fluent/rule.h"
 #include "fluent/scratch.h"
 #include "fluent/socket_cache.h"
 #include "fluent/stdin.h"
@@ -89,7 +90,7 @@ template <typename... Cs, typename... BootstrapLhss,
           template <typename> class Hash, template <typename> class ToSql>
 class FluentBuilder<
     TypeList<Cs...>,
-    std::tuple<std::tuple<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>,
+    std::tuple<Rule<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>,
     LineageDbClient, Hash, ToSql> {
   static_assert(sizeof...(BootstrapLhss) == sizeof...(BootstrapRuleTags) &&
                     sizeof...(BootstrapRuleTags) == sizeof...(BootstrapRhss),
@@ -102,8 +103,8 @@ class FluentBuilder<
                 "equal");
 
  public:
-  using BootstrapRules = std::tuple<
-      std::tuple<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>;
+  using BootstrapRules =
+      std::tuple<Rule<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>;
 
   FluentBuilder(FluentBuilder&&) = default;
   FluentBuilder& operator=(FluentBuilder&&) = default;
@@ -283,9 +284,7 @@ class FluentBuilder<
   RegisterBootstrapRulesImpl(const F& f, std::index_sequence<Is...>) {
     auto boostrap_rules = f(*std::get<Is>(collections_)...);
     TupleIter(boostrap_rules, [](const auto& rule) {
-      LOG(INFO) << "Registering a bootstrap rule: " << std::get<0>(rule)->Name()
-                << " " << std::get<1>(rule).ToDebugString() << " "
-                << std::get<2>(rule).ToDebugString();
+      LOG(INFO) << "Registering a bootstrap rule: " << rule.ToDebugString();
     });
     return {std::move(name_),
             id_,
@@ -306,9 +305,7 @@ class FluentBuilder<
   RegisterRulesImpl(const F& f, std::index_sequence<Is...>) {
     auto relalgs = f(*std::get<Is>(collections_)...);
     TupleIter(relalgs, [](const auto& rule) {
-      LOG(INFO) << "Registering a rule: " << std::get<0>(rule)->Name() << " "
-                << std::get<1>(rule).ToDebugString() << " "
-                << std::get<2>(rule).ToDebugString();
+      LOG(INFO) << "Registering a rule: " << rule.ToDebugString();
     });
     return {std::move(name_),
             id_,

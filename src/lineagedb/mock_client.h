@@ -39,12 +39,8 @@ class MockClient {
     add_collection_.push_back(std::make_pair(collection_name, types));
   }
 
-  template <typename Rule>
-  void AddRule(std::size_t rule_number, const Rule& rule) {
-    add_rule_.push_back(std::make_pair(
-        rule_number, fmt::format("{} {} {}", std::get<0>(rule)->Name(),
-                                 std::get<1>(rule).ToDebugString(),
-                                 std::get<2>(rule).ToDebugString())));
+  void AddRule(std::size_t rule_number, const std::string& rule_string) {
+    add_rule_.push_back(std::make_pair(rule_number, rule_string));
   }
 
   template <typename... Ts>

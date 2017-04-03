@@ -20,8 +20,7 @@ class NoopClient {
   template <typename... Ts>
   void AddCollection(const std::string&) {}
 
-  template <typename Rule>
-  void AddRule(std::size_t, const Rule&) {}
+  void AddRule(std::size_t, const std::string&) {}
 
   template <typename... Ts>
   void InsertTuple(const std::string&, int, const std::tuple<Ts...>&) {}

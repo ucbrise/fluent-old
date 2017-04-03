@@ -163,12 +163,8 @@ class InjectablePqxxClient {
                              name_, collection_name, Join(columns)));
   }
 
-  template <typename Rule>
-  void AddRule(std::size_t rule_number, const Rule& rule) {
+  void AddRule(std::size_t rule_number, const std::string& rule_string) {
     CHECK(initialized_) << "Call Init first.";
-    std::string rule_string = fmt::format("{} {} {}", std::get<0>(rule)->Name(),
-                                          std::get<1>(rule).ToDebugString(),
-                                          std::get<2>(rule).ToDebugString());
     ExecuteQuery("AddRule", fmt::format(R"(
       INSERT INTO Rules (node_id, rule_number, rule)
       VALUES ({});

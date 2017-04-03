@@ -23,6 +23,7 @@
 #include "fluent/network_state.h"
 #include "fluent/periodic.h"
 #include "fluent/periodic.h"
+#include "fluent/rule.h"
 #include "fluent/rule_tags.h"
 #include "fluent/scratch.h"
 #include "fluent/socket_cache.h"
@@ -169,9 +170,8 @@ template <typename... Cs, typename... BootstrapLhss,
           template <typename> class Hash, template <typename> class ToSql>
 class FluentExecutor<
     TypeList<Cs...>,
-    std::tuple<std::tuple<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>,
-    std::tuple<std::tuple<Lhss, RuleTags, Rhss>...>, LineageDbClient, Hash,
-    ToSql> {
+    std::tuple<Rule<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>,
+    std::tuple<Rule<Lhss, RuleTags, Rhss>...>, LineageDbClient, Hash, ToSql> {
   static_assert(sizeof...(BootstrapLhss) == sizeof...(BootstrapRuleTags) &&
                     sizeof...(BootstrapRuleTags) == sizeof...(BootstrapRhss),
                 "The ith entry of BootstrapLhss corresponds to the left-hand "
@@ -191,9 +191,9 @@ class FluentExecutor<
                 "RuleTags, and Rhss must be equal");
 
  public:
-  using BootstrapRules = std::tuple<
-      std::tuple<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>;
-  using Rules = std::tuple<std::tuple<Lhss, RuleTags, Rhss>...>;
+  using BootstrapRules =
+      std::tuple<Rule<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>;
+  using Rules = std::tuple<Rule<Lhss, RuleTags, Rhss>...>;
 
   FluentExecutor(std::string name, std::size_t id,
                  std::tuple<std::unique_ptr<Cs>...> collections,
@@ -344,7 +344,7 @@ class FluentExecutor<
 
     // Rules.
     TupleIteri(rules_, [this](std::size_t i, const auto& rule) {
-      lineagedb_client_->AddRule(i, rule);
+      lineagedb_client_->AddRule(i, rule.ToDebugString());
     });
   }
 
@@ -457,12 +457,10 @@ class FluentExecutor<
   }
 
   template <typename Lhs, typename RuleTag, typename Rhs>
-  void ExecuteRule(std::size_t rule_number,
-                   std::tuple<Lhs, RuleTag, Rhs>* rule) {
+  void ExecuteRule(std::size_t rule_number, Rule<Lhs, RuleTag, Rhs>* rule) {
     time_++;
-    ExecuteRule(static_cast<int>(rule_number),
-                CHECK_NOTNULL(std::get<0>(*rule)), std::get<1>(*rule),
-                std::get<2>(*rule));
+    ExecuteRule(static_cast<int>(rule_number), CHECK_NOTNULL(rule->collection),
+                rule->rule_tag, rule->ra);
   }
 
   // The logical time of the fluent program. The logical time begins at 0 and

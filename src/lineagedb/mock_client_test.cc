@@ -17,21 +17,6 @@
 
 namespace fluent {
 namespace lineagedb {
-namespace detail {
-
-struct MockCollection {
-  std::string Name() const { return "c"; }
-};
-
-struct MockRuleTag {
-  std::string ToDebugString() const { return "<="; }
-};
-
-struct MockRa {
-  std::string ToDebugString() const { return "ra"; }
-};
-
-}  // namespace
 
 TEST(MockClient, Init) {
   MockClient<Hash, MockToSql> client("", 42, ConnectionConfig());
@@ -56,17 +41,14 @@ TEST(MockClient, AddCollection) {
 
 TEST(MockClient, AddRule) {
   MockClient<Hash, MockToSql> client("", 42, ConnectionConfig());
-  detail::MockCollection mock_collection;
-  auto rule = std::make_tuple(&mock_collection, detail::MockRuleTag(),
-                              detail::MockRa());
-  client.AddRule(0, rule);
-  client.AddRule(1, rule);
-  client.AddRule(2, rule);
+  client.AddRule(0, "foo");
+  client.AddRule(1, "bar");
+  client.AddRule(2, "baz");
 
   using Pair = std::pair<std::size_t, std::string>;
-  EXPECT_EQ(client.GetAddRule()[0], Pair(0, "c <= ra"));
-  EXPECT_EQ(client.GetAddRule()[1], Pair(1, "c <= ra"));
-  EXPECT_EQ(client.GetAddRule()[2], Pair(2, "c <= ra"));
+  EXPECT_EQ(client.GetAddRule()[0], Pair(0, "foo"));
+  EXPECT_EQ(client.GetAddRule()[1], Pair(1, "bar"));
+  EXPECT_EQ(client.GetAddRule()[2], Pair(2, "baz"));
 }
 
 TEST(MockClient, InsertTuple) {

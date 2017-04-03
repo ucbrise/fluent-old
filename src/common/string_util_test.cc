@@ -16,14 +16,9 @@ TEST(StringUtil, Join) {
   EXPECT_EQ(Join("a"s, "bc"s), "a, bc"s);
   EXPECT_EQ(Join("a"s, "bc"s, "def"s), "a, bc, def"s);
 
-  {
-    std::vector<std::string> xs = {"a"};
-    std::vector<std::string> ys = {"a", "b"};
-    std::vector<std::string> zs = {"a", "b", "c"};
-    EXPECT_EQ(Join(xs), "a"s);
-    EXPECT_EQ(Join(ys), "a, b"s);
-    EXPECT_EQ(Join(zs), "a, b, c"s);
-  }
+  EXPECT_EQ(Join(std::vector<std::string>{"a"}), "a"s);
+  EXPECT_EQ(Join(std::vector<std::string>{"a", "b"}), "a, b"s);
+  EXPECT_EQ(Join(std::vector<std::string>{"a", "b", "c"}), "a, b, c"s);
 }
 
 TEST(StringUtil, CrunchWhitespace) {

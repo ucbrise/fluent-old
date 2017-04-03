@@ -1,14 +1,13 @@
 #ifndef COMMON_COLLECTION_UTIL_H_
 #define COMMON_COLLECTION_UTIL_H_
 
-#include <cstddef>
-
 #include <ostream>
 #include <set>
 #include <vector>
 
 namespace fluent {
 
+// Pretty print an std::set (e.g. {1, 2, 3}).
 template <typename... Ts>
 std::ostream& operator<<(std::ostream& out, const std::set<Ts...>& xs) {
   out << "{";
@@ -25,6 +24,7 @@ std::ostream& operator<<(std::ostream& out, const std::set<Ts...>& xs) {
   return out;
 }
 
+// Pretty print an std::vector (e.g. [1, 2, 3]).
 template <typename... Ts>
 std::ostream& operator<<(std::ostream& out, const std::vector<Ts...>& xs) {
   out << "[";

@@ -1,56 +1,33 @@
 #include "common/collection_util.h"
 
 #include <sstream>
+#include <string>
 
 #include "glog/logging.h"
 #include "gtest/gtest.h"
 
 namespace fluent {
+namespace {
+
+template <typename T>
+std::string ToString(const T& x) {
+  std::ostringstream os;
+  os << x;
+  return os.str();
+}
+
+}  // namespace
 
 TEST(CollectionUtil, SetToString) {
-  {
-    std::set<int> xs{};
-    std::ostringstream os;
-    os << xs;
-    EXPECT_EQ("{}", os.str());
-  }
-
-  {
-    std::set<int> xs{1};
-    std::ostringstream os;
-    os << xs;
-    EXPECT_EQ("{1}", os.str());
-  }
-
-  {
-    std::set<int> xs{1, 2, 3};
-    std::ostringstream os;
-    os << xs;
-    EXPECT_EQ("{1, 2, 3}", os.str());
-  }
+  EXPECT_EQ("{}", ToString(std::set<int>{}));
+  EXPECT_EQ("{1}", ToString(std::set<int>{1}));
+  EXPECT_EQ("{1, 2, 3}", ToString(std::set<int>{1, 2, 3}));
 }
 
 TEST(CollectionUtil, VectorToString) {
-  {
-    std::vector<int> xs{};
-    std::ostringstream os;
-    os << xs;
-    EXPECT_EQ("[]", os.str());
-  }
-
-  {
-    std::vector<int> xs{1};
-    std::ostringstream os;
-    os << xs;
-    EXPECT_EQ("[1]", os.str());
-  }
-
-  {
-    std::vector<int> xs{1, 2, 3};
-    std::ostringstream os;
-    os << xs;
-    EXPECT_EQ("[1, 2, 3]", os.str());
-  }
+  EXPECT_EQ("[]", ToString(std::vector<int>{}));
+  EXPECT_EQ("[1]", ToString(std::vector<int>{1}));
+  EXPECT_EQ("[1, 2, 3]", ToString(std::vector<int>{1, 2, 3}));
 }
 
 }  // namespace fluent

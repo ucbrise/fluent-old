@@ -282,7 +282,8 @@ class FluentBuilder<
   RegisterBootstrapRulesImpl(const F& f, std::index_sequence<Is...>) {
     auto boostrap_rules = f(*std::get<Is>(collections_)...);
     TupleIter(boostrap_rules, [](const auto& rule) {
-      LOG(INFO) << "Registering a bootstrap rule: "
+      LOG(INFO) << "Registering a bootstrap rule: " << std::get<0>(rule)->Name()
+                << " " << std::get<1>(rule).ToDebugString() << " "
                 << std::get<2>(rule).ToDebugString();
     });
     return {std::move(name_),
@@ -304,7 +305,9 @@ class FluentBuilder<
   RegisterRulesImpl(const F& f, std::index_sequence<Is...>) {
     auto relalgs = f(*std::get<Is>(collections_)...);
     TupleIter(relalgs, [](const auto& rule) {
-      LOG(INFO) << "Registering a rule: " << std::get<2>(rule).ToDebugString();
+      LOG(INFO) << "Registering a rule: " << std::get<0>(rule)->Name() << " "
+                << std::get<1>(rule).ToDebugString() << " "
+                << std::get<2>(rule).ToDebugString();
     });
     return {std::move(name_),
             id_,

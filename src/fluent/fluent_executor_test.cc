@@ -15,6 +15,8 @@
 #include "fluent/fluent_builder.h"
 #include "fluent/infix.h"
 #include "postgres/connection_config.h"
+#include "postgres/mock_client.h"
+#include "postgres/mock_to_sql.h"
 #include "postgres/noop_client.h"
 #include "ra/all.h"
 #include "testing/captured_stdout.h"
@@ -218,6 +220,114 @@ TEST(FluentExecutor, SimpleCommunication) {
     EXPECT_THAT(ping.Get<0>().Get(), UnorderedElementsAreArray(C{}));
   }
 }
+
+TEST(FluentExecutor, SimpleProgramWithLineage) {
+  zmq::context_t context(1);
+  postgres::ConnectionConfig connection_config;
+  auto f = fluent<pg::MockClient, Hash, pg::MockToSql>(
+               "name", "inproc://yolo", &context, connection_config)
+               .table<std::size_t>("t")
+               .scratch<std::size_t>("s")
+               .channel<std::string, float, char>("c")
+               .RegisterRules([](auto& t, auto& s, auto& c) {
+                 using namespace fluent::infix;
+                 return std::make_tuple(t <= (t.Iterable() | ra::count()),
+                                        t <= (s.Iterable() | ra::count()),
+                                        s <= (c.Iterable() | ra::count()));
+               });
+  const pg::MockClient<Hash, pg::MockToSql>& client = f.GetPostgresClient();
+  Hash<std::tuple<std::size_t>> hash;
+
+  using T = std::set<std::tuple<int>>;
+  using S = std::set<std::tuple<std::size_t>>;
+  using C = std::set<std::tuple<std::string, float, char>>;
+
+  using AddCollectionTuple = std::pair<std::string, std::vector<std::string>>;
+  using AddRuleTuple = std::pair<std::size_t, std::string>;
+  using InsertTupleTuple =
+      std::tuple<std::string, int, std::vector<std::string>>;
+  using DeleteTupleTuple =
+      std::tuple<std::string, int, std::vector<std::string>>;
+  using AddDerivedLineageTuple = std::tuple<std::string, std::size_t, int, bool,
+                                            std::string, std::size_t, int>;
+
+  EXPECT_TRUE(client.GetInit());
+  ASSERT_EQ(client.GetAddRule().size(), static_cast<std::size_t>(3));
+  EXPECT_EQ(client.GetAddCollection()[0],
+            AddCollectionTuple("t", {"unsigned long"}));
+  EXPECT_EQ(client.GetAddCollection()[1],
+            AddCollectionTuple("s", {"unsigned long"}));
+  EXPECT_EQ(client.GetAddCollection()[2],
+            AddCollectionTuple("c", {"string", "float", "char"}));
+  ASSERT_EQ(client.GetAddCollection().size(), static_cast<std::size_t>(3));
+  EXPECT_EQ(client.GetAddRule()[0], AddRuleTuple(0, "t <= Count(t)"));
+  EXPECT_EQ(client.GetAddRule()[1], AddRuleTuple(1, "t <= Count(s)"));
+  EXPECT_EQ(client.GetAddRule()[2], AddRuleTuple(2, "s <= Count(c)"));
+
+  f.Tick();
+  EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}}));
+  EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
+  EXPECT_THAT(f.Get<2>().Get(), UnorderedElementsAreArray(C{}));
+
+  EXPECT_TRUE(client.GetInit());
+  ASSERT_EQ(client.GetAddRule().size(), static_cast<std::size_t>(3));
+  ASSERT_EQ(client.GetAddCollection().size(), static_cast<std::size_t>(3));
+  ASSERT_EQ(client.GetInsertTuple().size(), static_cast<std::size_t>(3));
+  EXPECT_EQ(client.GetInsertTuple()[0], InsertTupleTuple("t", 1, {"0"}));
+  EXPECT_EQ(client.GetInsertTuple()[1], InsertTupleTuple("t", 2, {"0"}));
+  EXPECT_EQ(client.GetInsertTuple()[2], InsertTupleTuple("s", 3, {"0"}));
+  ASSERT_EQ(client.GetDeleteTuple().size(), static_cast<std::size_t>(1));
+  EXPECT_EQ(client.GetDeleteTuple()[0], DeleteTupleTuple("s", 4, {"0"}));
+  ASSERT_EQ(client.GetAddNetworkedLineage().size(),
+            static_cast<std::size_t>(0));
+  ASSERT_EQ(client.GetAddDerivedLineage().size(), static_cast<std::size_t>(0));
+
+  f.Tick();
+  EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}, {1}}));
+  EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
+  EXPECT_THAT(f.Get<2>().Get(), UnorderedElementsAreArray(C{}));
+
+  EXPECT_TRUE(client.GetInit());
+  ASSERT_EQ(client.GetAddRule().size(), static_cast<std::size_t>(3));
+  ASSERT_EQ(client.GetAddCollection().size(), static_cast<std::size_t>(3));
+  ASSERT_EQ(client.GetInsertTuple().size(), static_cast<std::size_t>(6));
+  EXPECT_EQ(client.GetInsertTuple()[3], InsertTupleTuple("t", 5, {"1"}));
+  EXPECT_EQ(client.GetInsertTuple()[4], InsertTupleTuple("t", 6, {"0"}));
+  EXPECT_EQ(client.GetInsertTuple()[5], InsertTupleTuple("s", 7, {"0"}));
+  ASSERT_EQ(client.GetDeleteTuple().size(), static_cast<std::size_t>(2));
+  EXPECT_EQ(client.GetDeleteTuple()[1], DeleteTupleTuple("s", 8, {"0"}));
+  ASSERT_EQ(client.GetAddNetworkedLineage().size(),
+            static_cast<std::size_t>(0));
+  ASSERT_EQ(client.GetAddDerivedLineage().size(), static_cast<std::size_t>(1));
+  EXPECT_EQ(client.GetAddDerivedLineage()[0],
+            AddDerivedLineageTuple("t", hash({0}), 0, true, "t", hash({1}), 5));
+
+  f.Tick();
+  EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}, {1}, {2}}));
+  EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
+  EXPECT_THAT(f.Get<2>().Get(), UnorderedElementsAreArray(C{}));
+
+  EXPECT_TRUE(client.GetInit());
+  ASSERT_EQ(client.GetAddRule().size(), static_cast<std::size_t>(3));
+  ASSERT_EQ(client.GetAddCollection().size(), static_cast<std::size_t>(3));
+  ASSERT_EQ(client.GetInsertTuple().size(), static_cast<std::size_t>(9));
+  EXPECT_EQ(client.GetInsertTuple()[6], InsertTupleTuple("t", 9, {"2"}));
+  EXPECT_EQ(client.GetInsertTuple()[7], InsertTupleTuple("t", 10, {"0"}));
+  EXPECT_EQ(client.GetInsertTuple()[8], InsertTupleTuple("s", 11, {"0"}));
+  ASSERT_EQ(client.GetDeleteTuple().size(), static_cast<std::size_t>(3));
+  EXPECT_EQ(client.GetDeleteTuple()[2], DeleteTupleTuple("s", 12, {"0"}));
+  ASSERT_EQ(client.GetAddNetworkedLineage().size(),
+            static_cast<std::size_t>(0));
+  EXPECT_THAT(client.GetAddDerivedLineage(),
+              UnorderedElementsAreArray(std::set<AddDerivedLineageTuple>{
+                  {"t", hash({0}), 0, true, "t", hash({1}), 5},
+                  {"t", hash({0}), 0, true, "t", hash({2}), 9},
+                  {"t", hash({1}), 0, true, "t", hash({2}), 9},
+              }));
+}
+
+// TODO(mwhittaker): Test the lineage of a fluent program with communication
+// and deletion.
 
 }  // namespace fluent
 

@@ -17,4 +17,5 @@ ENDMACRO(CREATE_POSTGRES_TEST)
 
 CREATE_POSTGRES_TEST(mock_client_test)
 CREATE_POSTGRES_TEST(mock_pqxx_client_test)
+CREATE_POSTGRES_TEST(mock_to_sql_test)
 CREATE_POSTGRES_TEST(to_sql_test)

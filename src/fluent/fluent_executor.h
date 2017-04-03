@@ -229,12 +229,18 @@ class FluentExecutor<
     return *std::get<I>(collections_);
   }
 
+  // DO_NOT_SUMIT(mwhittaker): Document.
+  const PostgresClient<Hash, ToSql>& GetPostgresClient() {
+    return *postgres_client_.get();
+  }
+
   // Sequentially execute each registered bootstrap query and then invoke the
   // `Tick` method of every collection.
   void BootstrapTick() {
     TupleIteri(bootstrap_rules_, [this](std::size_t rule_number, auto& rule) {
       ExecuteRule(rule_number, &rule);
     });
+    time_++;
     TupleIter(collections_, [this](auto& c) { TickCollection(c.get()); });
   }
 
@@ -244,6 +250,7 @@ class FluentExecutor<
     TupleIteri(rules_, [this](std::size_t rule_number, auto& rule) {
       ExecuteRule(rule_number, &rule);
     });
+    time_++;
     TupleIter(collections_, [this](auto& c) { TickCollection(c.get()); });
   }
 

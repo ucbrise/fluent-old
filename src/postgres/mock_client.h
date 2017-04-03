@@ -90,13 +90,13 @@ class MockClient {
   }
 
   // Getters ///////////////////////////////////////////////////////////////////
-  bool GetInit() { return init_; }
-  const auto& GetAddCollection() { return add_collection_; }
-  const auto& GetAddRule() { return add_rule_; }
-  const auto& GetInsertTuple() { return insert_tuple_; }
-  const auto& GetDeleteTuple() { return delete_tuple_; }
-  const auto& GetAddNetworkedLineage() { return add_networked_lineage_; }
-  const auto& GetAddDerivedLineage() { return add_derived_lineage_; }
+  bool GetInit() const { return init_; }
+  const auto& GetAddCollection() const { return add_collection_; }
+  const auto& GetAddRule() const { return add_rule_; }
+  const auto& GetInsertTuple() const { return insert_tuple_; }
+  const auto& GetDeleteTuple() const { return delete_tuple_; }
+  const auto& GetAddNetworkedLineage() const { return add_networked_lineage_; }
+  const auto& GetAddDerivedLineage() const { return add_derived_lineage_; }
 
  private:
   template <typename T>

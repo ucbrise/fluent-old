@@ -35,14 +35,15 @@ install and build the rest of the dependencies for you!
 ```
 
 ## Tour
-| Directory                  | Description                             |
-| -------------------------- | --------------------------------------- |
-| [`common`](src/common)     | Helpful functions, macros, and whatnot. |
-| [`testing`](src/testing)   | Testing utilities.                      |
-| [`zmq_util`](src/zmq_util) | ZeroMQ utilities.                       |
-| [`ra`](src/ra)             | Relational algebra implementation.      |
-| [`fluent`](src/fluent)     | Main fluent code.                       |
-| [`examples`](src/examples) | Example fluent programs.                |
+| Directory                    | Description                             |
+| ---------------------------- | --------------------------------------- |
+| [`common`](src/common)       | Helpful functions, macros, and whatnot. |
+| [`testing`](src/testing)     | Testing utilities.                      |
+| [`zmq_util`](src/zmq_util)   | ZeroMQ utilities.                       |
+| [`ra`](src/ra)               | Relational algebra implementation.      |
+| [`lineagedb`](src/lineagedb) | Lineage database clients.               |
+| [`fluent`](src/fluent)       | Main fluent code.                       |
+| [`examples`](src/examples)   | Example fluent programs.                |
 
 [bloom_paper]: https://scholar.google.com/scholar?cluster=9165311711752272482
 [gpp_tutorial]: http://scholtyssek.org/blog/2015/06/11/install-gcc-with-c14-support-on-ubuntumint

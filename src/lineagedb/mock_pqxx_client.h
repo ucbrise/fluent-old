@@ -1,5 +1,5 @@
-#ifndef POSTGRES_MOCK_PQXX_CLIENT_H_
-#define POSTGRES_MOCK_PQXX_CLIENT_H_
+#ifndef LINEAGEDB_MOCK_PQXX_CLIENT_H_
+#define LINEAGEDB_MOCK_PQXX_CLIENT_H_
 
 #include <cstdint>
 
@@ -7,12 +7,12 @@
 #include <utility>
 #include <vector>
 
-#include "postgres/mock_connection.h"
-#include "postgres/mock_work.h"
-#include "postgres/pqxx_client.h"
+#include "lineagedb/mock_connection.h"
+#include "lineagedb/mock_work.h"
+#include "lineagedb/pqxx_client.h"
 
 namespace fluent {
-namespace postgres {
+namespace lineagedb {
 
 // A MockPqxxClient is like a PqxxClient, except that instead of issuing SQL
 // queries, it stores them in a vector. For example:
@@ -55,7 +55,7 @@ class MockPqxxClient
   std::vector<std::pair<std::string, std::string>> queries_;
 };
 
-}  // namespace postgres
+}  // namespace lineagedb
 }  // namespace fluent
 
-#endif  // POSTGRES_MOCK_PQXX_CLIENT_H_
+#endif  // LINEAGEDB_MOCK_PQXX_CLIENT_H_

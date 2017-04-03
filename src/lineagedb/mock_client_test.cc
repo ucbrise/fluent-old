@@ -1,4 +1,4 @@
-#include "postgres/mock_client.h"
+#include "lineagedb/mock_client.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -10,13 +10,13 @@
 #include "gtest/gtest.h"
 
 #include "common/hash_util.h"
-#include "postgres/connection_config.h"
-#include "postgres/mock_to_sql.h"
-#include "postgres/to_sql.h"
+#include "lineagedb/connection_config.h"
+#include "lineagedb/mock_to_sql.h"
+#include "lineagedb/to_sql.h"
 #include "testing/test_util.h"
 
 namespace fluent {
-namespace postgres {
+namespace lineagedb {
 namespace detail {
 
 struct MockCollection {
@@ -121,7 +121,7 @@ TEST(MockClient, AddDerivedLineage) {
             Tuple("20", 21, 22, true, "23", 24, 25));
 }
 
-}  // namespace postgres
+}  // namespace lineagedb
 }  // namespace fluent
 
 int main(int argc, char** argv) {

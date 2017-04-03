@@ -14,14 +14,14 @@
 #include "fluent/channel.h"
 #include "fluent/fluent_builder.h"
 #include "fluent/infix.h"
-#include "postgres/connection_config.h"
-#include "postgres/mock_client.h"
-#include "postgres/mock_to_sql.h"
-#include "postgres/noop_client.h"
+#include "lineagedb/connection_config.h"
+#include "lineagedb/mock_client.h"
+#include "lineagedb/mock_to_sql.h"
+#include "lineagedb/noop_client.h"
 #include "ra/all.h"
 #include "testing/captured_stdout.h"
 
-namespace pg = fluent::postgres;
+namespace ldb = fluent::lineagedb;
 
 using ::testing::UnorderedElementsAreArray;
 
@@ -30,16 +30,16 @@ namespace {
 
 auto noopfluent(const std::string& name, const std::string& address,
                 zmq::context_t* context,
-                const pg::ConnectionConfig& connection_config) {
-  return fluent<pg::NoopClient, Hash, pg::ToSql>(name, address, context,
-                                                 connection_config);
+                const ldb::ConnectionConfig& connection_config) {
+  return fluent<ldb::NoopClient, Hash, ldb::ToSql>(name, address, context,
+                                                   connection_config);
 }
 
 }  // namespace
 
 TEST(FluentExecutor, SimpleProgram) {
   zmq::context_t context(1);
-  postgres::ConnectionConfig connection_config;
+  lineagedb::ConnectionConfig connection_config;
   auto f = noopfluent("name", "inproc://yolo", &context, connection_config)
                .table<std::size_t>("t")
                .scratch<int, int, float>("s")
@@ -76,7 +76,7 @@ TEST(FluentExecutor, SimpleBootstrap) {
   Tuples xs = {{1}, {2}, {3}, {4}, {5}};
 
   zmq::context_t context(1);
-  postgres::ConnectionConfig connection_config;
+  lineagedb::ConnectionConfig connection_config;
   auto f =
       noopfluent("name", "inproc://yolo", &context, connection_config)
           .table<int>("t")
@@ -101,7 +101,7 @@ TEST(FluentExecutor, MildlyComplexProgram) {
   };
 
   zmq::context_t context(1);
-  postgres::ConnectionConfig connection_config;
+  lineagedb::ConnectionConfig connection_config;
   auto f =
       noopfluent("name", "inproc://yolo", &context, connection_config)
           .table<std::size_t>("t")
@@ -147,7 +147,7 @@ TEST(FluentExecutor, ComplexProgram) {
   auto is_even = [](const auto& t) { return std::get<0>(t) % 2 == 0; };
 
   zmq::context_t context(1);
-  postgres::ConnectionConfig connection_config;
+  lineagedb::ConnectionConfig connection_config;
   auto f = noopfluent("name", "inproc://yolo", &context, connection_config)
                .table<std::size_t>("t")
                .scratch<std::size_t>("s")
@@ -184,7 +184,7 @@ TEST(FluentExecutor, SimpleCommunication) {
   };
 
   zmq::context_t context(1);
-  postgres::ConnectionConfig connection_config;
+  lineagedb::ConnectionConfig connection_config;
   auto ping =
       noopfluent("name", "inproc://ping", &context, connection_config)
           .channel<std::string, int>("c")
@@ -223,8 +223,8 @@ TEST(FluentExecutor, SimpleCommunication) {
 
 TEST(FluentExecutor, SimpleProgramWithLineage) {
   zmq::context_t context(1);
-  postgres::ConnectionConfig connection_config;
-  auto f = fluent<pg::MockClient, Hash, pg::MockToSql>(
+  lineagedb::ConnectionConfig connection_config;
+  auto f = fluent<ldb::MockClient, Hash, ldb::MockToSql>(
                "name", "inproc://yolo", &context, connection_config)
                .table<std::size_t>("t")
                .scratch<std::size_t>("s")
@@ -235,7 +235,7 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
                                         t <= (s.Iterable() | ra::count()),
                                         s <= (c.Iterable() | ra::count()));
                });
-  const pg::MockClient<Hash, pg::MockToSql>& client = f.GetPostgresClient();
+  const ldb::MockClient<Hash, ldb::MockToSql>& client = f.GetLineageDbClient();
   Hash<std::tuple<std::size_t>> hash;
 
   using T = std::set<std::tuple<int>>;

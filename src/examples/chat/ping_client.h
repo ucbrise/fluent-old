@@ -9,10 +9,10 @@
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"
-#include "postgres/connection_config.h"
+#include "lineagedb/connection_config.h"
 #include "ra/all.h"
 
-namespace postgres = fluent::postgres;
+namespace lineagedb = fluent::lineagedb;
 namespace ra = fluent::ra;
 
 using address_t = std::string;
@@ -29,10 +29,9 @@ struct PingClientArgs {
 };
 
 template <template <template <typename> class, template <typename> class>
-          class PostgresClient>
-int PingClientMain(
-    const PingClientArgs& args,
-    const fluent::postgres::ConnectionConfig& connection_config) {
+          class LineageDbClient>
+int PingClientMain(const PingClientArgs& args,
+                   const lineagedb::ConnectionConfig& connection_config) {
   zmq::context_t context(1);
 
   std::vector<std::tuple<server_address_t, client_address_t, nickname_t>>
@@ -40,8 +39,8 @@ int PingClientMain(
                                        args.nickname)};
 
   auto f =
-      fluent::fluent<PostgresClient>("chat_ping_client", args.client_address,
-                                     &context, connection_config)
+      fluent::fluent<LineageDbClient>("chat_ping_client", args.client_address,
+                                      &context, connection_config)
           .template channel<server_address_t, client_address_t, nickname_t>(
               "connect")
           .template channel<address_t, message_t>("mcast")

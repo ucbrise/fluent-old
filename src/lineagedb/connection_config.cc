@@ -1,7 +1,7 @@
-#include "postgres/connection_config.h"
+#include "lineagedb/connection_config.h"
 
 namespace fluent {
-namespace postgres {
+namespace lineagedb {
 
 std::string ConnectionConfig::ToString() const {
   return                                 //
@@ -12,5 +12,5 @@ std::string ConnectionConfig::ToString() const {
       " dbname=" + dbname;
 }
 
-}  // namespace postgres
+}  // namespace lineagedb
 }  // namespace fluent

@@ -8,7 +8,7 @@
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"
-#include "postgres/connection_config.h"
+#include "lineagedb/connection_config.h"
 #include "ra/all.h"
 
 namespace ra = fluent::ra;
@@ -26,9 +26,9 @@ struct ClientArgs {
 };
 
 template <template <template <typename> class, template <typename> class>
-          class PostgresClient>
+          class LineageDbClient>
 int ClientMain(const ClientArgs& args,
-               const fluent::postgres::ConnectionConfig& connection_config) {
+               const fluent::lineagedb::ConnectionConfig& connection_config) {
   zmq::context_t context(1);
 
   std::vector<std::tuple<server_address_t, client_address_t, nickname_t>>
@@ -36,8 +36,8 @@ int ClientMain(const ClientArgs& args,
                                        args.nickname)};
 
   auto f =
-      fluent::fluent<PostgresClient>("chat_client", args.client_address,
-                                     &context, connection_config)
+      fluent::fluent<LineageDbClient>("chat_client", args.client_address,
+                                      &context, connection_config)
           .stdin()
           .stdout()
           .template channel<server_address_t, client_address_t, nickname_t>(

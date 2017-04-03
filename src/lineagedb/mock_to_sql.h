@@ -1,5 +1,5 @@
-#ifndef POSTGRES_MOCK_TO_SQL_H_
-#define POSTGRES_MOCK_TO_SQL_H_
+#ifndef LINEAGEDB_MOCK_TO_SQL_H_
+#define LINEAGEDB_MOCK_TO_SQL_H_
 
 #include <cstdint>
 
@@ -9,7 +9,7 @@
 #include "fmt/format.h"
 
 namespace fluent {
-namespace postgres {
+namespace lineagedb {
 
 // DO_NOT_SUBMIT(mwhittaker): Document.
 template <typename T>
@@ -81,7 +81,7 @@ struct MockToSql<double> {
   std::string Value(double x) { return std::to_string(x); }
 };
 
-}  // namespace postgres
+}  // namespace lineagedb
 }  // namespace fluent
 
-#endif  // POSTGRES_MOCK_TO_SQL_H_
+#endif  // LINEAGEDB_MOCK_TO_SQL_H_

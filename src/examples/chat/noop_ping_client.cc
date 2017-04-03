@@ -3,8 +3,8 @@
 #include "glog/logging.h"
 
 #include "examples/chat/ping_client.h"
-#include "postgres/connection_config.h"
-#include "postgres/noop_client.h"
+#include "lineagedb/connection_config.h"
+#include "lineagedb/noop_client.h"
 
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
@@ -17,6 +17,6 @@ int main(int argc, char* argv[]) {
   }
 
   PingClientArgs args{argv[1], argv[2], argv[3], argv[4]};
-  fluent::postgres::ConnectionConfig config;
-  return PingClientMain<fluent::postgres::NoopClient>(args, config);
+  fluent::lineagedb::ConnectionConfig config;
+  return PingClientMain<fluent::lineagedb::NoopClient>(args, config);
 }

@@ -1,5 +1,5 @@
-#ifndef POSTGRES_MOCK_CLIENT_H_
-#define POSTGRES_MOCK_CLIENT_H_
+#ifndef LINEAGEDB_MOCK_CLIENT_H_
+#define LINEAGEDB_MOCK_CLIENT_H_
 
 #include <cstddef>
 
@@ -8,10 +8,10 @@
 #include "fmt/format.h"
 
 #include "common/tuple_util.h"
-#include "postgres/connection_config.h"
+#include "lineagedb/connection_config.h"
 
 namespace fluent {
-namespace postgres {
+namespace lineagedb {
 namespace detail {
 
 template <template <typename> class ToSql, typename T>
@@ -142,7 +142,7 @@ class MockClient {
       add_derived_lineage_;
 };
 
-}  // namespace postgres
+}  // namespace lineagedb
 }  // namespace fluent
 
-#endif  // POSTGRES_MOCK_CLIENT_H_
+#endif  // LINEAGEDB_MOCK_CLIENT_H_

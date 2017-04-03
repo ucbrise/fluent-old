@@ -1,5 +1,5 @@
-#ifndef POSTGRES_PQXX_CLIENT_H_
-#define POSTGRES_PQXX_CLIENT_H_
+#ifndef LINEAGEDB_PQXX_CLIENT_H_
+#define LINEAGEDB_PQXX_CLIENT_H_
 
 #include <cstdint>
 
@@ -9,10 +9,10 @@
 
 #include "common/string_util.h"
 #include "common/tuple_util.h"
-#include "postgres/connection_config.h"
+#include "lineagedb/connection_config.h"
 
 namespace fluent {
-namespace postgres {
+namespace lineagedb {
 namespace detail {
 
 inline std::int64_t size_t_to_int64(std::size_t hash) {
@@ -35,10 +35,10 @@ struct ToSqlType {
 //   class PqxxClient { ... }
 //
 // A `PqxxClient<Hash, ToSql>` object can be used to shuttle tuples and lineage
-// information from a fluent node to a postgres database. It's best explained
+// information from a fluent node to a lineagedb database. It's best explained
 // through an example:
 //
-//   // Construct a `ConnectionConfig` which tells our client to which postgres
+//   // Construct a `ConnectionConfig` which tells our client to which lineagedb
 //   // database it should connect and which credentials it should use to do
 //   // so.
 //   ConnectionConfig config {
@@ -49,11 +49,11 @@ struct ToSqlType {
 //     "sailors",   // the database
 //   }
 //
-//   // Construct a client which will connect to the postgres database.
+//   // Construct a client which will connect to the lineagedb database.
 //   PqxxClient<Hash, ToSql> client(config);
 //
-//   // Initialize the postgres client with the name of our fluent node. A
-//   // postgres client should be used by exactly one fluent node. Also, the
+//   // Initialize the lineagedb client with the name of our fluent node. A
+//   // lineagedb client should be used by exactly one fluent node. Also, the
 //   // name "lineage" is reserved; sorry about that.
 //   client.Init("my_fluent_node");
 //
@@ -75,7 +75,7 @@ struct ToSqlType {
 // dependency injected version of PqxxClient.
 //
 // The PqxxClient struct template we used above uses `pqxx::connection` and
-// `pqxx::work` for `Connection` and `Work` to actually connect to a postgres
+// `pqxx::work` for `Connection` and `Work` to actually connect to a lineagedb
 // database. If we don't want to actually connect to a database (say for unit
 // tests), we can substitute a mock connection and work class in for
 // `Connection` and `Work`. In fact, we do exactly that in
@@ -95,7 +95,7 @@ class InjectablePqxxClient {
         name_(std::move(name)),
         id_(id) {
     LOG(INFO)
-        << "Established a postgres connection with the following parameters: "
+        << "Established a lineagedb connection with the following parameters: "
         << connection_config.ToString();
   }
 
@@ -131,7 +131,7 @@ class InjectablePqxxClient {
     static_assert(sizeof...(Ts) > 0, "Collections should have >= 1 column.");
     CHECK(initialized_) << "Call Init first.";
 
-    // For a fluent node `n` and collection `c`, we create a postgres relation
+    // For a fluent node `n` and collection `c`, we create a lineagedb relation
     // `n_c`. We also make a relation for the lineage of `n` called
     // `n_lineage`. Thus, we have a naming conflict if `c == lineage`.
     CHECK_NE(collection_name, std::string("lineage"))
@@ -279,7 +279,7 @@ class InjectablePqxxClient {
     }));
   }
 
-  // A connection to postgres database.
+  // A connection to lineagedb database.
   Connection connection_;
 
   // True after `Init()` is called;
@@ -297,7 +297,7 @@ template <template <typename> class Hash, template <typename> class ToSql>
 using PqxxClient =
     InjectablePqxxClient<pqxx::connection, pqxx::work, Hash, ToSql>;
 
-}  // namespace postgres
+}  // namespace lineagedb
 }  // namespace fluent
 
-#endif  // POSTGRES_PQXX_CLIENT_H_
+#endif  // LINEAGEDB_PQXX_CLIENT_H_

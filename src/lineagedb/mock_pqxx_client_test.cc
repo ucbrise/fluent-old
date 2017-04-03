@@ -1,4 +1,4 @@
-#include "postgres/mock_pqxx_client.h"
+#include "lineagedb/mock_pqxx_client.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -11,7 +11,7 @@
 #include "gtest/gtest.h"
 
 #include "common/hash_util.h"
-#include "postgres/to_sql.h"
+#include "lineagedb/to_sql.h"
 #include "testing/test_util.h"
 
 // These unit tests are all whitebox tests that you will probably have to change
@@ -19,7 +19,7 @@
 // make sure things compile and to catch silly trivial bugs.
 
 namespace fluent {
-namespace postgres {
+namespace lineagedb {
 namespace detail {
 
 struct MockCollection {
@@ -184,7 +184,7 @@ TEST(MockPqxxClient, AddDerivedLineage) {
   )"));
 }
 
-}  // namespace postgres
+}  // namespace lineagedb
 }  // namespace fluent
 
 int main(int argc, char** argv) {

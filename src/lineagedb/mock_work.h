@@ -1,12 +1,12 @@
-#ifndef POSTGRES_MOCK_WORK_H_
-#define POSTGRES_MOCK_WORK_H_
+#ifndef LINEAGEDB_MOCK_WORK_H_
+#define LINEAGEDB_MOCK_WORK_H_
 
 #include <string>
 
-#include "postgres/mock_connection.h"
+#include "lineagedb/mock_connection.h"
 
 namespace fluent {
-namespace postgres {
+namespace lineagedb {
 
 // A mock of the `pqxx::work` class. See `InjectiblePqxxClient` for more
 // information.
@@ -17,7 +17,7 @@ class MockWork {
   void commit() {}
 };
 
-}  // namespace postgres
+}  // namespace lineagedb
 }  // namespace fluent
 
-#endif  // POSTGRES_MOCK_WORK_H_
+#endif  // LINEAGEDB_MOCK_WORK_H_

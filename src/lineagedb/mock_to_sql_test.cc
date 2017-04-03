@@ -1,4 +1,4 @@
-#include "postgres/mock_to_sql.h"
+#include "lineagedb/mock_to_sql.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -9,7 +9,7 @@
 #include "gtest/gtest.h"
 
 namespace fluent {
-namespace postgres {
+namespace lineagedb {
 
 TEST(MockToSql, ToSqlType) {
   EXPECT_EQ(MockToSql<bool>().Type(), "bool");
@@ -36,7 +36,7 @@ TEST(MockToSql, ToSqlValue) {
   EXPECT_EQ(MockToSql<double>().Value(7.0), "7.000000");
 }
 
-}  // namespace postgres
+}  // namespace lineagedb
 }  // namespace fluent
 
 int main(int argc, char** argv) {

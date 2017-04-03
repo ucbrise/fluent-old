@@ -1,8 +1,8 @@
-#ifndef POSTGRES_MOCK_CONNECTION_H_
-#define POSTGRES_MOCK_CONNECTION_H_
+#ifndef LINEAGEDB_MOCK_CONNECTION_H_
+#define LINEAGEDB_MOCK_CONNECTION_H_
 
 namespace fluent {
-namespace postgres {
+namespace lineagedb {
 
 // A mock of the `pqxx::connection` class. See `InjectiblePqxxClient` for more
 // information.
@@ -11,7 +11,7 @@ class MockConnection {
   MockConnection(const std::string&) {}
 };
 
-}  // namespace postgres
+}  // namespace lineagedb
 }  // namespace fluent
 
-#endif  // POSTGRES_MOCK_CONNECTION_H_
+#endif  // LINEAGEDB_MOCK_CONNECTION_H_

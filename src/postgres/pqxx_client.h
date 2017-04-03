@@ -115,7 +115,8 @@ class InjectablePqxxClient {
         dep_node_id          bigint   NOT NULL,
         dep_collection_name  text     NOT NULL,
         dep_tuple_hash       bigint   NOT NULL,
-        rule_number          integer  NOT NULL,
+        dep_time             bigint,
+        rule_number          integer,
         inserted             boolean  NOT NULL,
         collection_name      text     NOT NULL,
         tuple_hash           bigint   NOT NULL,
@@ -208,26 +209,47 @@ class InjectablePqxxClient {
                              name_, collection_name, time_deleted, hash));
   }
 
-  void AddLineage(std::size_t dep_node_id,
-                  const std::string& dep_collection_name,
-                  std::size_t dep_tuple_hash, int rule_number, bool inserted,
-                  const std::string& collection_name, std::size_t tuple_hash,
-                  int time) {
+  void AddNetworkedLineage(std::size_t dep_node_id, int dep_time,
+                           const std::string& collection_name,
+                           std::size_t tuple_hash, int time) {
     CHECK(initialized_) << "Call Init first.";
     ExecuteQuery(
         "AddLineage",
         fmt::format(
             R"(
       INSERT INTO {}_lineage (dep_node_id, dep_collection_name, dep_tuple_hash,
-                              rule_number, inserted, collection_name,
+                              dep_time, rule_number, inserted, collection_name,
                               tuple_hash, time)
-      VALUES ({});
+      VALUES ({}, NULL, {});
     )",
-            name_,
-            Join(SqlValues(std::make_tuple(
-                detail::size_t_to_int64(dep_node_id), dep_collection_name,
-                detail::size_t_to_int64(dep_tuple_hash), rule_number, inserted,
-                collection_name, detail::size_t_to_int64(tuple_hash), time)))));
+            name_, Join(SqlValues(std::make_tuple(
+                       detail::size_t_to_int64(dep_node_id), collection_name,
+                       detail::size_t_to_int64(tuple_hash), dep_time))),
+            Join(SqlValues(std::make_tuple(true /*inserted*/, collection_name,
+                                           detail::size_t_to_int64(tuple_hash),
+                                           time)))));
+  }
+
+  void AddDerivedLineage(const std::string& dep_collection_name,
+                         std::size_t dep_tuple_hash, int rule_number,
+                         bool inserted, const std::string& collection_name,
+                         std::size_t tuple_hash, int time) {
+    CHECK(initialized_) << "Call Init first.";
+    ExecuteQuery(
+        "AddLineage",
+        fmt::format(
+            R"(
+      INSERT INTO {}_lineage (dep_node_id, dep_collection_name, dep_tuple_hash,
+                              dep_time, rule_number, inserted, collection_name,
+                              tuple_hash, time)
+      VALUES ({}, NULL, {});
+    )",
+            name_, Join(SqlValues(std::make_tuple(
+                       detail::size_t_to_int64(id_), dep_collection_name,
+                       detail::size_t_to_int64(dep_tuple_hash)))),
+            Join(SqlValues(
+                std::make_tuple(rule_number, inserted, collection_name,
+                                detail::size_t_to_int64(tuple_hash), time)))));
   }
 
  protected:

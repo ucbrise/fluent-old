@@ -31,8 +31,11 @@ class NoopClient {
   template <typename... Ts>
   void DeleteTuple(const std::string&, int, const std::tuple<Ts...>&) {}
 
-  void AddLineage(std::size_t, const std::string&, std::size_t, int, bool,
-                  const std::string&, std::size_t, int) {}
+  void AddNetworkedLineage(std::size_t, int, const std::string&, std::size_t,
+                           int) {}
+
+  void AddDerivedLineage(const std::string&, std::size_t, int, bool,
+                         const std::string&, std::size_t, int) {}
 };
 
 }  // namespace postgres

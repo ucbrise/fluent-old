@@ -44,7 +44,8 @@ TEST(MockPqxxClient, Init) {
       dep_node_id          bigint   NOT NULL,
       dep_collection_name  text     NOT NULL,
       dep_tuple_hash       bigint   NOT NULL,
-      rule_number          integer  NOT NULL,
+      dep_time             bigint,
+      rule_number          integer,
       inserted             boolean  NOT NULL,
       collection_name      text     NOT NULL,
       tuple_hash           bigint   NOT NULL,
@@ -133,23 +134,43 @@ TEST(MockPqxxClient, DeleteTuple) {
                                                                     hash));
 }
 
-TEST(MockPqxxClient, AddLineage) {
+TEST(MockPqxxClient, AddNetworkedLineage) {
   using tuple_t = std::tuple<int, bool, char>;
   tuple_t t = {1, true, 'a'};
 
   ConnectionConfig c;
   MockPqxxClient<Hash, ToSql> client("name", 9001, c);
   client.Init();
-  client.AddLineage(0, "foo", 1, 2, true, "bar", 3, 4);
+  client.AddNetworkedLineage(0, 1, "foo", 2, 3);
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
 
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(3));
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, fmt::format(R"(
     INSERT INTO name_lineage (dep_node_id, dep_collection_name, dep_tuple_hash,
-                              rule_number, inserted, collection_name,
+                              dep_time, rule_number, inserted, collection_name,
                               tuple_hash, time)
-    VALUES (0, 'foo', 1, 2, true, 'bar', 3, 4);
+    VALUES (0, 'foo', 2, 1, NULL, true, 'foo', 2, 3);
+  )"));
+}
+
+TEST(MockPqxxClient, AddDerivedLineage) {
+  using tuple_t = std::tuple<int, bool, char>;
+  tuple_t t = {1, true, 'a'};
+
+  ConnectionConfig c;
+  MockPqxxClient<Hash, ToSql> client("name", 9001, c);
+  client.Init();
+  client.AddDerivedLineage("foo", 1, 2, true, "bar", 3, 4);
+
+  std::vector<std::pair<std::string, std::string>> queries = client.Queries();
+
+  ASSERT_EQ(queries.size(), static_cast<std::size_t>(3));
+  ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, fmt::format(R"(
+    INSERT INTO name_lineage (dep_node_id, dep_collection_name, dep_tuple_hash,
+                              dep_time, rule_number, inserted, collection_name,
+                              tuple_hash, time)
+    VALUES (9001, 'foo', 1, NULL, 2, true, 'bar', 3, 4);
   )"));
 }
 

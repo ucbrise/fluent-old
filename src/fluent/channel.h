@@ -38,8 +38,9 @@ std::tuple<Ts...> parse_tuple(const std::vector<std::string>& columns) {
 
 }  // namespace detail
 
-using Parser = std::function<void(std::size_t, const std::string&, std::size_t,
-                                  const std::vector<std::string>& columns)>;
+using Parser = std::function<void(
+    std::size_t dep_node_id, int dep_time, const std::string& channel_name,
+    const std::vector<std::string>& columns, int time)>;
 
 // A channel is a pseudo-relation. The first column of the channel is a string
 // specifying the ZeroMQ to which the tuple should be sent. For example, if
@@ -65,7 +66,7 @@ class Channel {
 
   // Merge assumes a `std::string ToString(const U&)` function exists for `U`
   // in `T, Ts...`.
-  void Merge(const std::set<std::tuple<T, Ts...>>& ts) {
+  void Merge(const std::set<std::tuple<T, Ts...>>& ts, int time) {
     for (const std::tuple<T, Ts...>& t : ts) {
       VLOG(1) << "Channel " << this->Name() << " sending tuple to "
               << std::get<0>(t) << ".";
@@ -73,6 +74,7 @@ class Channel {
       std::vector<zmq::message_t> msgs;
       msgs.push_back(zmq_util::string_to_message(ToString(id_)));
       msgs.push_back(zmq_util::string_to_message(this->Name()));
+      msgs.push_back(zmq_util::string_to_message(ToString(time)));
       auto strings = TupleMap(t, [](const auto& x) { return ToString(x); });
       TupleIter(strings, [&msgs](const std::string& s) {
         msgs.push_back(zmq_util::string_to_message(s));
@@ -89,20 +91,22 @@ class Channel {
     return ts;
   }
 
+  // DO_NOT_SUBMIT(mwhittaker): Update documentation.
   // `Collection<T1, ..., Tn>.GetParser()(columns)` parses a vector of `n`
-  // strings into a tuple of type `std::tuple<T1, ..., Tn>` and inserts it into
+  // strings into a tuple of type `std::tuple<T1, ..., Tn>` and inserts it
+  // into
   // the collection. The ith element of the tuple is parsed using a global `Ti
   // FromString<Ti>(const std::string&)` function which is assumed to exists
   // (see `serialization.h` for more information).
   template <typename F>
   Parser GetParser(F f) {
-    return
-        [this, f](std::size_t dep_node_id, const std::string& channel_name,
-                  std::size_t time, const std::vector<std::string>& columns) {
-          const auto t = detail::parse_tuple<T, Ts...>(columns);
-          f(dep_node_id, channel_name, time, t);
-          ts_.insert(t);
-        };
+    return [this, f](std::size_t dep_node_id, int dep_time,
+                     const std::string& channel_name,
+                     const std::vector<std::string>& columns, int time) {
+      const auto t = detail::parse_tuple<T, Ts...>(columns);
+      f(dep_node_id, dep_time, channel_name, t, time);
+      ts_.insert(t);
+    };
   }
 
  private:

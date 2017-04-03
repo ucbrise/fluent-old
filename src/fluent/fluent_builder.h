@@ -137,18 +137,16 @@ class FluentBuilder<
         << "The channel name '" << c->Name()
         << "' is used multiple times. Channel names must be unique.";
 
-    Channel<Us...>* cp = c.get();
     PostgresClient<Hash, ToSql>* client = postgres_client_.get();
     parsers_.insert(std::make_pair(
-        c->Name(), c->GetParser([cp, client](std::size_t dep_node_id,
-                                             const std::string& channel_name,
-                                             std::size_t time, const auto& t) {
+        c->Name(), c->GetParser([client](std::size_t dep_node_id, int dep_time,
+                                         const std::string& channel_name,
+                                         const auto& t, int time) {
           using tuple_type = typename std::decay<decltype(t)>::type;
           std::size_t tuple_hash = Hash<tuple_type>()(t);
-          client->InsertTuple(cp->Name(), time, t);
-          client->AddLineage(dep_node_id, channel_name, tuple_hash, -1, true,
-                             channel_name, tuple_hash, time);
-
+          client->InsertTuple(channel_name, time, t);
+          client->AddNetworkedLineage(dep_node_id, dep_time, channel_name,
+                                      tuple_hash, time);
         })));
     return AddCollection(std::move(c));
   }

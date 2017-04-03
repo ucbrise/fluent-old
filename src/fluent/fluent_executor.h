@@ -263,23 +263,29 @@ class FluentExecutor<
 
     // Read from the network.
     if (pollitems[0].revents & ZMQ_POLLIN) {
-      // msgs[0] = node id
-      // msgs[1] = collection name
-      // msgs[2] = tuple element 0
+      // msgs[0] = dep node id
+      // msgs[1] = dep collection name
+      // msgs[2] = dep time
+      // msgs[3] = tuple element 0
+      // msgs[4] = tuple element 1
       // ...
       std::vector<zmq::message_t> msgs =
           zmq_util::recv_msgs(&network_state_->socket);
 
       std::vector<std::string> strings;
-      for (std::size_t i = 2; i < msgs.size(); ++i) {
+      for (std::size_t i = 3; i < msgs.size(); ++i) {
         strings.push_back(zmq_util::message_to_string(msgs[i]));
       }
 
       const std::size_t dep_node_id =
           FromString<std::size_t>(zmq_util::message_to_string(msgs[0]));
       const std::string channel_name = zmq_util::message_to_string(msgs[1]);
+      const int dep_time =
+          FromString<int>(zmq_util::message_to_string(msgs[2]));
+
       if (parsers_.find(channel_name) != std::end(parsers_)) {
-        parsers_[channel_name](dep_node_id, channel_name, time_, strings);
+        parsers_[channel_name](dep_node_id, dep_time, channel_name, strings,
+                               time_);
       } else {
         LOG(WARNING) << "A message was received for a channel named "
                      << channel_name
@@ -399,9 +405,9 @@ class FluentExecutor<
     ranges::for_each(ra.ToPhysical().ToRange(), [&](const auto& lt) {
       std::size_t tuple_hash = hash(lt.tuple);
       for (const ra::LineageTuple& l : lt.lineage) {
-        postgres_client_->AddLineage(postgres_client_->GetId(), l.collection,
-                                     l.hash, rule_number, inserted,
-                                     collection->Name(), tuple_hash, time_);
+        postgres_client_->AddDerivedLineage(l.collection, l.hash, rule_number,
+                                            inserted, collection->Name(),
+                                            tuple_hash, time_);
       }
 
       if (inserted) {
@@ -412,6 +418,16 @@ class FluentExecutor<
 
       update_collection(*collection, std::set<tuple_type>{lt.tuple});
     });
+  }
+
+  template <typename... Ts, typename Rhs>
+  void ExecuteRule(int rule_number, Channel<Ts...>* collection, MergeTag,
+                   const Rhs& ra) {
+    ExecuteRule(
+        rule_number, collection, ra, true,
+        [this](Channel<Ts...>& c, const std::set<std::tuple<Ts...>>& ts) {
+          c.Merge(ts, time_);
+        });
   }
 
   template <typename Lhs, typename Rhs>

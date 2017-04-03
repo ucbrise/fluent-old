@@ -108,7 +108,8 @@ Additionally, for each program `p`, we generate a `p_lineage` table:
 | dep_node_id         | bigint  | not null  |
 | dep_collection_name | text    | not null  |
 | dep_tuple_hash      | bigint  | not null  |
-| rule number         | integer | not null  |
+| dep_time            | integer |           |
+| rule number         | integer |           |
 | inserted            | boolean | not null  |
 | collection_name     | text    | not null  |
 | tuple_hash          | bigint  | not null  |

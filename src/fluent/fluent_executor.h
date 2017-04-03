@@ -98,52 +98,8 @@ class FluentExecutor;
 
 // # Overview
 // A FluentExecutor runs a Fluent program. You build up a Fluent program using
-// a FluentBuilder and then use it to execute the program. It is best explained
-// through an example.
-//
-//   // This FluentExecutor will have four collections:
-//   //   - a 3-column table named "t1" with types [int, char, float]
-//   //   - a 2-column table named "t2" with types [float, int]
-//   //   - a 3-column scratch named "s" with types [int, int, float]
-//   //   - a 3-column channel named "c" with types [std::string, float, char]
-//   // The FluentExecutor will also have two rules:
-//   //   - The first is a bootstrap rule (registered with
-//   //     RegisterBootstrapRules) that will move the contents of `tuples`
-//   //     into `t1`. This rule will be executed exactly once at the beginning
-//   //     of the fluent program.
-//   //   - The second rule projects out the third and first columns of t1 and
-//   //     puts them into t2. It will be run every tick of the program.
-//   // The FluentExecutor will also record the history of its state and the
-//   // lineage of every tuple it derives using a PqxxClient.
-//   zmq::context_t context(1);
-//   ConnectionConfig config;
-//   auto f = fluent<PqxxClient>("name", "address", &context, config)
-//     .table<int, char, float>("t1")
-//     .table<float, int>("t2")
-//     .scratch<int, int, float>("s")
-//     .channel<std::string, float, char>("c")
-//     .RegisterBootstrapRules([&](auto& t1, auto& t2, auto& s, auto& c) {
-//       return std::make_tuple(t1 <= ra::make_iterable("ts", &tuples));
-//     });
-//     .RegisterRules([](auto& t1, auto& t2, auto& s, auto& c) {
-//       return std::make_tuple(t2 <= t1.iterable | ra::project<2, 0>());
-//     });
-//
-//   // Calling `f.BootstrapTick()` will run the bootstrap rules. Every rule
-//   // registered with `RegisterBootstrapRules` above will be called.
-//   // Afterwards, every collection is "ticked". For example, scratches and
-//   // channels are cleared.
-//   f.BootstrapTick();
-//
-//   // Calling `f.Tick()` will run the rules in exactly the same way
-//   // `f.BootstrapTick()` ran the bootstrap rules.
-//   f.Tick();
-//
-//   // Calling `f.Run()` will run a Fluent program. The program will call
-//   // `f.BootstrapTick()` and then repeatedly call `f.Tick()` and then wait
-//   // for messages to arrive from other Fluent nodes, populating channels
-//   // appropriately.
-//   f.Run();
+// a FluentBuilder and then use it to execute the program. See the README for
+// an example.
 //
 // # Implementation
 // - Every C in Cs is one of the following forms:

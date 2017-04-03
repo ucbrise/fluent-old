@@ -11,7 +11,10 @@
 namespace fluent {
 namespace lineagedb {
 
-// DO_NOT_SUBMIT(mwhittaker): Document.
+// MockToSql is like ToSql but it doesn't actually convert types to SQL types.
+// Instead, it simply returns the C++ types. For example,
+// `MockToSql<std::string>().Type()` is `string` (instead of `text`). MockToSql
+// is primarily for testing.
 template <typename T>
 struct MockToSql;
 

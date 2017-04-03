@@ -38,6 +38,11 @@ std::tuple<Ts...> parse_tuple(const std::vector<std::string>& columns) {
 
 }  // namespace detail
 
+// Fluent nodes send tuples to one another. A parser is responsible for parsing
+// serialized tuples and processing them. More specifically, a parser is given
+// the node id of the sending node, the time at which the tuple was sent, the
+// channel to which the tuple was sent, the stringified columns of the tuple,
+// and the local time.
 using Parser = std::function<void(
     std::size_t dep_node_id, int dep_time, const std::string& channel_name,
     const std::vector<std::string>& columns, int time)>;
@@ -91,11 +96,10 @@ class Channel {
     return ts;
   }
 
-  // DO_NOT_SUBMIT(mwhittaker): Update documentation.
-  // `Collection<T1, ..., Tn>.GetParser()(columns)` parses a vector of `n`
-  // strings into a tuple of type `std::tuple<T1, ..., Tn>` and inserts it
-  // into
-  // the collection. The ith element of the tuple is parsed using a global `Ti
+  // `GetParser(f)` returns a parser (see Parser above) which parses a tuple
+  // destined for this channel and then invokes `f`.
+  //
+  // The ith element of the tuple is parsed using a global `Ti
   // FromString<Ti>(const std::string&)` function which is assumed to exists
   // (see `serialization.h` for more information).
   template <typename F>

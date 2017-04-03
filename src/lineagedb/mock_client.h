@@ -21,7 +21,10 @@ struct ToSqlType {
 
 }  // namespace detail
 
-// DO_NOT_SUBMIT(mwhittaker): Document.
+// A MockClient has the same interface as a PqxxClient, but instead of
+// constructing SQL queries and issuing them to a postgres database, a
+// MockClient simply records invocations of its methods. MockClient is
+// primarily for testing.
 template <template <typename> class Hash, template <typename> class ToSql>
 class MockClient {
  public:

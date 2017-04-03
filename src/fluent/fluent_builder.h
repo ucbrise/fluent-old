@@ -42,8 +42,7 @@ class FluentBuilder;
 
 // # Overview
 // A FluentBuilder is a class that you can use to build up a FluentExecutor.
-// See FluentExecutor documentation for an overview of how to use a
-// FluentBuilder.
+// See the README for an overview of how to use a FluentBuilder.
 //
 // # Implementation
 // Each FluentBuilder maintains two key fields (in addition to a bunch of other

@@ -1,4 +1,4 @@
-# Fluent: An Asynchronous Dataflow Framework
+# Fluent
 Fluent = [Bloom][bloom_paper] + C++.
 
 ## Getting Started

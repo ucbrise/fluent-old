@@ -17,13 +17,11 @@ class NoopClient {
 
   void Init() {}
 
-  std::size_t GetId() { return 42; }
-
   template <typename... Ts>
   void AddCollection(const std::string&) {}
 
-  template <typename RA>
-  void AddRule(std::size_t, const RA&) {}
+  template <typename Rule>
+  void AddRule(std::size_t, const Rule&) {}
 
   template <typename... Ts>
   void InsertTuple(const std::string&, int, const std::tuple<Ts...>&) {}

@@ -145,7 +145,8 @@ std::vector<T> TupleToVector(const std::tuple<T, Ts...>& t) {
   return xs;
 }
 
-// `TupleFromTypes<T1,...,Tn>` returns the tuple `(F<T1>()(), ..., F<Tn>()())`.
+// `TupleFromTypes<F, T1,...,Tn>` returns the tuple `(F<T1>()(), ...,
+// F<Tn>()())`.
 template <template <typename> class F, typename... Ts>
 auto TupleFromTypes() {
   return std::make_tuple(F<Ts>()()...);

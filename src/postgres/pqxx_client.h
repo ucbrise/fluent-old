@@ -126,11 +126,6 @@ class InjectablePqxxClient {
                                                    name_));
   }
 
-  std::size_t GetId() {
-    CHECK(initialized_) << "Call Init first.";
-    return id_;
-  }
-
   template <typename... Ts>
   void AddCollection(const std::string& collection_name) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >= 1 column.");
@@ -168,10 +163,12 @@ class InjectablePqxxClient {
                              name_, collection_name, Join(columns)));
   }
 
-  template <typename RA>
-  void AddRule(std::size_t rule_number, const RA& rule) {
+  template <typename Rule>
+  void AddRule(std::size_t rule_number, const Rule& rule) {
     CHECK(initialized_) << "Call Init first.";
-    auto rule_string = std::get<2>(rule).ToDebugString();
+    std::string rule_string = fmt::format("{} {} {}", std::get<0>(rule)->Name(),
+                                          std::get<1>(rule).ToDebugString(),
+                                          std::get<2>(rule).ToDebugString());
     ExecuteQuery("AddRule", fmt::format(R"(
       INSERT INTO Rules (node_id, rule_number, rule)
       VALUES ({});

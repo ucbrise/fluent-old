@@ -105,6 +105,10 @@ class FluentBuilder<
   using BootstrapRules = std::tuple<
       std::tuple<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>;
 
+  FluentBuilder(FluentBuilder&&) = default;
+  FluentBuilder& operator=(FluentBuilder&&) = default;
+  DISALLOW_COPY_AND_ASSIGN(FluentBuilder);
+
   // Create a table, scratch, channel, stdin, stdout, or periodic. Note the
   // `&&` at the end of each declaration. This means that these methods can
   // only be invoked on an rvalue-reference, which is necessary since the
@@ -253,10 +257,6 @@ class FluentBuilder<
         stdin_(stdin),
         periodics_(std::move(periodics)),
         postgres_client_(std::move(postgres_client)) {}
-
-  FluentBuilder(FluentBuilder&&) = default;
-  FluentBuilder& operator=(FluentBuilder&&) = default;
-  DISALLOW_COPY_AND_ASSIGN(FluentBuilder);
 
   // Return a new FluentBuilder with `c` appended to `collections`.
   template <typename C>

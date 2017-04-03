@@ -22,8 +22,16 @@ namespace fluent {
 namespace postgres {
 namespace detail {
 
-struct MockRule {
-  std::string ToDebugString() const { return "yolo"; }
+struct MockCollection {
+  std::string Name() const { return "c"; }
+};
+
+struct MockRuleTag {
+  std::string ToDebugString() const { return "<="; }
+};
+
+struct MockRa {
+  std::string ToDebugString() const { return "ra"; }
 };
 
 }  // namespace detail
@@ -83,13 +91,15 @@ TEST(MockPqxxClient, AddRule) {
   ConnectionConfig c;
   MockPqxxClient<Hash, ToSql> client("name", 9001, c);
   client.Init();
-  client.AddRule(0, std::make_tuple(42, 42, detail::MockRule()));
+  detail::MockCollection mock_collection;
+  client.AddRule(0, std::make_tuple(&mock_collection, detail::MockRuleTag(),
+                                    detail::MockRa()));
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(3));
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, R"(
     INSERT INTO Rules (node_id, rule_number, rule)
-    VALUES (9001, 0, 'yolo');
+    VALUES (9001, 0, 'c <= ra');
   )");
 }
 

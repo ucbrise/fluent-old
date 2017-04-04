@@ -82,15 +82,23 @@ fluent.ajax = {};
 
 // node_names: unit -> string list
 fluent.ajax.node_names = function(callback) {
-    fluent.ajax_get("/node_names", function(result){
+    fluent.ajax_get("/node_names", function(result) {
         callback(result["node_names"]);
     });
 }
 
 // node_names: string -> Node
 fluent.ajax.node = function(name, callback) {
-    fluent.ajax_get("/node?name=" + name, function(result){
+    fluent.ajax_get("/node?name=" + name, function(result) {
         callback(result["node"]);
+    });
+}
+
+// collections: string -> int -> Collection list
+fluent.ajax.collections = function(name, time, callback) {
+    var url = "/collections?name=" + name + "&time=" + time;
+    fluent.ajax_get(url, function(result) {
+        callback(result["collections"]);
     });
 }
 
@@ -167,10 +175,59 @@ fluent.render_collections = function(state) {
     }
 }
 
+fluent.render_time = function(state) {
+    if (state.node === null) {
+        return;
+    }
+
+    document.getElementById("time").innerHTML = state.node.time;
+}
+
 fluent.render_state = function(state) {
-    console.log(state);
+    fluent.render_time(state);
     fluent.render_rules(state);
     fluent.render_collections(state);
+}
+
+fluent.update_collections = function(state) {
+    if (state.node === null) {
+        return;
+    }
+
+    var node = state.node;
+    fluent.ajax.collections(node.name, node.time, function(collections) {
+        state.node.collections = collections;
+    });
+}
+
+fluent.register_time_callbacks = function(state) {
+    var time_down = function() {
+        if (state.node === null) {
+            return;
+        }
+        state.node.time = Math.max(0, state.node.time - 1);
+        fluent.update_collections(state);
+        fluent.render_state(state);
+    }
+
+    var time_up = function() {
+        if (state.node === null) {
+            return;
+        }
+        state.node.time += 1
+        fluent.update_collections(state);
+        fluent.render_state(state);
+    }
+
+    document.getElementById("time_down").onclick = time_down;
+    document.getElementById("time_up").onclick = time_up;
+    document.onkeydown = function(e) {
+        if (e.key === "ArrowLeft") {
+            time_down();
+        } else if (e.key === "ArrowRight")  {
+            time_up();
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -182,6 +239,7 @@ function main() {
         state.node_names = node_names;
         fluent.render_node_names(state);
     });
+    fluent.register_time_callbacks(state);
 }
 
 window.onload = main

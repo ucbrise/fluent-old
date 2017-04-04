@@ -18,11 +18,15 @@ body {
 }
 
 #nodesrules {
-    max-width: 5in;
+    width: 5in;
 }
 
 #nodes {
     margin-bottom: 1em;
+}
+
+#collections {
+    min-width: 7in;
 }
 
 .column {
@@ -52,6 +56,10 @@ body {
 }
 
 .collection {
+    font-family: monospace;
+}
+
+#collections_time {
     font-family: monospace;
 }
 

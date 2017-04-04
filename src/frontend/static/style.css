@@ -1,0 +1,60 @@
+body {
+    background-color: #e2e1e0;
+}
+
+#container {
+    font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+    line-height: 27px;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 60em;
+    padding-bottom: 20px;
+    padding-left: 1em;
+    padding-right: 1em;
+    padding-top: 20px;
+}
+
+.column {
+    background-color: white;
+    border-radius: 2pt;
+    float: left;
+    margin: 0.5em;
+    min-width: 2in;
+    padding: 10pt;
+}
+
+.column h1 {
+    font-size: 28pt;
+    font-weight: lighter;
+    margin-bottom: 0.5em;
+    margin-top: 0em;
+}
+
+.node {
+    background: none;
+    border: none;
+    font-family: monospace;
+    font-size: 16pt;
+}
+
+.rule {
+    font-family: monospace;
+}
+
+.collection {
+    font-family: monospace;
+}
+
+.collection_name {
+    font-size: 16pt;
+}
+
+#collections table {
+    margin-bottom: 1.15em;
+    border-collapse: collapse;
+}
+
+#collections td, #collections th {
+    padding: 5pt;
+    border: 1.5pt solid black;
+}

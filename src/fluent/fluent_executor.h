@@ -193,6 +193,10 @@ class FluentExecutor<
   // Sequentially execute each registered bootstrap query and then invoke the
   // `Tick` method of every collection.
   void BootstrapTick() {
+    if (sizeof...(BootstrapLhss) == 0) {
+      return;
+    }
+
     TupleIteri(bootstrap_rules_, [this](std::size_t rule_number, auto& rule) {
       ExecuteRule(rule_number, &rule);
     });

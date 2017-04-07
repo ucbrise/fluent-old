@@ -25,6 +25,24 @@ body {
     margin-bottom: 1em;
 }
 
+#nodes ul {
+    padding: 0;
+    list-style-type: none;
+}
+
+.bolded {
+    font-weight: bold;
+}
+
+#nodes button:hover {
+    background-color: #ebeff1;
+}
+
+#nodes button {
+    width: 100%;
+    display: flex;
+}
+
 #collections {
     min-width: 7in;
 }

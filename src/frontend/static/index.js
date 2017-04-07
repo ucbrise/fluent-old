@@ -40,6 +40,12 @@ fluent.create_html_table = function(rows) {
     return table;
 }
 
+// `Clone(x)` returns a deep clone of `x`.
+fluent.Clone = function(x) {
+    // http://stackoverflow.com/a/23481096/3187068
+    return JSON.parse(JSON.stringify(nodesArray));
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Types
 ////////////////////////////////////////////////////////////////////////////////
@@ -103,8 +109,11 @@ fluent.ajax.collections = function(name, time, callback) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Functions
+// Rendering Functions
 ////////////////////////////////////////////////////////////////////////////////
+// Given a state `s`, `render_node_names(s)` renders the node names
+// `s.node_names`. It also registers all the callbacks to handle when a node
+// name is clicked.
 fluent.render_node_names = function(state) {
     var nodes_list = document.getElementById("nodes_list");
     for (var i = 0; i < state.node_names.length; ++i) {
@@ -183,12 +192,32 @@ fluent.render_time = function(state) {
     document.getElementById("time").innerHTML = state.node.time;
 }
 
+fluent.render_node = function(state) {
+    if (state.node === null) {
+        return;
+    }
+
+    var node_names = document.getElementById("nodes_list");
+    for (var i = 0; i < node_names.children.length; ++i) {
+        var li = node_names.children[i];
+        var button = li.children[0];
+        button.classList.remove("bolded");
+    }
+
+    var node_name = document.getElementById("node_" + state.node.name);
+    node_name.classList.add("bolded");
+}
+
 fluent.render_state = function(state) {
-    fluent.render_time(state);
+    fluent.render_node(state);
     fluent.render_rules(state);
+    fluent.render_time(state);
     fluent.render_collections(state);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Rendering Functions
+////////////////////////////////////////////////////////////////////////////////
 fluent.update_collections = function(state) {
     if (state.node === null) {
         return;

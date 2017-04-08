@@ -69,11 +69,11 @@ fluent.Node = function(name, bootstrap_rules, rules, time, collections) {
 }
 
 // type State = {
-//   node_names: string list,
+//   nodes: [string, string] list,
 //   node: Node option,
 // }
-fluent.State = function(node_names, node) {
-    this.node_names = node_names;
+fluent.State = function(nodes, node) {
+    this.nodes = nodes;
     this.node = node;
 }
 
@@ -184,14 +184,14 @@ fluent.CreateStateUi = function() {
 ////////////////////////////////////////////////////////////////////////////////
 fluent.ajax = {};
 
-// node_names: unit -> string list
-fluent.ajax.node_names = function(callback) {
-    fluent.ajax_get("/node_names", function(result) {
-        callback(result["node_names"]);
+// nodes: unit -> [string, string] list
+fluent.ajax.nodes = function(callback) {
+    fluent.ajax_get("/nodes", function(result) {
+        callback(result["nodes"]);
     });
 }
 
-// node_names: string -> Node
+// node: string -> Node
 fluent.ajax.node = function(name, callback) {
     fluent.ajax_get("/node?name=" + name, function(result) {
         callback(result["node"]);
@@ -213,9 +213,9 @@ fluent.callbacks = {}
 
 fluent.callbacks.refresh_nodes = function(state, state_ui) {
     return function() {
-        fluent.ajax.node_names(function(node_names) {
-            state.node_names = node_names;
-            fluent.render_node_names(state, state_ui);
+        fluent.ajax.nodes(function(nodes) {
+            state.nodes = nodes;
+            fluent.render_nodes(state, state_ui);
         });
     };
 }
@@ -280,22 +280,36 @@ fluent.init_ui = function(state, state_ui) {
 ////////////////////////////////////////////////////////////////////////////////
 // Rendering Functions
 ////////////////////////////////////////////////////////////////////////////////
-fluent.render_node_names = function(state, state_ui) {
+fluent.render_nodes = function(state, state_ui) {
     var nodes = state_ui.nodes;
     nodes.node_list.innerHTML = "";
     nodes.node_buttons = [];
     nodes.clicked_node = null;
 
-    for (var i = 0; i < state.node_names.length; ++i) {
-        node_name = state.node_names[i];
+    for (var i = 0; i < state.nodes.length; ++i) {
+        var node = state.nodes[i];
+        var name = node[0];
+        var address = node[1];
+
+        var name_span = document.createElement("span");
+        name_span.id = "node_" + name + "_name";
+        name_span.className = "name";
+        name_span.innerHTML = name;
+
+        var address_span = document.createElement("span");
+        address_span.id = "node_" + name + "_address";
+        address_span.className = "address";
+        address_span.innerHTML = address;
+
         var button = document.createElement("button");
-        button.id = "node_" + node_name;
+        button.id = "node_" + name;
         button.className = "node";
-        button.innerHTML = node_name;
-        if (state.node !== null && state.node.name === node_name) {
+        button.appendChild(name_span);
+        button.appendChild(address_span);
+        if (state.node !== null && state.node.name === name) {
             button.classList.add("bolded");
         }
-        button.onclick = fluent.callbacks.click_node(node_name, state, state_ui);
+        button.onclick = fluent.callbacks.click_node(name, state, state_ui);
         nodes.node_buttons.push(button);
 
         var li = document.createElement("li");
@@ -322,7 +336,7 @@ fluent.render_node = function(state, state_ui) {
 
     for (var i = 0; i < state_ui.nodes.node_buttons.length; ++i) {
         var button = state_ui.nodes.node_buttons[i];
-        if (button.innerHTML === state.node.name) {
+        if (button.children[0].innerHTML === state.node.name) {
             button.classList.add("bolded");
             state_ui.nodes.clicked_node = button;
             return;

@@ -91,11 +91,12 @@ template <typename Connection, typename Work, template <typename> class Hash,
           template <typename> class ToSql>
 class InjectablePqxxClient {
  public:
-  InjectablePqxxClient(std::string name, std::size_t id,
+  InjectablePqxxClient(std::string name, std::size_t id, std::string address,
                        const ConnectionConfig& connection_config)
       : connection_(connection_config.ToString()),
         name_(std::move(name)),
-        id_(id) {
+        id_(id),
+        address_(std::move(address)) {
     LOG(INFO)
         << "Established a lineagedb connection with the following parameters: "
         << connection_config.ToString();
@@ -105,12 +106,13 @@ class InjectablePqxxClient {
   void Init() {
     initialized_ = true;
 
-    ExecuteQuery("Init",
-                 fmt::format(R"(
-      INSERT INTO Nodes (id, name)
+    ExecuteQuery(
+        "Init",
+        fmt::format(R"(
+      INSERT INTO Nodes (id, name, address)
       VALUES ({});
     )",
-                             Join(SqlValues(std::make_tuple(id_, name_)))));
+                    Join(SqlValues(std::make_tuple(id_, name_, address_)))));
 
     ExecuteQuery("CreateLineageTable", fmt::format(R"(
       CREATE TABLE {}_lineage (
@@ -287,10 +289,13 @@ class InjectablePqxxClient {
   bool initialized_ = false;
 
   // The name of fluent node using this client.
-  std::string name_;
+  const std::string name_;
 
   // Each fluent node named `n` has a unique id `hash(n)`.
-  std::int64_t id_;
+  const std::int64_t id_;
+
+  // The address of the fluent program.
+  const std::string address_;
 };
 
 // See InjectablePqxxClient documentation above.

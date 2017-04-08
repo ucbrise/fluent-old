@@ -6,7 +6,8 @@ CREATE SCHEMA PUBLIC;
 
 CREATE TABLE Nodes (
     id      bigint PRIMARY KEY,
-    name    text   NOT NULL
+    name    text   NOT NULL,
+    address text   NOT NULL
 );
 
 CREATE TABLE Collections (

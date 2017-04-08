@@ -19,14 +19,14 @@ namespace fluent {
 namespace lineagedb {
 
 TEST(MockClient, Init) {
-  MockClient<Hash, MockToSql> client("", 42, ConnectionConfig());
+  MockClient<Hash, MockToSql> client("", 42, "", ConnectionConfig());
   EXPECT_EQ(client.GetInit(), false);
   client.Init();
   EXPECT_EQ(client.GetInit(), true);
 }
 
 TEST(MockClient, AddCollection) {
-  MockClient<Hash, MockToSql> client("", 42, ConnectionConfig());
+  MockClient<Hash, MockToSql> client("", 42, "", ConnectionConfig());
   client.AddCollection<>("fee");
   client.AddCollection<int>("fi");
   client.AddCollection<int, bool>("fo");
@@ -41,7 +41,7 @@ TEST(MockClient, AddCollection) {
 }
 
 TEST(MockClient, AddRule) {
-  MockClient<Hash, MockToSql> client("", 42, ConnectionConfig());
+  MockClient<Hash, MockToSql> client("", 42, "", ConnectionConfig());
   client.AddRule(0, true, "foo");
   client.AddRule(1, true, "bar");
   client.AddRule(2, true, "baz");
@@ -59,7 +59,7 @@ TEST(MockClient, AddRule) {
 }
 
 TEST(MockClient, InsertTuple) {
-  MockClient<Hash, MockToSql> client("", 42, ConnectionConfig());
+  MockClient<Hash, MockToSql> client("", 42, "", ConnectionConfig());
   client.InsertTuple("a", 0, std::tuple<>{});
   client.InsertTuple("b", 1, std::tuple<int>{10});
   client.InsertTuple("c", 2, std::tuple<int, char, bool>{42, 'x', false});
@@ -71,7 +71,7 @@ TEST(MockClient, InsertTuple) {
 }
 
 TEST(MockClient, DeleteTuple) {
-  MockClient<Hash, MockToSql> client("", 42, ConnectionConfig());
+  MockClient<Hash, MockToSql> client("", 42, "", ConnectionConfig());
   client.DeleteTuple("a", 0, std::tuple<>{});
   client.DeleteTuple("b", 1, std::tuple<int>{10});
   client.DeleteTuple("c", 2, std::tuple<int, char, bool>{42, 'x', false});
@@ -83,7 +83,7 @@ TEST(MockClient, DeleteTuple) {
 }
 
 TEST(MockClient, AddNetworkedLineage) {
-  MockClient<Hash, MockToSql> client("", 42, ConnectionConfig());
+  MockClient<Hash, MockToSql> client("", 42, "", ConnectionConfig());
   client.AddNetworkedLineage(0, 1, "2", 3, 4);
   client.AddNetworkedLineage(10, 11, "12", 13, 14);
   client.AddNetworkedLineage(20, 21, "22", 23, 24);
@@ -95,7 +95,7 @@ TEST(MockClient, AddNetworkedLineage) {
 }
 
 TEST(MockClient, AddDerivedLineage) {
-  MockClient<Hash, MockToSql> client("", 42, ConnectionConfig());
+  MockClient<Hash, MockToSql> client("", 42, "", ConnectionConfig());
   client.AddDerivedLineage("0", 1, 2, true, "3", 4, 5);
   client.AddDerivedLineage("10", 11, 12, true, "13", 14, 15);
   client.AddDerivedLineage("20", 21, 22, true, "23", 24, 25);

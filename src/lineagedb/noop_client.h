@@ -13,7 +13,7 @@ namespace lineagedb {
 template <template <typename> class Hash, template <typename> class ToSql>
 class NoopClient {
  public:
-  NoopClient(std::string, std::size_t, const ConnectionConfig&) {}
+  NoopClient(std::string, std::size_t, std::string, const ConnectionConfig&) {}
 
   void Init() {}
 

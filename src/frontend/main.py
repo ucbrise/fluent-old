@@ -27,18 +27,26 @@ def get_collection(cur, node_name, collection_name, time):
 def index():
     return flask.send_file("index.html")
 
-@app.route("/node_names")
-def node_names():
+@app.route("/nodes")
+def nodes():
     cur = db.cursor()
-    cur.execute("SELECT name FROM nodes;")
-    names = [t[0] for t in cur.fetchall()]
+    cur.execute("SELECT name, address FROM nodes;")
+    nodes = cur.fetchall()
     cur.close()
-    return flask.jsonify(node_names=names)
+    return flask.jsonify(nodes=nodes)
 
 @app.route("/node")
 def node():
     node_name = flask.request.args.get('name', "")
     cur = db.cursor()
+
+    # Address.
+    cur.execute("""
+        SELECT N.address
+        FROM Nodes N
+        WHERE N.name = %s;
+    """, (node_name,))
+    address = cur.fetchone()[0]
 
     # Bootstrap rules.
     cur.execute("""
@@ -79,6 +87,7 @@ def node():
 
     n = {
         "name": node_name,
+        "address": address,
         "bootstrap_rules": bootstrap_rules,
         "rules": rules,
         "time": max_time,

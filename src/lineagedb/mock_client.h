@@ -29,8 +29,12 @@ template <template <typename> class Hash, template <typename> class ToSql>
 class MockClient {
  public:
   // Client Mocks //////////////////////////////////////////////////////////////
-  MockClient(std::string name, std::size_t id, const ConnectionConfig& config)
-      : name_(std::move(name)), id_(id), config_(config) {}
+  MockClient(std::string name, std::size_t id, std::string address,
+             const ConnectionConfig& config)
+      : name_(std::move(name)),
+        id_(id),
+        address_(std::move(address)),
+        config_(config) {}
 
   void Init() { init_ = true; }
 
@@ -126,6 +130,7 @@ class MockClient {
 
   const std::string name_;
   const std::size_t id_;
+  const std::string address_;
   const ConnectionConfig config_;
 
   // True iff Init has been called.

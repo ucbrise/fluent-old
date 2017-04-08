@@ -70,7 +70,15 @@ body {
     background: none;
     border: none;
     font-family: monospace;
-    font-size: 16pt;
+    font-size: 12pt;
+}
+
+.name {
+}
+
+.address {
+    margin-left: 5pt;
+    color: gray;
 }
 
 .rule {
@@ -96,16 +104,19 @@ body {
 }
 
 #collections td, #collections th {
-    padding: 3pt;
+    padding: 1pt;
     border: 1.5pt solid gray;
 }
 
-#bootstrap_rules_list, #rules_list {
+#rules ul, #rules ol {
     font-family: monospace;
+    font-size: 12pt;
+}
+
+#bootstrap_rules_list, #rules_list {
 }
 
 #bootstrap_tick_list, #tick_list, #receive_list {
-    font-family: monospace;
     list-style-type: none;
 }
 

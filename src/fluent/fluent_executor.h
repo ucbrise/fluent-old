@@ -20,6 +20,7 @@
 #include "common/tuple_util.h"
 #include "common/type_list.h"
 #include "fluent/channel.h"
+#include "fluent/collection_util.h"
 #include "fluent/network_state.h"
 #include "fluent/periodic.h"
 #include "fluent/periodic.h"
@@ -35,59 +36,6 @@
 #include "ra/lineaged_tuple.h"
 
 namespace fluent {
-namespace detail {
-
-// `CollectionTypes` returns the types of the columns of a collection.
-//
-//   - CollectionTypes<Table<Ts...>>   == TypeList<Ts...>
-//   - CollectionTypes<Scratch<Ts...>> == TypeList<Ts...>
-//   - CollectionTypes<Channel<Ts...>> == TypeList<Ts...>
-//   - CollectionTypes<Stdin>          == TypeList<std::string>
-//   - CollectionTypes<Stdout>         == TypeList<std::string>
-//   - CollectionTypes<Periodic>       == TypeList<Periodic::id, Periodic::time>
-template <typename Collection>
-struct CollectionTypes;
-
-template <typename... Ts>
-struct CollectionTypes<Table<Ts...>> {
-  using type = TypeList<Ts...>;
-};
-
-template <typename... Ts>
-struct CollectionTypes<Scratch<Ts...>> {
-  using type = TypeList<Ts...>;
-};
-
-template <typename... Ts>
-struct CollectionTypes<Channel<Ts...>> {
-  using type = TypeList<Ts...>;
-};
-
-template <>
-struct CollectionTypes<Stdin> {
-  using type = TypeList<std::string>;
-};
-
-template <>
-struct CollectionTypes<Stdout> {
-  using type = TypeList<std::string>;
-};
-
-template <>
-struct CollectionTypes<Periodic> {
-  using type = TypeList<Periodic::id, Periodic::time>;
-};
-
-// `UnwrapUniquePtr<std::unique_ptr<T>>::type == T`.
-template <typename T>
-struct UnwrapUniquePtr;
-
-template <typename T>
-struct UnwrapUniquePtr<std::unique_ptr<T>> {
-  using type = T;
-};
-
-}  // namespace detail
 
 // See below.
 template <typename Collections, typename BootstrapRules, typename Rules,
@@ -296,10 +244,11 @@ class FluentExecutor<
 
     // Collections.
     TupleIter(collections_, [this](const auto& collection) {
-      using collection_type = typename detail::UnwrapUniquePtr<
+      // collection is of type `const unique_ptr<collection_type>&`.
+      using collection_type = typename Unwrap<
           typename std::decay<decltype(collection)>::type>::type;
       AddCollection(collection,
-                    typename detail::CollectionTypes<collection_type>::type{});
+                    typename CollectionTypes<collection_type>::type{});
     });
 
     // Rules.
@@ -379,6 +328,22 @@ class FluentExecutor<
 
       if (inserted) {
         lineagedb_client_->InsertTuple(collection->Name(), time_, lt.tuple);
+        switch (GetCollectionType<Lhs>::value) {
+          case CollectionType::CHANNEL:
+          case CollectionType::STDOUT: {
+            // When a tuple is inserted into a channel or stdout, it isn't
+            // really inserted at all. Channels send their tuples away and
+            // stdout just prints the message to the screen. Thus, we insert
+            // and then immediately delete the tuple.
+            lineagedb_client_->DeleteTuple(collection->Name(), time_, lt.tuple);
+          }
+          case CollectionType::TABLE:
+          case CollectionType::SCRATCH:
+          case CollectionType::STDIN:
+          case CollectionType::PERIODIC: {
+            // Do nothing.
+          }
+        }
       } else {
         lineagedb_client_->DeleteTuple(collection->Name(), time_, lt.tuple);
       }

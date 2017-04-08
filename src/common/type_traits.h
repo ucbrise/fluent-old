@@ -44,6 +44,15 @@ using IsVector = IsTemplate<std::vector, T>;
 template <typename T>
 using IsTuple = IsTemplate<std::tuple, T>;
 
+// Unwrap<Template<T, ...>>::type == T
+template <typename T>
+struct Unwrap;
+
+template <template <typename...> class Template, typename T, typename... Ts>
+struct Unwrap<Template<T, Ts...>> {
+  using type = T;
+};
+
 }  // namespace fluent
 
 #endif  //  COMMON_TYPE_TRAITS_H_

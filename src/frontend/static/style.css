@@ -34,11 +34,11 @@ body {
     font-weight: bold;
 }
 
-#nodes button:hover {
+#nodes_list button:hover {
     background-color: #ebeff1;
 }
 
-#nodes button {
+#nodes_list button {
     width: 100%;
     display: flex;
 }

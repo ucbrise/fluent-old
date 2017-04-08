@@ -76,13 +76,13 @@ TEST(MockPqxxClient, AddRule) {
   ConnectionConfig c;
   MockPqxxClient<Hash, ToSql> client("name", 9001, c);
   client.Init();
-  client.AddRule(0, "foo");
+  client.AddRule(0, true, "foo");
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(3));
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, R"(
-    INSERT INTO Rules (node_id, rule_number, rule)
-    VALUES (9001, 0, 'foo');
+    INSERT INTO Rules (node_id, rule_number, is_bootstrap, rule)
+    VALUES (9001, 0, true, 'foo');
   )");
 }
 

@@ -252,8 +252,12 @@ class FluentExecutor<
     });
 
     // Rules.
+    TupleIteri(
+        bootstrap_rules_, [this](std::size_t i, const auto& bootstrap_rule) {
+          lineagedb_client_->AddRule(i, true, bootstrap_rule.ToDebugString());
+        });
     TupleIteri(rules_, [this](std::size_t i, const auto& rule) {
-      lineagedb_client_->AddRule(i, rule.ToDebugString());
+      lineagedb_client_->AddRule(i, false, rule.ToDebugString());
     });
   }
 

@@ -40,11 +40,20 @@ def node():
     node_name = flask.request.args.get('name', "")
     cur = db.cursor()
 
+    # Bootstrap rules.
+    cur.execute("""
+        SELECT R.rule
+        FROM Nodes N, Rules R
+        WHERE N.name = %s AND N.id = R.node_id AND R.is_bootstrap
+        ORDER BY R.rule_number;
+    """, (node_name,))
+    bootstrap_rules = [t[0] for t in cur.fetchall()]
+
     # Rules.
     cur.execute("""
         SELECT R.rule
         FROM Nodes N, Rules R
-        WHERE N.name = %s AND N.id = R.node_id
+        WHERE N.name = %s AND N.id = R.node_id AND (NOT R.is_bootstrap)
         ORDER BY R.rule_number;
     """, (node_name,))
     rules = [t[0] for t in cur.fetchall()]
@@ -70,6 +79,7 @@ def node():
 
     n = {
         "name": node_name,
+        "bootstrap_rules": bootstrap_rules,
         "rules": rules,
         "time": max_time,
         "collections": collections,

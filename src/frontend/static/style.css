@@ -43,6 +43,10 @@ body {
     display: flex;
 }
 
+#rules ol, #rules ul {
+    margin: 0;
+}
+
 #collections {
     min-width: 7in;
 }
@@ -94,4 +98,13 @@ body {
 #collections td, #collections th {
     padding: 3pt;
     border: 1.5pt solid gray;
+}
+
+#bootstrap_rules_list, #rules_list {
+    font-family: monospace;
+}
+
+#bootstrap_tick_list, #tick_list, #receive_list {
+    font-family: monospace;
+    list-style-type: none;
 }

@@ -15,8 +15,9 @@ CREATE TABLE Collections (
 );
 
 CREATE TABLE Rules (
-    node_id     bigint  NOT NULL,
-    rule_number integer NOT NULL,
-    rule        text    NOT NULL,
-    PRIMARY KEY (node_id, rule_number)
+    node_id      bigint  NOT NULL,
+    rule_number  integer NOT NULL,
+    is_bootstrap boolean NOT NULL,
+    rule         text    NOT NULL,
+    PRIMARY KEY (node_id, rule_number, is_bootstrap)
 );

@@ -62,8 +62,10 @@ struct ToSqlType {
 //   client.AddCollection<string, float>("c") // a channel c[string, float].
 //
 //   // Add all our rules.
-//   client.AddRule(0, t += c.Iterable());
-//   client.AddRule(1, t -= (c.Iterable() | ra::filter(f)));
+//   client.AddRule(0, true, t += c.Iterable());
+//   client.AddRule(1, true, t -= (c.Iterable() | ra::filter(f)));
+//   client.AddRule(0, false, t += c.Iterable());
+//   client.AddRule(1, false, t -= (c.Iterable() | ra::filter(f)));
 //
 //   // Add and delete some tuples.
 //   client.InsertTuple("t", 0 /* time_inserted */, make_tuple("hi",  42.0));
@@ -163,14 +165,17 @@ class InjectablePqxxClient {
                              name_, collection_name, Join(columns)));
   }
 
-  void AddRule(std::size_t rule_number, const std::string& rule_string) {
+  void AddRule(std::size_t rule_number, bool is_bootstrap,
+               const std::string& rule_string) {
     CHECK(initialized_) << "Call Init first.";
-    ExecuteQuery("AddRule", fmt::format(R"(
-      INSERT INTO Rules (node_id, rule_number, rule)
+    ExecuteQuery(
+        "AddRule",
+        fmt::format(R"(
+      INSERT INTO Rules (node_id, rule_number, is_bootstrap, rule)
       VALUES ({});
     )",
-                                        Join(SqlValues(std::make_tuple(
-                                            id_, rule_number, rule_string)))));
+                    Join(SqlValues(std::make_tuple(
+                        id_, rule_number, is_bootstrap, rule_string)))));
   }
 
   template <typename... Ts>

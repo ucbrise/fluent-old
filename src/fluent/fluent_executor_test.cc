@@ -242,14 +242,12 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
   using S = std::set<std::tuple<std::size_t>>;
   using C = std::set<std::tuple<std::string, float, char>>;
 
-  using AddCollectionTuple = std::pair<std::string, std::vector<std::string>>;
-  using AddRuleTuple = std::pair<std::size_t, std::string>;
-  using InsertTupleTuple =
-      std::tuple<std::string, int, std::vector<std::string>>;
-  using DeleteTupleTuple =
-      std::tuple<std::string, int, std::vector<std::string>>;
-  using AddDerivedLineageTuple = std::tuple<std::string, std::size_t, int, bool,
-                                            std::string, std::size_t, int>;
+  using MockClient = ldb::MockClient<Hash, ldb::MockToSql>;
+  using AddCollectionTuple = MockClient::AddCollectionTuple;
+  using AddRuleTuple = MockClient::AddRuleTuple;
+  using InsertTupleTuple = MockClient::InsertTupleTuple;
+  using DeleteTupleTuple = MockClient::DeleteTupleTuple;
+  using AddDerivedLineageTuple = MockClient::AddDerivedLineageTuple;
 
   EXPECT_TRUE(client.GetInit());
   ASSERT_EQ(client.GetAddRule().size(), static_cast<std::size_t>(3));
@@ -260,9 +258,9 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
   EXPECT_EQ(client.GetAddCollection()[2],
             AddCollectionTuple("c", {"string", "float", "char"}));
   ASSERT_EQ(client.GetAddCollection().size(), static_cast<std::size_t>(3));
-  EXPECT_EQ(client.GetAddRule()[0], AddRuleTuple(0, "t <= Count(t)"));
-  EXPECT_EQ(client.GetAddRule()[1], AddRuleTuple(1, "t <= Count(s)"));
-  EXPECT_EQ(client.GetAddRule()[2], AddRuleTuple(2, "s <= Count(c)"));
+  EXPECT_EQ(client.GetAddRule()[0], AddRuleTuple(0, false, "t <= Count(t)"));
+  EXPECT_EQ(client.GetAddRule()[1], AddRuleTuple(1, false, "t <= Count(s)"));
+  EXPECT_EQ(client.GetAddRule()[2], AddRuleTuple(2, false, "s <= Count(c)"));
 
   f.Tick();
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}}));

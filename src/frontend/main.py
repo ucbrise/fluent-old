@@ -17,9 +17,9 @@ def get_collection(cur, node_name, collection_name, time):
     cur.execute("""
         SELECT *
         FROM {}_{}
-        WHERE time_inserted <= %s AND
-              (time_deleted IS NULL OR time_deleted >= %s);
-    """.format(node_name, collection_name), (time, time))
+        WHERE (time_inserted = %s AND time_inserted = time_deleted) OR
+              (time_inserted <= %s AND (time_deleted IS NULL OR time_deleted > %s))
+    """.format(node_name, collection_name), (time, time, time))
     collection["tuples"] += [list(t[3:]) for t in cur.fetchall()]
     return collection
 

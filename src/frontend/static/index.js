@@ -94,16 +94,21 @@ fluent.NodesUi = function(refresh_button, node_list, node_buttons, clicked_node)
 //   bootstrap_rule_list: ol,
 //   bootstrap_rule_spans: span list
 //   bootstrap_tick_list: ol,
+//   receive_list: ol,
 //   rule_list: ol,
 //   rule_spans: span list
+//   tick_list: ol,
 // }
 fluent.RulesUi = function(bootstrap_rule_list, bootstrap_rule_spans,
-                          bootstrap_tick_list, rule_list, rule_spans) {
+                          bootstrap_tick_list, receive_list, rule_list,
+                          rule_spans, tick_list) {
     this.bootstrap_rule_list = bootstrap_rule_list;
     this.bootstrap_rule_spans = bootstrap_rule_spans;
     this.bootstrap_tick_list = bootstrap_tick_list;
+    this.receive_list = receive_list;
     this.rule_list = rule_list;
     this.rule_spans = rule_spans;
+    this.tick_list = tick_list;
 }
 
 // type TimeUi = {
@@ -160,8 +165,10 @@ fluent.CreateStateUi = function() {
         document.getElementById("bootstrap_rules_list"),
         [],
         document.getElementById("bootstrap_tick_list"),
+        document.getElementById("receive_list"),
         document.getElementById("rules_list"),
-        []);
+        [],
+        document.getElementById("tick_list"));
     var time = new fluent.TimeUi(
         document.getElementById("time_down"),
         document.getElementById("time"),
@@ -328,10 +335,10 @@ fluent.render_rules = function(state, state_ui) {
         return;
     }
 
+    var rules_ui = state_ui.rules;
+
+    // Render rules.
     var render = function(rules, rule_list, rule_spans) {
-        console.log(rules);
-        rule_list.innerHTML = "";
-        rule_spans = [];
         for (var i = 0; i < rules.length; ++i) {
             var rule = rules[i];
             var text = document.createElement("span");
@@ -345,17 +352,51 @@ fluent.render_rules = function(state, state_ui) {
             rule_list.appendChild(li);
         }
     };
-
-    var rules_ui = state_ui.rules;
+    rules_ui.bootstrap_rule_list.innerHTML = "";
+    rules_ui.bootstrap_rule_spans = [];
+    rules_ui.rule_list.innerHTML = "";
+    rules_ui.rule_spans = [];
     render(state.node.bootstrap_rules, rules_ui.bootstrap_rule_list,
            rules_ui.bootstrap_rule_spans);
     render(state.node.rules, rules_ui.rule_list, rules_ui.rule_spans);
 
+    // Toggle bootstrap tick.
     rules_ui.bootstrap_tick_list.innerHTML = "";
     if (state.node.bootstrap_rules.length > 0) {
         var li = document.createElement("li");
         li.appendChild(document.createTextNode("Tick"));
         rules_ui.bootstrap_tick_list.appendChild(li);
+    }
+
+    // Show current rule.
+    var time = state.node.time;
+    if (state.node.bootstrap_rules.length > 0) {
+        var num_head = rules_ui.bootstrap_rule_spans.length + 1;
+        var lis = [];
+        lis = lis.concat(rules_ui.bootstrap_rule_spans);
+        lis.push(rules_ui.bootstrap_tick_list.children[0]);
+        lis.push(rules_ui.receive_list.children[0]);
+        lis = lis.concat(rules_ui.rule_spans);
+        lis.push(rules_ui.tick_list.children[0]);
+    } else {
+        var num_head = 0;
+        var lis = [];
+        lis.push(rules_ui.receive_list.children[0]);
+        lis = lis.concat(rules_ui.rule_spans);
+        lis.push(rules_ui.tick_list.children[0]);
+    }
+
+    for (var i = 0; i < lis.length; ++i) {
+        lis[i].classList.remove("current_rule");
+    }
+
+    if (time == 0) {
+        // Do nothing.
+    } else if (time <= num_head) {
+        lis[time - 1].classList.add("current_rule");
+    } else {
+        var i = (time - num_head - 1) % (lis.length - num_head);
+        lis[i + num_head].classList.add("current_rule");
     }
 }
 

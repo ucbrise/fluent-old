@@ -108,3 +108,7 @@ body {
     font-family: monospace;
     list-style-type: none;
 }
+
+.current_rule {
+    font-weight: bold;
+}

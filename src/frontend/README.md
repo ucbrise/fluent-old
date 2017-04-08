@@ -13,8 +13,8 @@ FLASK_APP=main.py FLASK_DEBUG=1 flask run --host 0.0.0.0 --port 8000
 - [ ] Add column types.
 - [ ] Add column names.
 - [ ] Add collection types.
-- [ ] Handle bootstrap rules.
-- [ ] Show which rule is being executed
+- [x] Handle bootstrap rules.
+- [x] Show which rule is being executed
 - [ ] Better lineage for constant tuples.
 - [ ] Show address of nodes.
 - [ ] Better initial time.

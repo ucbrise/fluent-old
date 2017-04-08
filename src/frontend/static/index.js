@@ -308,6 +308,7 @@ fluent.render_nodes = function(state, state_ui) {
         button.appendChild(address_span);
         if (state.node !== null && state.node.name === name) {
             button.classList.add("bolded");
+            state_ui.nodes.clicked_node = button;
         }
         button.onclick = fluent.callbacks.click_node(name, state, state_ui);
         nodes.node_buttons.push(button);

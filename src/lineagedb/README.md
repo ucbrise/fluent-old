@@ -99,37 +99,37 @@ This fluent program has three collections---
 Information about this program, its collections, and its rules are found in the
 `Nodes`, `Collections`, and `Rules` tables within the postgres database.
 
-- The `Nodes(id, name)` relation holds the name and id (the hash of the name)
-  for every fluent program.
-- The `Collections(node_id, collection_name)` relation holds the name of every
-  collection of every fluent program.
-- The `Rules(node_id, rule_number, rule)` relation holds every rule of every
-  fluent program.
+- The `Nodes(id, name, address)` relation holds the name, id (the hash of the
+  name), and address for every fluent program.
+- The `Collections(node_id, collection_name, collection_type)` relation holds
+  the name and type of every collection of every fluent program.
+- The `Rules(node_id, rule_number, is_bootstrap, rule)` relation holds every
+  rule of every fluent program.
 
 ```
 > SELECT * FROM Nodes;
-+----+------------+
-| id | name       |
-|----+------------|
-| 42 | my_program |
-+----+------------+
++----+------------+-----------+
+| id | name       | address   |
+|----+------------+-----------+
+| 42 | my_program | 127.0.0.1 |
++----+------------+-----------+
 
 > SELECT * FROM Collections;
-+---------+-----------------+
-| node_id | collection_name |
-|---------+-----------------|
-| 42      | my_table        |
-| 42      | my_sratch       |
-| 42      | my_channel      |
-+---------+-----------------+
++---------+-----------------+-----------------+
+| node_id | collection_name | collection_type |
+|---------+-----------------+-----------------+
+| 42      | my_table        | Table           |
+| 42      | my_sratch       | Scratch         |
+| 42      | my_channel      | Channel         |
++---------+-----------------+-----------------+
 
 > SELECT * FROM Rules;
-+---------+-------------+--------+
-| node_id | rule_number | rule   |
-|---------+-------------+--------|
-| 42      | 0           | s <= c |
-| 42      | 1           | t <= s |
-+---------+-------------+--------+
++---------+-------------+--------------+--------+
+| node_id | rule_number | is_bootstrap | rule   |
+|---------+-------------+--------------+--------+
+| 42      | 0           | false        | s <= c |
+| 42      | 1           | false        | t <= s |
++---------+-------------+--------------+--------+
 ```
 
 The postgres database also has a relation for every collection of every

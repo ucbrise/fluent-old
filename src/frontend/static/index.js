@@ -45,11 +45,12 @@ fluent.create_html_table = function(rows) {
 ////////////////////////////////////////////////////////////////////////////////
 // type Collection = {
 //   name: string,
+//   type: string,
 //   tuples: string list list,
 // }
-fluent.Collection = function(name, num_columns, tuples) {
+fluent.Collection = function(name, type, tuples) {
     this.name = name;
-    this.num_columns = num_columns;
+    this.type = type;
     this.tuples = tuples;
 }
 
@@ -127,9 +128,10 @@ fluent.TimeUi = function(minus_button, time_span, plus_button) {
 //   name_span: span,
 //   tuples: table,
 // }
-fluent.CollectionUi = function(collection_div, name_span, tuples) {
+fluent.CollectionUi = function(collection_div, name_span, type_span, tuples) {
     this.collection_div = collection_div;
     this.name_span = name_span;
+    this.type_span = type_span;
     this.tuples = tuples;
 }
 
@@ -426,15 +428,21 @@ fluent.render_collection = function(collection) {
     collection_name.className = "collection_name";
     collection_name.innerHTML = collection.name;
 
+    var collection_type = document.createElement("span");
+    collection_type.className = "collection_type";
+    collection_type.innerHTML = ": " + collection.type;
+
     var tuples = fluent.create_html_table(collection.tuples);
 
     var collection_div = document.createElement("div");
     collection_div.id = "collection_" + collection.name;
     collection_div.className = "collection";
     collection_div.appendChild(collection_name);
+    collection_div.appendChild(collection_type);
     collection_div.appendChild(tuples);
 
-    return new fluent.CollectionUi(collection_div, collection_name, tuples);
+    return new fluent.CollectionUi(collection_div, collection_name,
+                                   collection_type, tuples);
 }
 
 fluent.render_collections = function(state, state_ui) {

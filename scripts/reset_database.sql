@@ -12,7 +12,9 @@ CREATE TABLE Nodes (
 
 CREATE TABLE Collections (
     node_id         bigint NOT NULL,
-    collection_name text   NOT NULL
+    collection_name text   NOT NULL,
+    collection_type text   NOT NULL,
+    PRIMARY KEY (node_id, collection_name)
 );
 
 CREATE TABLE Rules (

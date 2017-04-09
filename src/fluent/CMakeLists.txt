@@ -1,6 +1,9 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
-ADD_LIBRARY(fluent socket_cache.cc)
+ADD_LIBRARY(fluent
+    collection_util.cc
+    socket_cache.cc
+)
 TARGET_LINK_LIBRARIES(fluent glog zmq_util lineagedb ${FMT_LINK_DIRS}/libfmt.a)
 
 MACRO(CREATE_FLUENT_TEST NAME)

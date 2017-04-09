@@ -39,11 +39,13 @@ class MockClient {
   void Init() { init_ = true; }
 
   template <typename... Ts>
-  void AddCollection(const std::string& collection_name) {
+  void AddCollection(const std::string& collection_name,
+                     const std::string& collection_type) {
     std::vector<std::string> types;
     TupleIter(TupleFromTypes<ToSqlType, Ts...>(),
               [&types](const std::string& s) { types.push_back(s); });
-    add_collection_.push_back(std::make_pair(collection_name, types));
+    add_collection_.push_back(
+        std::make_tuple(collection_name, collection_type, types));
   }
 
   void AddRule(std::size_t rule_number, bool is_bootstrap,
@@ -95,7 +97,8 @@ class MockClient {
   }
 
   // Getters ///////////////////////////////////////////////////////////////////
-  using AddCollectionTuple = std::tuple<std::string, std::vector<std::string>>;
+  using AddCollectionTuple =
+      std::tuple<std::string, std::string, std::vector<std::string>>;
   using AddRuleTuple = std::tuple<std::size_t, bool, std::string>;
   using InsertTupleTuple =
       std::tuple<std::string, int, std::vector<std::string>>;
@@ -136,8 +139,8 @@ class MockClient {
   // True iff Init has been called.
   bool init_ = false;
 
-  // Every time `AddCollection<Ts...>(name)` is called, the pair `(name,
-  // (ToSql<Ts>().Type()...))` is appended to `add_collection_`.
+  // Every time `AddCollection<Ts...>(name, type)` is called, the tuple `(name,
+  // type, (ToSql<Ts>().Type()...))` is appended to `add_collection_`.
   std::vector<AddCollectionTuple> add_collection_;
 
   // Every time `AddRule(i, b, rule)` is called, the pair `(i, b, rule rule)`

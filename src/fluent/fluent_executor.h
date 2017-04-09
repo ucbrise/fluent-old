@@ -263,8 +263,10 @@ class FluentExecutor<
 
   // Register a collection with the lineagedb database.
   template <typename Collection, typename... Ts>
-  void AddCollection(const Collection& c, TypeList<Ts...>) {
-    lineagedb_client_->template AddCollection<Ts...>(c->Name());
+  void AddCollection(const std::unique_ptr<Collection>& c, TypeList<Ts...>) {
+    lineagedb_client_->template AddCollection<Ts...>(
+        c->Name(),
+        CollectionTypeToString(GetCollectionType<Collection>::value));
   }
 
   // Tick a collection and insert the deleted tuples into the lineagedb

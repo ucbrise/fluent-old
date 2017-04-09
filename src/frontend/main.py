@@ -13,7 +13,17 @@ def get_collection_names(cur, node_name):
     return [t[0] for t in cur.fetchall()]
 
 def get_collection(cur, node_name, collection_name, time):
-    collection = {"name": collection_name, "tuples": []}
+    collection = {"name": collection_name, "type": "", "tuples": []}
+
+    # Type
+    cur.execute("""
+        SELECT collection_type
+        FROM Collections
+        WHERE collection_name = %s;
+    """, (collection_name, ))
+    collection["type"] = cur.fetchone()[0]
+
+    # Tuples
     cur.execute("""
         SELECT *
         FROM {}_{}
@@ -21,6 +31,7 @@ def get_collection(cur, node_name, collection_name, time):
               (time_inserted <= %s AND (time_deleted IS NULL OR time_deleted > %s))
     """.format(node_name, collection_name), (time, time, time))
     collection["tuples"] += [list(t[3:]) for t in cur.fetchall()]
+
     return collection
 
 @app.route("/")

@@ -27,17 +27,17 @@ TEST(MockClient, Init) {
 
 TEST(MockClient, AddCollection) {
   MockClient<Hash, MockToSql> client("", 42, "", ConnectionConfig());
-  client.AddCollection<>("fee");
-  client.AddCollection<int>("fi");
-  client.AddCollection<int, bool>("fo");
-  client.AddCollection<int, bool, char>("fum");
+  client.AddCollection<>("fee", "Fee");
+  client.AddCollection<int>("fi", "Fi");
+  client.AddCollection<int, bool>("fo", "Fo");
+  client.AddCollection<int, bool, char>("fum", "Fum");
 
   using Tuple = MockClient<Hash, MockToSql>::AddCollectionTuple;
-  EXPECT_EQ(client.GetAddCollection()[0], Tuple("fee", {}));
-  EXPECT_EQ(client.GetAddCollection()[1], Tuple("fi", {"int"}));
-  EXPECT_EQ(client.GetAddCollection()[2], Tuple("fo", {"int", "bool"}));
+  EXPECT_EQ(client.GetAddCollection()[0], Tuple("fee", "Fee", {}));
+  EXPECT_EQ(client.GetAddCollection()[1], Tuple("fi", "Fi", {"int"}));
+  EXPECT_EQ(client.GetAddCollection()[2], Tuple("fo", "Fo", {"int", "bool"}));
   EXPECT_EQ(client.GetAddCollection()[3],
-            Tuple("fum", {"int", "bool", "char"}));
+            Tuple("fum", "Fum", {"int", "bool", "char"}));
 }
 
 TEST(MockClient, AddRule) {

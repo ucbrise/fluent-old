@@ -252,11 +252,11 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
   EXPECT_TRUE(client.GetInit());
   ASSERT_EQ(client.GetAddRule().size(), static_cast<std::size_t>(3));
   EXPECT_EQ(client.GetAddCollection()[0],
-            AddCollectionTuple("t", {"unsigned long"}));
+            AddCollectionTuple("t", "Table", {"unsigned long"}));
   EXPECT_EQ(client.GetAddCollection()[1],
-            AddCollectionTuple("s", {"unsigned long"}));
+            AddCollectionTuple("s", "Scratch", {"unsigned long"}));
   EXPECT_EQ(client.GetAddCollection()[2],
-            AddCollectionTuple("c", {"string", "float", "char"}));
+            AddCollectionTuple("c", "Channel", {"string", "float", "char"}));
   ASSERT_EQ(client.GetAddCollection().size(), static_cast<std::size_t>(3));
   EXPECT_EQ(client.GetAddRule()[0], AddRuleTuple(0, false, "t <= Count(t)"));
   EXPECT_EQ(client.GetAddRule()[1], AddRuleTuple(1, false, "t <= Count(s)"));

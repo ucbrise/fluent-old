@@ -58,8 +58,8 @@ struct ToSqlType {
 //   client.Init("my_fluent_node");
 //
 //   // Add the types of our collections.
-//   client.AddCollection<string, float>("t") // a table t[string, float].
-//   client.AddCollection<string, float>("c") // a channel c[string, float].
+//   client.AddCollection<int, float>("t", "Table")   // Table t[int, float].
+//   client.AddCollection<int, float>("c", "Channel") // Channel c[int, float].
 //
 //   // Add all our rules.
 //   client.AddRule(0, true, t += c.Iterable());
@@ -131,7 +131,8 @@ class InjectablePqxxClient {
   }
 
   template <typename... Ts>
-  void AddCollection(const std::string& collection_name) {
+  void AddCollection(const std::string& collection_name,
+                     const std::string& collection_type) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >= 1 column.");
     CHECK(initialized_) << "Call Init first.";
 
@@ -141,13 +142,13 @@ class InjectablePqxxClient {
     CHECK_NE(collection_name, std::string("lineage"))
         << "Lineage is a reserved collection name.";
 
-    ExecuteQuery(
-        "AddCollection",
-        fmt::format(R"(
-      INSERT INTO Collections (node_id, collection_name)
+    ExecuteQuery("AddCollection",
+                 fmt::format(R"(
+      INSERT INTO Collections (node_id, collection_name, collection_type)
       VALUES ({});
     )",
-                    Join(SqlValues(std::make_tuple(id_, collection_name)))));
+                             Join(SqlValues(std::make_tuple(
+                                 id_, collection_name, collection_type)))));
 
     std::vector<std::string> types = SqlTypes<Ts...>();
     std::vector<std::string> columns;

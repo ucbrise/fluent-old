@@ -18,7 +18,7 @@ class NoopClient {
   void Init() {}
 
   template <typename... Ts>
-  void AddCollection(const std::string&) {}
+  void AddCollection(const std::string&, const std::string&) {}
 
   void AddRule(std::size_t, bool, const std::string&) {}
 

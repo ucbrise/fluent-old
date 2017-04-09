@@ -2,7 +2,6 @@
 #define FLUENT_COLLECTION_UTIL_H_
 
 #include <string>
-
 #include "common/type_list.h"
 #include "fluent/channel.h"
 #include "fluent/periodic.h"
@@ -117,6 +116,8 @@ template <>
 struct GetCollectionType<Periodic>
     : public std::integral_constant<CollectionType, CollectionType::PERIODIC> {
 };
+
+std::string CollectionTypeToString(CollectionType type);
 
 }  // namespace fluent
 

@@ -94,7 +94,12 @@ body {
 }
 
 .collection_name {
-    font-size: 14pt;
+    font-size: 12pt;
+}
+
+.collection_type {
+    font-size: 12pt;
+    color: gray;
 }
 
 #collections table {

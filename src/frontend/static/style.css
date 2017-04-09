@@ -51,6 +51,10 @@ body {
     min-width: 7in;
 }
 
+#collections tr:hover {
+    background-color: #ebeff1;
+}
+
 .column {
     background-color: white;
     border-radius: 2pt;
@@ -127,4 +131,12 @@ body {
 
 .current_rule {
     font-weight: bold;
+}
+
+.clicked_tuple {
+    font-weight: bold;
+}
+
+.lineage_tuple {
+    background-color: #fdfd96;
 }

@@ -54,19 +54,37 @@ fluent.Collection = function(name, type, tuples) {
     this.tuples = tuples;
 }
 
+// type LineageTuple = {
+//   node_name: string,
+//   collection_name: string,
+//   tuple_hash: int,
+//   time: int,
+// }
+fluent.LineageTuple = function(node_name, collection_name, tuple_hash, time) {
+    this.node_name = node_name;
+    this.collection_name = collection_name;
+    this.tuple_hash = tuple_hash;
+    this.time = time;
+}
+
 // type Node = {
 //   name: string,
 //   bootstrap_rules: string list,
 //   rules: string list,
 //   time: int,
-//   collections = Collection list,
+//   collections: Collection list,
+//   clicked_tuple: LineageTuple option,
+//   lineage_tuples: LineageTuple list option,
 // }
-fluent.Node = function(name, bootstrap_rules, rules, time, collections) {
+fluent.Node = function(name, bootstrap_rules, rules, time, collections,
+                       clicked_tuple, lineage_tuples) {
     this.name = name;
     this.bootstrap_rules = bootstrap_rules;
     this.rules = rules;
     this.time = time;
     this.collections = collections;
+    this.clicked_tuple = clicked_tuple;
+    this.lineage_tuples = lineage_tuples;
 }
 
 // type State = {
@@ -138,10 +156,15 @@ fluent.CollectionUi = function(collection_div, name_span, type_span, tuples) {
 // type CollectionsUi = {
 //   collections_div: div,
 //   collections: CollectionUi list
+//   index: {hash -> tr}
+//   clicked_tuple: tr option
 // }
-fluent.CollectionsUi = function(collections_div, collections) {
+fluent.CollectionsUi = function(collections_div, collections, index,
+                                clicked_tuple) {
     this.collections_div = collections_div;
     this.collections = collections;
+    this.index = index;
+    this.clicked_tuple = clicked_tuple;
 }
 
 // type StateUi = {
@@ -177,7 +200,9 @@ fluent.CreateStateUi = function() {
         document.getElementById("time_up"));
     var collections = new fluent.CollectionsUi(
         document.getElementById("collections_container"),
-        []);
+        [],
+        {},
+        null);
     return new fluent.StateUi(nodes, rules, time, collections);
 }
 
@@ -205,6 +230,18 @@ fluent.ajax.collections = function(name, time, callback) {
     var url = "/collections?name=" + name + "&time=" + time;
     fluent.ajax_get(url, function(result) {
         callback(result["collections"]);
+    });
+}
+
+// lineage: lineage_tuple -> lineage_tuple list
+fluent.ajax.lineage = function(lt, callback) {
+    var url = "/lineage" +
+        "?node_name=" + lt.node_name +
+        "&collection_name=" + lt.collection_name +
+        "&hash=" + lt.tuple_hash +
+        "&time=" + lt.time;
+    fluent.ajax_get(url, function(result) {
+        callback(result["lineage"]);
     });
 }
 
@@ -236,6 +273,21 @@ fluent.callbacks.time_down = function(state, state_ui) {
         if (state.node !== null) {
             var node = state.node;
             node.time = Math.max(0, node.time - 1);
+            node.clicked_tuple = null;
+            node.lineage = null;
+            fluent.ajax.collections(node.name, node.time, function(collections) {
+                node.collections = collections;
+                fluent.render_state(state, state_ui);
+            });
+        }
+    }
+}
+
+fluent.callbacks.time_set = function(time, state, state_ui) {
+    return function() {
+        if (state.node !== null) {
+            var node = state.node;
+            node.time = time;
             fluent.ajax.collections(node.name, node.time, function(collections) {
                 node.collections = collections;
                 fluent.render_state(state, state_ui);
@@ -249,11 +301,39 @@ fluent.callbacks.time_up = function(state, state_ui) {
         if (state.node !== null) {
             var node = state.node;
             node.time += 1;
+            node.clicked_tuple = null;
+            node.lineage = null;
             fluent.ajax.collections(node.name, node.time, function(collections) {
                 node.collections = collections;
                 fluent.render_state(state, state_ui);
             });
         }
+    }
+}
+
+fluent.callbacks.click_tuple = function(clicked_tuple, state, state_ui) {
+    return function() {
+        fluent.ajax.lineage(clicked_tuple, function(lineage) {
+            state.node.clicked_tuple = clicked_tuple;
+            state.node.lineage = lineage;
+
+            if (lineage.length == 1 &&
+                lineage[0].node_name != clicked_tuple.node_name)  {
+                // Network lineage.
+                fluent.ajax.node(lineage[0].node_name, function(node) {
+                    state.node = node;
+                    state.node.clicked_tuple = clicked_tuple;
+                    state.node.lineage = lineage;
+                    fluent.callbacks.time_set(lineage[0].time, state, state_ui)();
+                })
+            } else if (lineage.length > 0) {
+                // Derived lineage.
+                fluent.callbacks.time_set(
+                    lineage[0].time, state, state_ui)();
+            } else {
+                fluent.render_state(state, state_ui);
+            }
+        });
     }
 }
 
@@ -326,6 +406,7 @@ fluent.render_state = function(state, state_ui) {
     fluent.render_rules(state, state_ui);
     fluent.render_time(state, state_ui);
     fluent.render_collections(state, state_ui);
+    fluent.render_lineage(state, state_ui);
 }
 
 fluent.render_node = function(state, state_ui) {
@@ -423,7 +504,7 @@ fluent.render_time = function(state, state_ui) {
     }
 }
 
-fluent.render_collection = function(collection) {
+fluent.render_collection = function(state, state_ui, collection, index) {
     var collection_name = document.createElement("span");
     collection_name.className = "collection_name";
     collection_name.innerHTML = collection.name;
@@ -432,7 +513,27 @@ fluent.render_collection = function(collection) {
     collection_type.className = "collection_type";
     collection_type.innerHTML = ": " + collection.type;
 
-    var tuples = fluent.create_html_table(collection.tuples);
+    var tuples = document.createElement("table");
+    for (var i = 0; i < collection.tuples.length; ++i) {
+        var tuple = collection.tuples[i];
+        var row = document.createElement("tr");
+        var hash = tuple[0];
+        index[hash] = row;
+
+        // We skip the hash (j = 0).
+        for (var j = 1; j < tuple.length; ++j) {
+            var element = document.createElement("td");
+            element.innerHTML = tuple[j];
+            row.appendChild(element);
+        }
+        tuples.appendChild(row);
+
+        var clicked_tuple = new fluent.LineageTuple(state.node.name,
+                                                    collection.name, hash,
+                                                    state.node.time);
+        row.onclick = fluent.callbacks.click_tuple(clicked_tuple, state,
+                                                   state_ui);
+    }
 
     var collection_div = document.createElement("div");
     collection_div.id = "collection_" + collection.name;
@@ -450,14 +551,34 @@ fluent.render_collections = function(state, state_ui) {
         return;
     }
 
-    var collections_div = state_ui.collections.collections_div;
-    var collections = state_ui.collections.collections;
-    collections_div.innerHTML = "";
-    collections = [];
+    var collections = state_ui.collections;
+    collections.collections_div.innerHTML = "";
+    collections.collections = [];
+    collections.index = {};
     for (var i = 0; i < state.node.collections.length; ++i) {
-        var collection_ui = fluent.render_collection(state.node.collections[i]);
-        collections_div.appendChild(collection_ui.collection_div);
-        collections.push(collection_ui);
+        var collection_ui = fluent.render_collection(
+            state, state_ui, state.node.collections[i], collections.index);
+        collections.collections_div.appendChild(collection_ui.collection_div);
+        collections.collections.push(collection_ui);
+    }
+}
+
+fluent.render_lineage = function(state, state_ui) {
+    if (state.node === null) {
+        return;
+    }
+    if (state.node.clicked_tuple === null) {
+        return;
+    }
+
+    var index = state_ui.collections.index;
+    var clicked_tuple = index[state.node.clicked_tuple.tuple_hash];
+    clicked_tuple.classList.add("clicked_tuple");
+    state_ui.collections.clicked_tuple = clicked_tuple;
+
+    for (var i = 0; i < state.node.lineage.length; ++i) {
+        var lineage_tuple = state.node.lineage[i];
+        index[lineage_tuple.tuple_hash].classList.add("lineage_tuple");
     }
 }
 
@@ -468,6 +589,7 @@ function main() {
     var state = new fluent.State([], null);
     var state_ui = fluent.CreateStateUi();
     fluent.init_ui(state, state_ui);
+    fluent.callbacks.refresh_nodes(state, state_ui)();
 }
 
 window.onload = main

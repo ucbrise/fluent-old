@@ -21,4 +21,7 @@ FLASK_APP=main.py FLASK_DEBUG=1 flask run --host 0.0.0.0 --port 8000
 - [ ] Don't scroll past max time.
 
 ## Lineage TODO
-- [ ] Get basic lineage working.
+- [x] Get basic lineage working.
+- [ ] Get deleted lineage working.
+- [ ] Step backwards through lineage stack.
+- [ ] Show all derivations.

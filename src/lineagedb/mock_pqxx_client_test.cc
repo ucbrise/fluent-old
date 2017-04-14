@@ -65,9 +65,9 @@ TEST(MockPqxxClient, AddCollection) {
       hash          bigint  NOT NULL,
       time_inserted integer NOT NULL,
       time_deleted  integer,
-      col_0 integer NOT NULL,
-      col_1 char(1) NOT NULL,
-      col_2 boolean NOT NULL,
+      x integer NOT NULL,
+      c char(1) NOT NULL,
+      b boolean NOT NULL,
       PRIMARY KEY (hash, time_inserted)
     );
   )");

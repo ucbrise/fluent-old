@@ -157,7 +157,8 @@ class InjectablePqxxClient {
     std::vector<std::string> types = SqlTypes<Ts...>();
     std::vector<std::string> columns;
     for (std::size_t i = 0; i < types.size(); ++i) {
-      columns.push_back(fmt::format("col_{} {} NOT NULL", i, types[i]));
+      columns.push_back(
+          fmt::format("{} {} NOT NULL", column_names[i], types[i]));
     }
     ExecuteQuery("AddCollectionTable",
                  fmt::format(R"(

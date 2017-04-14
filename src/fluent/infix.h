@@ -29,8 +29,8 @@ namespace infix {
 // following snippet of code.
 //
 //   using namespace fluent::infix;
-//   Table<int> t;
-//   Scratch<float> s;
+//   Table<int> t("t", {{"x"}});
+//   Scratch<float> s("s", {{"y"}});
 //   auto rule = t <= s.Iterable() | ra::count();
 //
 // Here, `rule` is the tuple `(&t, MergeTag(), s.Iterable() | ra::count())`.

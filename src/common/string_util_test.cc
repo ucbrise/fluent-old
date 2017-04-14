@@ -16,9 +16,15 @@ TEST(StringUtil, Join) {
   EXPECT_EQ(Join("a"s, "bc"s), "a, bc"s);
   EXPECT_EQ(Join("a"s, "bc"s, "def"s), "a, bc, def"s);
 
+  EXPECT_EQ(Join(std::vector<std::string>{}), ""s);
   EXPECT_EQ(Join(std::vector<std::string>{"a"}), "a"s);
   EXPECT_EQ(Join(std::vector<std::string>{"a", "b"}), "a, b"s);
   EXPECT_EQ(Join(std::vector<std::string>{"a", "b", "c"}), "a, b, c"s);
+
+  EXPECT_EQ(Join(std::array<std::string, 0>{}), ""s);
+  EXPECT_EQ(Join(std::array<std::string, 1>{{"a"}}), "a"s);
+  EXPECT_EQ(Join(std::array<std::string, 2>{{"a", "b"}}), "a, b"s);
+  EXPECT_EQ(Join(std::array<std::string, 3>{{"a", "b", "c"}}), "a, b, c"s);
 }
 
 TEST(StringUtil, CrunchWhitespace) {

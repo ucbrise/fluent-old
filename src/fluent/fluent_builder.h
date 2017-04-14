@@ -16,6 +16,7 @@
 #include "zmq.hpp"
 
 #include "common/hash_util.h"
+#include "common/string_util.h"
 #include "common/type_list.h"
 #include "fluent/channel.h"
 #include "fluent/fluent_executor.h"
@@ -52,10 +53,10 @@ class FluentBuilder;
 // FluentBuilder. For example, given the following FluentBuilder:
 //
 //   auto f = fluent<...>(...)
-//     .table<int, char, float>("t1")
-//     .table<float, int>("t2")
-//     .scratch<int, int, float>("s")
-//     .channel<std::string, float, char>("c")
+//     .table<int, char, float>("t1", {{"x", "y", "z"}})
+//     .table<float, int>("t2", {{"x", "y", "z"}})
+//     .scratch<int, int, float>("s", {{"x", "y", "z"}})
+//     .channel<std::string, float, char>("c", {{"addr", "x", "y"}})
 //
 // `collections_` will have the following type:
 //
@@ -117,26 +118,31 @@ class FluentBuilder<
   template <typename... Us>
   FluentBuilder<TypeList<Cs..., Table<Us...>>, BootstrapRules, LineageDbClient,
                 Hash, ToSql>
-  table(const std::string& name) && {
-    LOG(INFO) << "Adding a table named " << name << ".";
-    return AddCollection(std::make_unique<Table<Us...>>(name));
+  table(const std::string& name,
+        std::array<std::string, sizeof...(Us)> column_names) && {
+    LOG(INFO) << "Adding table " << name << "(" << Join(column_names) << ").";
+    return AddCollection(
+        std::make_unique<Table<Us...>>(name, std::move(column_names)));
   }
 
   template <typename... Us>
   FluentBuilder<TypeList<Cs..., Scratch<Us...>>, BootstrapRules,
                 LineageDbClient, Hash, ToSql>
-  scratch(const std::string& name) && {
-    LOG(INFO) << "Adding a scratch named " << name << ".";
-    return AddCollection(std::make_unique<Scratch<Us...>>(name));
+  scratch(const std::string& name,
+          std::array<std::string, sizeof...(Us)> column_names) && {
+    LOG(INFO) << "Adding scratch " << name << "(" << Join(column_names) << ").";
+    return AddCollection(
+        std::make_unique<Scratch<Us...>>(name, std::move(column_names)));
   }
 
   template <typename... Us>
   FluentBuilder<TypeList<Cs..., Channel<Us...>>, BootstrapRules,
                 LineageDbClient, Hash, ToSql>
-  channel(const std::string& name) && {
-    LOG(INFO) << "Adding a channel named " << name << ".";
-    auto c = std::make_unique<Channel<Us...>>(id_, name,
-                                              &network_state_->socket_cache);
+  channel(const std::string& name,
+          std::array<std::string, sizeof...(Us)> column_names) && {
+    LOG(INFO) << "Adding channel " << name << "(" << Join(column_names) << ").";
+    auto c = std::make_unique<Channel<Us...>>(
+        id_, name, std::move(column_names), &network_state_->socket_cache);
     CHECK(parsers_.find(c->Name()) == parsers_.end())
         << "The channel name '" << c->Name()
         << "' is used multiple times. Channel names must be unique.";

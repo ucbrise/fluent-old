@@ -15,12 +15,6 @@
 namespace lineagedb = fluent::lineagedb;
 namespace ra = fluent::ra;
 
-using address_t = std::string;
-using server_address_t = std::string;
-using client_address_t = std::string;
-using nickname_t = std::string;
-using message_t = std::string;
-
 struct PingClientArgs {
   std::string server_address;
   std::string client_address;
@@ -32,18 +26,18 @@ template <template <template <typename> class, template <typename> class>
           class LineageDbClient>
 int PingClientMain(const PingClientArgs& args,
                    const lineagedb::ConnectionConfig& connection_config) {
+  using connect_tuple_t = std::tuple<std::string, std::string, std::string>;
+  std::vector<connect_tuple_t> connect_tuple = {
+      std::make_tuple(args.server_address, args.client_address, args.nickname)};
+
   zmq::context_t context(1);
-
-  std::vector<std::tuple<server_address_t, client_address_t, nickname_t>>
-      connect_tuple = {std::make_tuple(args.server_address, args.client_address,
-                                       args.nickname)};
-
   auto f =
       fluent::fluent<LineageDbClient>("chat_ping_client", args.client_address,
                                       &context, connection_config)
-          .template channel<server_address_t, client_address_t, nickname_t>(
-              "connect")
-          .template channel<address_t, message_t>("mcast")
+          .template channel<std::string, std::string, std::string>(
+              "connect", {{"server_addr", "client_addr", "nickname"}})
+          .template channel<std::string, std::string>("mcast",
+                                                      {{"addr", "msg"}})
           .periodic("p", std::chrono::milliseconds(1000))
           .RegisterBootstrapRules([&](auto& connect, auto&, auto&) {
             using namespace fluent::infix;

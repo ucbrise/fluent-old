@@ -13,7 +13,7 @@ namespace fluent {
 using ::testing::UnorderedElementsAreArray;
 
 TEST(Scratch, SimpleMerge) {
-  Scratch<int, int> s("s");
+  Scratch<int, int> s("s", {{"x", "y"}});
   std::set<std::tuple<int, int>> empty;
   std::set<std::tuple<int, int>> s1 = {{1, 1}, {2, 2}};
   std::set<std::tuple<int, int>> s2 = {{2, 2}, {3, 3}};
@@ -27,7 +27,7 @@ TEST(Scratch, SimpleMerge) {
 }
 
 TEST(Scratch, TickClearsScratches) {
-  Scratch<int, int> s("s");
+  Scratch<int, int> s("s", {{"x", "y"}});
   std::set<std::tuple<int, int>> empty = {};
   std::set<std::tuple<int, int>> ts = {{1, 1}, {2, 2}};
 

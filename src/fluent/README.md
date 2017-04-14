@@ -10,10 +10,10 @@ zmq::context_t context(1);
 ConnectionConfig conn;
 std::set<std::tuple<int, char, float>> ts = {{42, 'a', 9001.}};
 auto f = fluent<NoopClient>("name", "tcp://0.0.0.0:8000", &context, conn)
-  .table<int, char, float>("t1")
-  .table<float, int>("t2")
-  .scratch<int, int, float>("s")
-  .channel<std::string, float, char>("c")
+  .table<int, char, float>("t1", {{"x", "y", "z"}})
+  .table<float, int>("t2" {{"x", "y"}})
+  .scratch<int, int, float>("s", {{"x", "y"}})
+  .channel<std::string, float, char>("c", {{"addr", "x", "y"}})
   .RegisterBootstrapRules([&](auto& t1, auto& t2, auto& s, auto& c) {
     return std::make_tuple(t1 <= ra::make_iterable("ts", &ts));
   })
@@ -38,18 +38,18 @@ that you can ignore for now. Next, we declare the collections our program will
 use:
 
 ```c++
-  .table<int, char, float>("t1")
-  .table<float, int>("t2")
-  .scratch<int, int, float>("s")
-  .channel<std::string, float, char>("c")
+  .table<int, char, float>("t1", {{"x", "y", "z"}})
+  .table<float, int>("t2" {{"x", "y"}})
+  .scratch<int, int, float>("s", {{"x", "y"}})
+  .channel<std::string, float, char>("c", {{"addr", "x", "y"}})
 ```
 
 This code declares that our fluent program will use
 
-1. a 3-column table named `t1` with types `int`, `char`, and `float`;
-2. a 2-column table named `t2` with types `float` and `int`;
-3. a 3-column scratch named `s` with types `int`, `int`, and `float`; and
-4. a 3-column channel named `c` with types `string`, `float`, and `char`.
+1. a 3-column table `t1(x:int, y:char, z:float)`;
+2. a 2-column table `t2(x:float, y:int)`;
+3. a 3-column scratch `s(x:int, y:int, z:float)`; and
+4. a 3-column channel `c(addr:string, x:float, y:char)`;
 
 Next, we register a single bootstrap rule.
 

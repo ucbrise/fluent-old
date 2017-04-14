@@ -4,6 +4,7 @@
 #include <cstddef>
 
 #include <algorithm>
+#include <array>
 #include <set>
 #include <type_traits>
 #include <utility>
@@ -12,6 +13,7 @@
 #include "gtest/gtest.h"
 #include "range/v3/all.hpp"
 
+#include "common/macros.h"
 #include "common/type_traits.h"
 #include "fluent/rule_tags.h"
 #include "fluent/serialization.h"
@@ -58,10 +60,22 @@ class Channel {
                 "ZeroMQ address (e.g. tcp://localhost:9999).");
 
  public:
-  Channel(std::size_t id, std::string name, SocketCache* socket_cache)
-      : id_(id), name_(std::move(name)), socket_cache_(socket_cache) {}
+  Channel(std::size_t id, std::string name,
+          std::array<std::string, 1 + sizeof...(Ts)> column_names,
+          SocketCache* socket_cache)
+      : id_(id),
+        name_(std::move(name)),
+        column_names_(std::move(column_names)),
+        socket_cache_(socket_cache) {}
+  Channel(Channel&&) = default;
+  Channel& operator=(Channel&&) = default;
+  DISALLOW_COPY_AND_ASSIGN(Channel);
 
   const std::string& Name() const { return name_; }
+
+  const std::array<std::string, 1 + sizeof...(Ts)>& ColumnNames() const {
+    return column_names_;
+  }
 
   const std::set<std::tuple<T, Ts...>>& Get() const { return ts_; }
 
@@ -116,6 +130,7 @@ class Channel {
  private:
   const std::size_t id_;
   const std::string name_;
+  const std::array<std::string, 1 + sizeof...(Ts)> column_names_;
   std::set<std::tuple<T, Ts...>> ts_;
 
   // Whenever a tuple with address `a` is added to a Channel, the socket

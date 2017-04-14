@@ -41,9 +41,9 @@ TEST(FluentExecutor, SimpleProgram) {
   zmq::context_t context(1);
   lineagedb::ConnectionConfig connection_config;
   auto f = noopfluent("name", "inproc://yolo", &context, connection_config)
-               .table<std::size_t>("t")
-               .scratch<int, int, float>("s")
-               .channel<std::string, float, char>("c")
+               .table<std::size_t>("t", {{"x"}})
+               .scratch<int, int, float>("s", {{"x", "y", "z"}})
+               .channel<std::string, float, char>("c", {{"addr", "x", "y"}})
                .RegisterRules([](auto& t, auto& s, auto& c) {
                  using namespace fluent::infix;
                  return std::make_tuple(t <= (t.Iterable() | ra::count()),
@@ -79,8 +79,8 @@ TEST(FluentExecutor, SimpleBootstrap) {
   lineagedb::ConnectionConfig connection_config;
   auto f =
       noopfluent("name", "inproc://yolo", &context, connection_config)
-          .table<int>("t")
-          .scratch<int>("s")
+          .table<int>("t", {{"x"}})
+          .scratch<int>("s", {{"x"}})
           .RegisterBootstrapRules([&xs](auto& t, auto& s) {
             using namespace fluent::infix;
             return std::make_tuple(t <= ra::make_iterable("xs", &xs),
@@ -104,8 +104,8 @@ TEST(FluentExecutor, MildlyComplexProgram) {
   lineagedb::ConnectionConfig connection_config;
   auto f =
       noopfluent("name", "inproc://yolo", &context, connection_config)
-          .table<std::size_t>("t")
-          .scratch<std::size_t>("s")
+          .table<std::size_t>("t", {{"x"}})
+          .scratch<std::size_t>("s", {{"x"}})
           .stdout()
           .RegisterRules([&](auto& t, auto& s, auto& stdout) {
             using namespace fluent::infix;
@@ -149,8 +149,8 @@ TEST(FluentExecutor, ComplexProgram) {
   zmq::context_t context(1);
   lineagedb::ConnectionConfig connection_config;
   auto f = noopfluent("name", "inproc://yolo", &context, connection_config)
-               .table<std::size_t>("t")
-               .scratch<std::size_t>("s")
+               .table<std::size_t>("t", {{"x"}})
+               .scratch<std::size_t>("s", {{"x"}})
                .RegisterRules([plus_one_times_two, is_even](auto& t, auto& s) {
                  using namespace fluent::infix;
                  auto a = t += (s.Iterable() | ra::count());
@@ -187,7 +187,7 @@ TEST(FluentExecutor, SimpleCommunication) {
   lineagedb::ConnectionConfig connection_config;
   auto ping =
       noopfluent("name", "inproc://ping", &context, connection_config)
-          .channel<std::string, int>("c")
+          .channel<std::string, int>("c", {{"addr", "x"}})
           .RegisterRules([&reroute](auto& c) {
             using namespace fluent::infix;
             return std::make_tuple(
@@ -195,7 +195,7 @@ TEST(FluentExecutor, SimpleCommunication) {
           });
   auto pong =
       noopfluent("name", "inproc://pong", &context, connection_config)
-          .channel<std::string, int>("c")
+          .channel<std::string, int>("c", {{"addr", "x"}})
           .RegisterRules([&reroute](auto& c) {
             using namespace fluent::infix;
             return std::make_tuple(
@@ -226,9 +226,9 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
   lineagedb::ConnectionConfig connection_config;
   auto f = fluent<ldb::MockClient, Hash, ldb::MockToSql>(
                "name", "inproc://yolo", &context, connection_config)
-               .table<std::size_t>("t")
-               .scratch<std::size_t>("s")
-               .channel<std::string, float, char>("c")
+               .table<std::size_t>("t", {{"x"}})
+               .scratch<std::size_t>("s", {{"x"}})
+               .channel<std::string, float, char>("c", {{"addr", "x", "y"}})
                .RegisterRules([](auto& t, auto& s, auto& c) {
                  using namespace fluent::infix;
                  return std::make_tuple(t <= (t.Iterable() | ra::count()),

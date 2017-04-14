@@ -2,6 +2,7 @@
 #define FLUENT_STDOUT_H_
 
 #include <algorithm>
+#include <array>
 #include <iostream>
 #include <iterator>
 #include <set>
@@ -24,6 +25,11 @@ class Stdout {
   const std::string& Name() const {
     static const std::string name = "stdout";
     return name;
+  }
+
+  const std::array<std::string, 1>& ColumnNames() const {
+    static std::array<std::string, 1> column_names{{"stdout"}};
+    return column_names;
   }
 
   void Merge(const std::set<std::tuple<std::string>>& ts) {

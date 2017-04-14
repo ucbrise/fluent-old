@@ -265,8 +265,8 @@ class FluentExecutor<
   template <typename Collection, typename... Ts>
   void AddCollection(const std::unique_ptr<Collection>& c, TypeList<Ts...>) {
     lineagedb_client_->template AddCollection<Ts...>(
-        c->Name(),
-        CollectionTypeToString(GetCollectionType<Collection>::value));
+        c->Name(), CollectionTypeToString(GetCollectionType<Collection>::value),
+        c->ColumnNames());
   }
 
   // Tick a collection and insert the deleted tuples into the lineagedb

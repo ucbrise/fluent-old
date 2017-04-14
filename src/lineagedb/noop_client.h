@@ -1,6 +1,11 @@
 #ifndef LINEAGEDB_NOOP_CLIENT_H_
 #define LINEAGEDB_NOOP_CLIENT_H_
 
+#include <cstddef>
+
+#include <array>
+#include <string>
+
 #include "lineagedb/connection_config.h"
 
 namespace fluent {
@@ -18,7 +23,8 @@ class NoopClient {
   void Init() {}
 
   template <typename... Ts>
-  void AddCollection(const std::string&, const std::string&) {}
+  void AddCollection(const std::string&, const std::string&,
+                     const std::array<std::string, sizeof...(Ts)>&) {}
 
   void AddRule(std::size_t, bool, const std::string&) {}
 

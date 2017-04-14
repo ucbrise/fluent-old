@@ -2,6 +2,7 @@
 #define FLUENT_STDIN_H_
 
 #include <algorithm>
+#include <array>
 #include <iostream>
 #include <set>
 #include <string>
@@ -23,6 +24,11 @@ class Stdin {
   const std::string& Name() const {
     static const std::string name = "stdin";
     return name;
+  }
+
+  const std::array<std::string, 1>& ColumnNames() const {
+    static std::array<std::string, 1> column_names{{"stdin"}};
+    return column_names;
   }
 
   ra::Iterable<std::set<std::tuple<std::string>>> Iterable() const {

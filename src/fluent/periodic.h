@@ -4,6 +4,7 @@
 #include <cstddef>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <set>
 #include <string>
@@ -48,6 +49,11 @@ class Periodic {
   DISALLOW_COPY_AND_ASSIGN(Periodic);
 
   const std::string& Name() const { return name_; }
+
+  const std::array<std::string, 2>& ColumnNames() const {
+    static std::array<std::string, 2> column_names{{"id", "time"}};
+    return column_names;
+  }
 
   const period& Period() const { return period_; }
 

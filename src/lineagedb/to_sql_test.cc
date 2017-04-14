@@ -40,9 +40,9 @@ TEST(ToSql, ToSqlValue) {
   EXPECT_EQ(ToSql<std::int64_t>().Value(5), "5");
   EXPECT_EQ(ToSql<float>().Value(6.0), "6.000000");
   EXPECT_EQ(ToSql<double>().Value(7.0), "7.000000");
-  EXPECT_EQ((ToSql<std::array<int, 0>>().Value({{}})), "[]");
+  EXPECT_EQ((ToSql<std::array<int, 0>>().Value({{}})), "ARRAY[]");
   EXPECT_EQ((ToSql<std::array<bool, 2>>().Value({{true, false}})),
-            "[true, false]");
+            "ARRAY[true, false]");
   // TODO(mwhittaker): Test ToSql<std::chrono::time_point<Clock>>.
 }
 

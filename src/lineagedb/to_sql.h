@@ -118,12 +118,13 @@ struct ToSql<double> {
 template <typename T, std::size_t N>
 struct ToSql<std::array<T, N>> {
   std::string Type() { return fmt::format("{}[]", ToSql<T>().Type()); }
+
   std::string Value(const std::array<T, N>& xs) {
     std::vector<std::string> values;
     for (const T& x : xs) {
       values.push_back(ToSql<T>().Value(x));
     }
-    return fmt::format("[{}]", Join(values));
+    return fmt::format("ARRAY[{}]", Join(values));
   }
 };
 

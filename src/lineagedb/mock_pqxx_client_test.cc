@@ -58,7 +58,7 @@ TEST(MockPqxxClient, AddCollection) {
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, R"(
     INSERT INTO Collections (node_id, collection_name, collection_type,
                              column_names)
-    VALUES (9001, 't', 'Table', ['x', 'c', 'b']);
+    VALUES (9001, 't', 'Table', ARRAY['x', 'c', 'b']);
   )");
   ExpectStringsEqualIgnoreWhiteSpace(queries[3].second, R"(
     CREATE TABLE name_t (

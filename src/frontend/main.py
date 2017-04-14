@@ -15,13 +15,15 @@ def get_collection_names(cur, node_name):
 def get_collection(cur, node_name, collection_name, time):
     collection = {"name": collection_name, "type": "", "tuples": []}
 
-    # Type
+    # Type, Column Names
     cur.execute("""
-        SELECT collection_type
+        SELECT collection_type, column_names
         FROM Collections
         WHERE collection_name = %s;
     """, (collection_name, ))
-    collection["type"] = cur.fetchone()[0]
+    t = cur.fetchone()
+    collection["type"] = t[0]
+    collection["column_names"] = t[1]
 
     # Tuples
     cur.execute("""
@@ -88,7 +90,9 @@ def node():
             FROM {}_{};
         """.format(node_name, collection_name))
         times.append(cur.fetchone()[0])
-    max_time = max(times)
+    # If no rules have been executed at all, then max(times) is None and we
+    # default to a time of 0.
+    max_time = max(times) or 0
 
     # Collections.
     collections = [get_collection(cur, node_name, collection_name, max_time)

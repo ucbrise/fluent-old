@@ -258,6 +258,8 @@ class InjectablePqxxClient {
                                 detail::size_t_to_int64(tuple_hash), time)))));
   }
 
+  void Exec(const std::string& query) { ExecuteQuery("Exec", query); }
+
  protected:
   // Transactionally execute the query `query` named `name`.
   virtual void ExecuteQuery(const std::string& name, const std::string& query) {

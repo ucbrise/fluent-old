@@ -105,6 +105,8 @@ class MockClient {
                         inserted, collection_name, tuple_hash, time));
   }
 
+  void Exec(const std::string& query) { exec_.push_back(query); }
+
   // Getters ///////////////////////////////////////////////////////////////////
   // name, collection type, column names, column types
   using AddCollectionTuple =
@@ -125,6 +127,8 @@ class MockClient {
   // collection_name, tuple_hash, time
   using AddDerivedLineageTuple = std::tuple<std::string, std::size_t, int, bool,
                                             std::string, std::size_t, int>;
+  // query
+  using ExecTuple = std::tuple<std::string>;
 
   bool GetInit() const { return init_called_; }
   const std::vector<AddCollectionTuple>& GetAddCollection() const {
@@ -143,6 +147,7 @@ class MockClient {
   const std::vector<AddDerivedLineageTuple>& GetAddDerivedLineage() const {
     return add_derived_lineage_;
   }
+  const std::vector<ExecTuple>& GetExec() const { return exec_; }
 
  private:
   template <typename T>
@@ -160,6 +165,7 @@ class MockClient {
   std::vector<DeleteTupleTuple> delete_tuple_;
   std::vector<AddNetworkedLineageTuple> add_networked_lineage_;
   std::vector<AddDerivedLineageTuple> add_derived_lineage_;
+  std::vector<ExecTuple> exec_;
 };
 
 }  // namespace lineagedb

@@ -15,6 +15,15 @@ struct Template {};
 
 }  // namespace detail
 
+TEST(TypeList, TypeListGet) {
+  using typelist = TypeList<int, char, bool, int, float>;
+  static_assert(std::is_same<int, TypeListGet<typelist, 0>::type>::value, "");
+  static_assert(std::is_same<char, TypeListGet<typelist, 1>::type>::value, "");
+  static_assert(std::is_same<bool, TypeListGet<typelist, 2>::type>::value, "");
+  static_assert(std::is_same<int, TypeListGet<typelist, 3>::type>::value, "");
+  static_assert(std::is_same<float, TypeListGet<typelist, 4>::type>::value, "");
+}
+
 TEST(TypeList, TypeListMap) {
   using xs = TypeList<int, char, float>;
   using ys = TypeListMap<xs, std::add_pointer>::type;

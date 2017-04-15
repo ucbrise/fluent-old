@@ -59,12 +59,16 @@ namespace fluent {
 //   static_assert(TypeListConcat<xs, ys>::type ==
 //                 TypeList<int, char, float, int, char, float>);
 
-// http://en.cppreference.com/w/cpp/utility/tuple/tuple_element
 template <typename... Ts>
-struct TypeList {
-  template <std::size_t N>
-  using type = typename std::tuple_element<N, std::tuple<Ts...>>::type;
-};
+struct TypeList {};
+
+// Get
+template <typename TypeList, std::size_t I>
+struct TypeListGet;
+
+template <typename... Ts, std::size_t I>
+struct TypeListGet<TypeList<Ts...>, I>
+    : public std::tuple_element<I, std::tuple<Ts...>> {};
 
 // Map
 template <typename TypeList, template <typename> class F>
@@ -90,7 +94,7 @@ struct TypeListProject;
 
 template <typename... Ts, std::size_t... Is>
 struct TypeListProject<TypeList<Ts...>, Is...> {
-  using type = TypeList<typename TypeList<Ts...>::template type<Is>...>;
+  using type = TypeList<typename TypeListGet<TypeList<Ts...>, Is>::type...>;
 };
 
 // Take

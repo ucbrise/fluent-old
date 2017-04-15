@@ -133,7 +133,10 @@ class FluentExecutor<
     return *std::get<I>(collections_);
   }
 
-  // DO_NOT_SUMIT(mwhittaker): Document.
+  // Return a reference to a FluentExecutor's Lineage DB client. When
+  // LineageDbClient is MockClient, this method allows us to unit test that
+  // FluentExecutors are properly tracking lineage and history. See
+  // fluent_executor_test.cc for some examples.
   const LineageDbClient<Hash, ToSql>& GetLineageDbClient() {
     return *lineagedb_client_.get();
   }

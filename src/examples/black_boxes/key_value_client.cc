@@ -7,9 +7,9 @@
 #include "glog/logging.h"
 #include "zmq.hpp"
 
-#include "black_boxes/key_value.h"
-#include "black_boxes/random_id_generator.h"
 #include "common/string_util.h"
+#include "examples/black_boxes/key_value.h"
+#include "examples/black_boxes/random_id_generator.h"
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"

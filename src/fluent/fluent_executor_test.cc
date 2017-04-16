@@ -1,6 +1,7 @@
 #include "fluent/fluent_executor.h"
 
 #include <cstddef>
+#include <cstdint>
 
 #include <set>
 #include <tuple>
@@ -11,6 +12,7 @@
 #include "gtest/gtest.h"
 #include "zmq.hpp"
 
+#include "common/string_util.h"
 #include "fluent/channel.h"
 #include "fluent/fluent_builder.h"
 #include "fluent/infix.h"
@@ -323,6 +325,45 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
                   {"t", hash({0}), 0, true, "t", hash({2}), 9},
                   {"t", hash({1}), 0, true, "t", hash({2}), 9},
               }));
+}
+
+TEST(FluentExecutor, BlackBoxLineage) {
+  zmq::context_t context(1);
+  lineagedb::ConnectionConfig connection_config;
+  auto f = fluent<ldb::MockClient, Hash, ldb::MockToSql>(
+               "name", "inproc://yolo", &context, connection_config)
+               .channel<std::string, std::string, std::int64_t, int>(
+                   "f_request", {{"dst_addr", "src_addr", "id", "x"}})
+               .channel<std::string, std::int64_t, int>("f_response",
+                                                        {{"addr", "id", "y"}})
+               .RegisterRules([](auto&, auto&) { return std::make_tuple(); });
+  f.RegisterBlackBoxLineage<0, 1>([](const std::string& time_inserted,
+                                     const std::string& x,
+                                     const std::string& y) {
+    (void)time_inserted;
+    (void)x;
+    (void)y;
+    return "hello world";
+  });
+
+  const ldb::MockClient<Hash, ldb::MockToSql>& client = f.GetLineageDbClient();
+  ASSERT_EQ(client.GetExec().size(), static_cast<std::size_t>(2));
+  EXPECT_EQ(CrunchWhitespace(std::get<0>(client.GetExec()[0])),
+            CrunchWhitespace(R"(
+    CREATE FUNCTION name_f_response_lineage_impl(integer, int, int)
+    RETURNS TABLE(collection_name text, hash bigint, time_inserted integer)
+    AS $$hello world$$ LANGUAGE SQL;
+  )"));
+  EXPECT_EQ(CrunchWhitespace(std::get<0>(client.GetExec()[1])),
+            CrunchWhitespace(R"(
+    CREATE FUNCTION name_f_response_lineage(bigint)
+    RETURNS TABLE(collection_name text, hash bigint, time_inserted integer)
+    AS $$
+      SELECT name_f_response_lineage_impl(Req.time_inserted, Req.x, Resp.y)
+      FROM name_f_request Req, name_f_response Resp
+      WHERE Req.id = $1 AND Resp.id = $1
+    $$ LANGUAGE SQL;
+  )"));
 }
 
 // TODO(mwhittaker): Test the lineage of a fluent program with communication

@@ -4,6 +4,7 @@
 #include "glog/logging.h"
 #include "zmq.hpp"
 
+#include "examples/black_boxes/primality.h"
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"
@@ -49,11 +50,8 @@ int main(int argc, char* argv[]) {
 
   zmq::context_t context(1);
   ldb::ConnectionConfig config{"localhost", 5432, argv[1], argv[2], argv[3]};
-  fluent::fluent<ldb::PqxxClient>("primality", argv[4], &context, config)
-      .channel<std::string, std::string, std::int64_t, int>(
-          "is_prime_request", {{"dst_addr", "src_addr", "id", "x"}})
-      .channel<std::string, std::int64_t, bool>("is_prime_response",
-                                                {{"addr", "id", "is_prime"}})
+  AddPrimalityApi(fluent::fluent<ldb::PqxxClient>("primality_server", argv[4],
+                                                  &context, config))
       .RegisterRules([&](auto& req, auto& resp) {
         using namespace fluent::infix;
         auto rule = resp <= (req.Iterable() | ra::map(f));

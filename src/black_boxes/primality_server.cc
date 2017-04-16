@@ -1,6 +1,3 @@
-#ifndef EXAMPLES_CHAT_CLIENT_H_
-#define EXAMPLES_CHAT_CLIENT_H_
-
 #include <cstdint>
 
 #include "fmt/format.h"
@@ -78,5 +75,3 @@ int main(int argc, char* argv[]) {
       })
       .Run();
 }
-
-#endif  // EXAMPLES_CHAT_CLIENT_H_

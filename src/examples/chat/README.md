@@ -6,16 +6,16 @@ chat client.
 
 ```bash
 # Start the server in one window.
-GLOG_logtostderr=1 ./build/examples/chat/examples_chat_noop_server \
+GLOG_logtostderr=1 ./build/examples_chat_noop_server \
     tcp://0.0.0.0:8000
 
 # Start some clients in other windows. Enter text in any of the clients and
 # it will be broadcasted to all the others.
-GLOG_logtostderr=1 ./build/examples/chat/examples_chat_noop_client \
+GLOG_logtostderr=1 ./build/examples_chat_noop_client \
     tcp://0.0.0.0:8000 tcp://0.0.0.0:8001 foo
-GLOG_logtostderr=1 ./build/examples/chat/examples_chat_noop_client \
+GLOG_logtostderr=1 ./build/examples_chat_noop_client \
     tcp://0.0.0.0:8000 tcp://0.0.0.0:8002 bar
-GLOG_logtostderr=1 ./build/examples/chat/examples_chat_noop_client \
+GLOG_logtostderr=1 ./build/examples_chat_noop_client \
     tcp://0.0.0.0:8000 tcp://0.0.0.0:8003 baz
 ```
 
@@ -23,7 +23,7 @@ We also implement a pinging client in
 [`noop_ping_client.cc`](noop_ping_client.cc).
 
 ```bash
-GLOG_logtostderr=1 ./build/examples/chat/examples_chat_noop_ping_client \
+GLOG_logtostderr=1 ./build/examples_chat_noop_ping_client \
     tcp://0.0.0.0:8000 tcp://0.0.0.0:8004 pinger yolo
 ```
 
@@ -41,19 +41,19 @@ DB_PASS="password"
 DB_NAME="the_db"
 
 # Server.
-GLOG_logtostderr=1 ./build/examples/chat/examples_chat_noop_server \
+GLOG_logtostderr=1 ./build/examples_chat_noop_server \
     $DB_USER $DB_PASS $DB_NAME tcp://0.0.0.0:8000
 
 # Clients.
-GLOG_logtostderr=1 ./build/examples/chat/examples_chat_noop_client \
+GLOG_logtostderr=1 ./build/examples_chat_noop_client \
     $DB_USER $DB_PASS $DB_NAME tcp://0.0.0.0:8000 tcp://0.0.0.0:8001 foo
-GLOG_logtostderr=1 ./build/examples/chat/examples_chat_noop_client \
+GLOG_logtostderr=1 ./build/examples_chat_noop_client \
     $DB_USER $DB_PASS $DB_NAME tcp://0.0.0.0:8000 tcp://0.0.0.0:8002 bar
-GLOG_logtostderr=1 ./build/examples/chat/examples_chat_noop_client \
+GLOG_logtostderr=1 ./build/examples_chat_noop_client \
     $DB_USER $DB_PASS $DB_NAME tcp://0.0.0.0:8000 tcp://0.0.0.0:8003 baz
 
 # Pinging Client.
-GLOG_logtostderr=1 ./build/examples/chat/examples_chat_noop_ping_client \
+GLOG_logtostderr=1 ./build/examples_chat_noop_ping_client \
     $DB_USER $DB_PASS $DB_NAME tcp://0.0.0.0:8000 tcp://0.0.0.0:8004 pinger yolo
 ```
 

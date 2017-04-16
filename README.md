@@ -22,8 +22,8 @@ install and build the rest of the dependencies for you!
 ./scripts/build.sh Release 4 # build the code in release mode with 4 cores
 
 # Testing
-./build/ra/ra_cross_test          # run a test
-./build/common/common_macros_test # run another test
+./build/ra_cross_test          # run a test
+./build/common_macros_test # run another test
 (cd build && make test)           # run all the tests
 
 # Generating Tags
@@ -35,10 +35,10 @@ install and build the rest of the dependencies for you!
     (cd build && make test)
 
 # Run a chat server listening on port 8000.
-./build/examples/chat/examples_chat_noop_server 'tcp://*:8000'
+./build/examples_chat_noop_server 'tcp://*:8000'
 
 # Run a chat client on port 8001 with nickname "zardoz"
-./build/examples/chat/examples_chat_noop_client \
+./build/examples_chat_noop_client \
     tcp://0.0.0.0:8000 tcp://0.0.0.0:8001 zardoz
 ```
 

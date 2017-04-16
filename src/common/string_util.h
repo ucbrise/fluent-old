@@ -4,6 +4,7 @@
 #include <cstddef>
 
 #include <array>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -58,6 +59,13 @@ template <std::size_t N>
 std::string Join(const std::array<std::string, N>& ss) {
   return detail::JoinIterators(ss.cbegin(), ss.cend());
 }
+
+// Split(s) splits on spaces.
+// - Split("") == []
+// - Split("a") == ["a"]
+// - Split("a b c") == ["a", "b", "c"]
+// - Split("  a   b   c  ") == ["a", "b", "c"]
+std::vector<std::string> Split(const std::string& s);
 
 // CrunchWhitespace converts newlines to spaces and then destutters spaces.
 //

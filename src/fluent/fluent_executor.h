@@ -549,24 +549,25 @@ class FluentExecutor<
                                         TypeListLen<RetTypes>::value>();
     lineagedb_client_->Exec(fmt::format(
         R"(
-      CREATE FUNCTION {}_lineage_impl(integer, {})
+      CREATE FUNCTION {}_{}_lineage_impl(integer, {})
       RETURNS TABLE(collection_name text, hash bigint, time_inserted integer)
       AS $${}$$ LANGUAGE SQL;
     )",
-        response.Name(), Join(types), CallBlackBoxLineageFunction(f, seq)));
+        name_, response.Name(), Join(types),
+        CallBlackBoxLineageFunction(f, seq)));
 
-    lineagedb_client_->Exec(
-        fmt::format(R"(
-      CREATE FUNCTION {}_lineage(integer)
+    lineagedb_client_->Exec(fmt::format(
+        R"(
+      CREATE FUNCTION {}_{}_lineage(bigint)
       RETURNS TABLE(collection_name text, hash bigint, time_inserted integer)
       AS $$
-        SELECT {}_lineage_impl(Req.time_inserted, {})
+        SELECT {}_{}_lineage_impl(Req.time_inserted, {})
         FROM {}_{} Req, {}_{} Resp
         WHERE Req.id = $1 AND Resp.id = $1
       $$ LANGUAGE SQL;
     )",
-                    response.Name(), response.Name(), Join(column_names), name_,
-                    request.Name(), name_, response.Name()));
+        name_, response.Name(), name_, response.Name(), Join(column_names),
+        name_, request.Name(), name_, response.Name()));
   }
 
   // TODO(mwhittaker): Document.

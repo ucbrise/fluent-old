@@ -30,6 +30,8 @@ TEST(ToSql, ToSqlType) {
   EXPECT_EQ(ToSql<double>().Type(), "double precision");
   EXPECT_EQ(ToSql<double>().Type(), "double precision");
   EXPECT_EQ(ToSql<double>().Type(), "double precision");
+  EXPECT_EQ((ToSql<std::vector<int>>().Type()), "integer[]");
+  EXPECT_EQ((ToSql<std::vector<bool>>().Type()), "boolean[]");
   EXPECT_EQ((ToSql<std::array<int, 0>>().Type()), "integer[]");
   EXPECT_EQ((ToSql<std::array<bool, 1>>().Type()), "boolean[]");
 
@@ -76,6 +78,8 @@ TEST(ToSql, ToSqlValue) {
   EXPECT_EQ(Value<std::int64_t>()(5), "5");
   EXPECT_EQ(Value<float>()(6.0), "6.000000");
   EXPECT_EQ(Value<double>()(7.0), "7.000000");
+  EXPECT_EQ((Value<std::vector<int>>()({})), "ARRAY[]");
+  EXPECT_EQ((Value<std::vector<bool>>()({true, false})), "ARRAY[true, false]");
   EXPECT_EQ((Value<std::array<int, 0>>()({{}})), "ARRAY[]");
   EXPECT_EQ((Value<std::array<bool, 2>>()({{true, false}})),
             "ARRAY[true, false]");

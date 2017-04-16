@@ -6,6 +6,7 @@
 #include "glog/logging.h"
 #include "zmq.hpp"
 
+#include "black_boxes/key_value.h"
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"
@@ -32,15 +33,8 @@ int main(int argc, char* argv[]) {
 
   zmq::context_t context(1);
   ldb::ConnectionConfig config{"localhost", 5432, argv[1], argv[2], argv[3]};
-  fluent::fluent<ldb::PqxxClient>("key_value_server", argv[4], &context, config)
-      .channel<std::string, std::string, std::int64_t, std::string,
-               std::string>("set_request",
-                            {{"dst_addr", "src_addr", "id", "key", "value"}})
-      .channel<std::string, std::int64_t>("set_response", {{"addr", "id"}})
-      .channel<std::string, std::string, std::int64_t, std::string>(
-          "get_request", {{"dst_addr", "src_addr", "id", "key"}})
-      .channel<std::string, std::int64_t, std::string>(
-          "get_response", {{"addr", "id", "value"}})
+  AddKeyValueApi(fluent::fluent<ldb::PqxxClient>("key_value_server", argv[4],
+                                                 &context, config))
       .RegisterRules([&](auto& set_req, auto& set_resp, auto& get_req,
                          auto& get_resp) {
         using namespace fluent::infix;
@@ -60,7 +54,7 @@ int main(int argc, char* argv[]) {
              }));
         return std::make_tuple(set, get);
       })
-      .RegisterBlackBoxLineage<0, 1>([](const std::string& time_inserted,
+      .RegisterBlackBoxLineage<2, 3>([](const std::string& time_inserted,
                                         const std::string& key,
                                         const std::string& value) {
         (void)value;
@@ -69,7 +63,7 @@ int main(int argc, char* argv[]) {
             CAST('key_value_server_set_request' as TEXT), hash, time_inserted
           FROM key_value_server_set_request
           WHERE key = {} AND time_inserted <= {}
-          ORDER BY {}
+          ORDER BY time_inserted DESC
           LIMIT 1;
         )",
                            key, time_inserted, time_inserted);

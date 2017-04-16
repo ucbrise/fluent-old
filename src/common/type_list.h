@@ -170,6 +170,15 @@ struct TypeListAllSame<TypeList<T, Ts...>> {
   static constexpr bool value = TypeListAll<TypeList<Ts...>, is_t>::value;
 };
 
+// MapToTuple
+template <typename TypeList, template <typename> class F>
+struct TypeListMapToTuple;
+
+template <typename... Ts, template <typename> class F>
+struct TypeListMapToTuple<TypeList<Ts...>, F> {
+  std::tuple<decltype(F<Ts>()())...> operator()() { return {F<Ts>()()...}; }
+};
+
 // TypeListTo<Template, TypeList<Ts...>> = Template<Ts...>
 template <template <typename...> class Template, typename TypeList>
 struct TypeListTo;

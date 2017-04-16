@@ -10,6 +10,7 @@
 #include "fmt/format.h"
 
 #include "common/tuple_util.h"
+#include "common/type_list.h"
 #include "lineagedb/connection_config.h"
 
 namespace fluent {
@@ -50,7 +51,7 @@ class MockClient {
     }
 
     std::vector<std::string> types;
-    TupleIter(TupleFromTypes<ToSqlType, Ts...>(),
+    TupleIter(TypeListMapToTuple<TypeList<Ts...>, ToSqlType>()(),
               [&types](const std::string& s) { types.push_back(s); });
 
     add_collection_.push_back(

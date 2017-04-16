@@ -13,6 +13,24 @@ namespace detail {
 template <typename... Ts>
 struct Template {};
 
+template <typename T>
+struct Default;
+
+template <>
+struct Default<int> {
+  int operator()() { return 0; }
+};
+
+template <>
+struct Default<char> {
+  char operator()() { return 'a'; }
+};
+
+template <>
+struct Default<bool> {
+  char operator()() { return true; }
+};
+
 }  // namespace detail
 
 TEST(TypeList, TypeListGet) {
@@ -120,6 +138,12 @@ TEST(TypeList, TypeListAllSame) {
   static_assert(!TypeListAllSame<d>::value, "");
   static_assert(!TypeListAllSame<e>::value, "");
   static_assert(TypeListAllSame<f>::value, "");
+}
+
+TEST(TypeList, TypeListMapToTuple) {
+  using typelist = TypeList<int, char, bool>;
+  EXPECT_EQ((std::tuple<int, char, bool>{0, 'a', true}),
+            (TypeListMapToTuple<typelist, detail::Default>()()));
 }
 
 TEST(TypeList, TypeListTo) {

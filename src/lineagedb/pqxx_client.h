@@ -9,6 +9,7 @@
 
 #include "common/string_util.h"
 #include "common/tuple_util.h"
+#include "common/type_list.h"
 #include "lineagedb/connection_config.h"
 
 namespace fluent {
@@ -278,7 +279,7 @@ class InjectablePqxxClient {
   // [ToSql<T1>.Type(), ..., ToSql<Tn>().Type()]
   template <typename... Ts>
   std::vector<std::string> SqlTypes() {
-    return TupleToVector(TupleFromTypes<ToSqlType, Ts...>());
+    return TupleToVector(TypeListMapToTuple<TypeList<Ts...>, ToSqlType>()());
   }
 
   // SqlValues((x1: T1, ..., xn: Tn)) returns the vector

@@ -1,7 +1,9 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
-ADD_EXECUTABLE(blackboxes_primality_server primality_server.cc)
-#ADD_EXECUTABLE(blackboxes_key_value_store key_value_store.cc)
+MACRO(CREATE_BLACK_BOX_EXECUTABLE NAME)
+    ADD_EXECUTABLE(black_boxes_${NAME} ${NAME}.cc)
+    TARGET_LINK_LIBRARIES(black_boxes_${NAME} fluent)
+ENDMACRO(CREATE_BLACK_BOX_EXECUTABLE)
 
-TARGET_LINK_LIBRARIES(blackboxes_primality_server fluent)
-#TARGET_LINK_LIBRARIES(blackboxes_key_value_store fluent)
+CREATE_BLACK_BOX_EXECUTABLE(key_value_server)
+CREATE_BLACK_BOX_EXECUTABLE(primality_server)

@@ -473,7 +473,7 @@ class FluentExecutor<
   // See RegisterBlackBoxLineage.
   template <std::size_t... Is, typename F>
   std::string CallBlackBoxLineageFunction(F f, std::index_sequence<Is...>) {
-    return f(("$" + std::to_string(Is))...);
+    return f(("$" + std::to_string(Is + 1))...);
   }
 
   // See RegisterBlackBoxLineage.

@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include "common/type_traits.h"
+
 namespace fluent {
 
 // The `Collection<T1, ..., Tn>` class provides a `GetParser` method which
@@ -49,6 +51,13 @@ std::string FromString<std::string>(const std::string& s) {
 template <>
 std::string ToString(const char& c) {
   return std::string(1, c);
+}
+
+//lww pair
+template <typename K, typename V>
+std::string ToString(const std::pair<K, V>& p) {
+  std::string delimiter = "|";
+  return ToString(std::get<0>(p)) + delimiter + ToString(std::get<1>(p));
 }
 
 template <>
@@ -103,6 +112,28 @@ template <>
 long double FromString<long double>(const std::string& s) {
   return std::stold(s);
 }
+
+// lww pair for indy monitoring
+template <>
+std::pair<long, std::size_t> FromString<std::pair<long, std::size_t>>(const std::string& s) {
+  std::string str = s;
+  std::string delimiter = "|";
+  std::string p1 = str.substr(0, str.find(delimiter));
+  str.erase(0, str.find(delimiter) + delimiter.length());
+  std::string p2 = str;
+  return std::make_pair(FromString<long>(p1), FromString<std::size_t>(p2));
+}
+
+// template <typename T>
+// typename std::enable_if<IsPair<T>::value, T>::type
+// FromString(const std::string& s) {
+//   std::string str = s;
+//   std::string delimiter = "|";
+//   std::string p1 = str.substr(0, str.find(delimiter));
+//   str.erase(0, str.find(delimiter) + delimiter.length());
+//   std::string p2 = str;
+//   return T(FromString<T::first_type>(p1), FromString<T::second_type>(p2));
+// }
 
 }  // namespace fluent
 

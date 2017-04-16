@@ -6,6 +6,8 @@
 #include <tuple>
 #include <utility>
 
+#include "common/type_traits.h"
+
 namespace fluent {
 
 // TODO(mwhittaker): Namespace these functions so they aren't so long?
@@ -136,22 +138,52 @@ template <typename... Ts>
 struct TypeListLen<TypeList<Ts...>>
     : public std::integral_constant<std::size_t, sizeof...(Ts)> {};
 
-// Tuple -> TypeList
-template <typename Tuple>
-struct TupleToTypeList;
+// AllSame
+template <typename TypeList>
+struct TypeListAllSame;
 
-template <typename... Ts>
-struct TupleToTypeList<std::tuple<Ts...>> {
+template <>
+struct TypeListAllSame<TypeList<>> : public std::true_type {};
+
+template <typename T>
+struct TypeListAllSame<TypeList<T>> : public std::true_type {};
+
+template <typename T, typename U, typename... Us>
+struct TypeListAllSame<TypeList<T, U, Us...>> {
+  static constexpr bool value =
+      std::is_same<T, U>::value && TypeListAllSame<TypeList<U, Us...>>::value;
+};
+
+// TypeListTo<Template, TypeList<Ts...>> = Template<Ts...>
+template <template <typename...> class Template, typename TypeList>
+struct TypeListTo;
+
+template <template <typename...> class Template, typename... Ts>
+struct TypeListTo<Template, TypeList<Ts...>> {
+  using type = Template<Ts...>;
+};
+
+// TypeListFrom<Template<Ts...>> = TypeList<Ts...>
+template <typename From>
+struct TypeListFrom;
+
+template <template <typename...> class Template, typename... Ts>
+struct TypeListFrom<Template<Ts...>> {
   using type = TypeList<Ts...>;
 };
 
 // TypeList -> Tuple
-template <typename TypeList>
-struct TypeListToTuple;
+template <typename T>
+struct TypeListToTuple {
+  static_assert(IsTemplate<TypeList, T>::value, "");
+  using type = typename TypeListTo<std::tuple, T>::type;
+};
 
-template <typename... Ts>
-struct TypeListToTuple<TypeList<Ts...>> {
-  using type = std::tuple<Ts...>;
+// Tuple -> TypeList
+template <typename Tuple>
+struct TupleToTypeList {
+  static_assert(IsTemplate<std::tuple, Tuple>::value, "");
+  using type = typename TypeListFrom<Tuple>::type;
 };
 
 }  // namespace fluent

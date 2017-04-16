@@ -8,6 +8,7 @@
 #include "group_by.h"
 #include "iterable.h"
 #include "map.h"
+#include "map_iterable.h"
 #include "project.h"
 #include "sum.h"
 

@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 
+#include "common/function_traits.h"
 #include "glog/logging.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -38,15 +39,19 @@ const C& thd(const std::tuple<A, B, C>& t) {
 TEST(MapLattice, SimpleMerge) {
   std::set<std::tuple<int, int>> s1 = {{1, 5}, {1, 4}};
   MapLattice<int, MaxLattice<int>> mapl("mapl");
-  // std::set<std::tuple<Maxintmap>> s1 = {std::make_tuple(m1), std::make_tuple(m2)};
-  //std::set<std::tuple<int, int>> s2 = {{2, 2}, {3, 3}};
-  //std::set<std::tuple<int, int>> s3 = {{1, 1}, {2, 2}, {3, 3}};
 
   mapl.Merge(ra::make_iterable(&s1));
   std::unordered_map<int, MaxLattice<int>> res = mapl.Reveal();
   for (auto it = res.begin(); it != res.end(); it++) {
     EXPECT_THAT((it->second).Reveal(), 5);
   }
+}
+
+TEST(MapLattice, HasIterableCheck) {
+  bool res = fluent::has_Iterable<MapLattice<int, MaxLattice<int>>>::value;
+  EXPECT_THAT(res, true);
+  res = fluent::has_Iterable<std::unordered_map<int, int>>::value;
+  EXPECT_THAT(res, false);
 }
 
 }  // namespace fluent

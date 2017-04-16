@@ -16,7 +16,7 @@ using ::testing::UnorderedElementsAreArray;
 namespace fluent {
 
 TEST(MinLattice, SimpleMerge) {
-  MinLattice<int> l("l");
+  MinLattice<int> l("l", 1000000);
   EXPECT_THAT(l.Reveal(), 1000000);
   
   std::set<std::tuple<int>> s1 = {{2}, {1}, {3}};

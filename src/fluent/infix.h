@@ -97,18 +97,18 @@ operator+=(Stdout& o, Rhs&& rhs) {
 }
 
 // Lattices <=
-template <typename T, typename Rhs>
-std::tuple<Lattice<T>*, MergeTag, typename std::decay<Rhs>::type> operator<=(
-    Lattice<T>& l, Rhs&& rhs) {
+template <typename L, typename Rhs>
+std::tuple<L*, MergeTag, typename std::decay<Rhs>::type> operator<=(
+    L& l, Rhs&& rhs) {
   return {&l, MergeTag(), std::forward<Rhs>(rhs)};
 }
 
 // CompositeLattices <=
-template <typename K, typename V, typename Rhs>
-std::tuple<MapLattice<K, V>*, MergeTag, typename std::decay<Rhs>::type> operator<=(
-    MapLattice<K, V>& l, Rhs&& rhs) {
-  return {&l, MergeTag(), std::forward<Rhs>(rhs)};
-}
+// template <typename K, typename V, typename Rhs>
+// std::tuple<MapLattice<K, V>*, MergeTag, typename std::decay<Rhs>::type> operator<=(
+//     MapLattice<K, V>& l, Rhs&& rhs) {
+//   return {&l, MergeTag(), std::forward<Rhs>(rhs)};
+// }
 
 }  // namespace infix
 }  // namespace fluent

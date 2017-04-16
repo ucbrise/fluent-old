@@ -8,6 +8,12 @@
 #include "gtest/gtest.h"
 
 namespace fluent {
+namespace detail {
+
+template <typename... Ts>
+struct Template {};
+
+}  // namespace detail
 
 TEST(TypeList, TypeListMap) {
   using xs = TypeList<int, char, float>;
@@ -80,6 +86,114 @@ TEST(TypeList, TypeListLen) {
   static_assert(TypeListLen<two>::value == 2, "");
   static_assert(TypeListLen<three>::value == 3, "");
   static_assert(TypeListLen<four>::value == 4, "");
+}
+
+TEST(TypeList, TypeListAllSame) {
+  using a = TypeList<>;
+  using b = TypeList<int>;
+  using c = TypeList<int, int>;
+  using d = TypeList<int, char>;
+  using e = TypeList<int, int, char>;
+  using f = TypeList<int, int, int>;
+
+  static_assert(TypeListAllSame<a>::value, "");
+  static_assert(TypeListAllSame<b>::value, "");
+  static_assert(TypeListAllSame<c>::value, "");
+  static_assert(!TypeListAllSame<d>::value, "");
+  static_assert(!TypeListAllSame<e>::value, "");
+  static_assert(TypeListAllSame<f>::value, "");
+}
+
+TEST(TypeList, TypeListTo) {
+  {
+    using actual = TypeListTo<detail::Template, TypeList<>>::type;
+    using expected = detail::Template<>;
+    static_assert(std::is_same<actual, expected>::value, "");
+  }
+
+  {
+    using actual = TypeListTo<detail::Template, TypeList<int>>::type;
+    using expected = detail::Template<int>;
+    static_assert(std::is_same<actual, expected>::value, "");
+  }
+
+  {
+    using actual = TypeListTo<detail::Template, TypeList<int, int>>::type;
+    using expected = detail::Template<int, int>;
+    static_assert(std::is_same<actual, expected>::value, "");
+  }
+
+  {
+    using actual = TypeListTo<std::tuple, TypeList<int, int>>::type;
+    using expected = std::tuple<int, int>;
+    static_assert(std::is_same<actual, expected>::value, "");
+  }
+}
+
+TEST(TypeList, TypeListFrom) {
+  {
+    using actual = TypeListFrom<detail::Template<>>::type;
+    using expected = TypeList<>;
+    static_assert(std::is_same<actual, expected>::value, "");
+  }
+
+  {
+    using actual = TypeListFrom<detail::Template<int>>::type;
+    using expected = TypeList<int>;
+    static_assert(std::is_same<actual, expected>::value, "");
+  }
+
+  {
+    using actual = TypeListFrom<detail::Template<int, int>>::type;
+    using expected = TypeList<int, int>;
+    static_assert(std::is_same<actual, expected>::value, "");
+  }
+
+  {
+    using actual = TypeListFrom<std::tuple<int, int>>::type;
+    using expected = TypeList<int, int>;
+    static_assert(std::is_same<actual, expected>::value, "");
+  }
+}
+
+TEST(TypeList, TypeListToTuple) {
+  {
+    using actual = TypeListToTuple<TypeList<>>::type;
+    using expected = std::tuple<>;
+    static_assert(std::is_same<actual, expected>::value, "");
+  }
+
+  {
+    using actual = TypeListToTuple<TypeList<int>>::type;
+    using expected = std::tuple<int>;
+    static_assert(std::is_same<actual, expected>::value, "");
+  }
+
+  {
+    using actual = TypeListToTuple<TypeList<int, int>>::type;
+    using expected = std::tuple<int, int>;
+    static_assert(std::is_same<actual, expected>::value, "");
+  }
+}
+
+TEST(TypeList, TupleToTypleList) {
+  {
+    using actual = TupleToTypeList<std::tuple<>>::type;
+    using expected = TypeList<>;
+    static_assert(std::is_same<actual, expected>::value, "");
+  }
+
+  {
+    using actual = TupleToTypeList<std::tuple<int>>::type;
+    using expected = TypeList<int>;
+    static_assert(std::is_same<actual, expected>::value, "");
+  }
+
+  {
+    using actual = TupleToTypeList<std::tuple<int, int>>::type;
+    using expected = TypeList<int, int>;
+    static_assert(std::is_same<actual, expected>::value, "");
+  }
 }
 
 }  // namespace fluent

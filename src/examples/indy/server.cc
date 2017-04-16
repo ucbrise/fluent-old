@@ -54,8 +54,6 @@ int main(int argc, char* argv[]) {
           .table<k_t>("changeset")
           // Keeps track of the number of messages in the get&put channels
           .table<std::string, std::size_t>("messagecount")
-          // Keeps track of the load info across servers
-          .table<server_address_t, std::size_t>("load")
           // Records the number of workers spawned
           .table<std::size_t>("spawn")
           // Communication from a new worker node to the seed node
@@ -75,14 +73,17 @@ int main(int argc, char* argv[]) {
           // Gossip updates to other worker nodes
           .channel<server_address_t, k_t, v_t>("gossip")
           // Gossip load info to other worker nodes
-          .channel<server_address_t, server_address_t, std::size_t>("gossipload")
+          .channel<server_address_t, server_address_t, std::pair<long, std::size_t>>("gossipload")
+          .lattice<fluent::MaxLattice<long>>("ts")
           // KVS using MaxLattice for conflict resolution
-          .lattice<fluent::MapLattice<std::string, fluent::MaxLattice<int>>>("mapl")
+          .lattice<fluent::MapLattice<std::string, fluent::MaxLattice<int>>>("kvs")
+          // Keeps track of the load info across servers
+          .lattice<fluent::MapLattice<server_address_t, fluent::LwwLattice<std::size_t>>>("load")
           // Trigger gossip every 100 milliseconds
           .periodic("pg", std::chrono::milliseconds(100))
           // Trigger load checking every 1000 milliseconds
           .periodic("pl", std::chrono::milliseconds(1000))
-          .RegisterBootstrapRules([&](auto& serverlist, auto&, auto&, auto&, auto&, auto& addrgossipseed, auto&, auto&, auto&, auto&, auto&, auto&, auto&, auto&, auto&, auto&, auto&) {
+          .RegisterBootstrapRules([&](auto& serverlist, auto&, auto&, auto&, auto& addrgossipseed, auto&, auto&, auto&, auto&, auto&, auto&, auto&, auto&, auto&, auto&, auto&, auto&, auto&) {
             using namespace fluent::infix;
 
             auto add_self = 
@@ -95,8 +96,11 @@ int main(int argc, char* argv[]) {
                                                      }));
             return std::make_tuple(add_self, to_seed);
           })
-          .RegisterRules([&](auto& serverlist, auto& changeset, auto& messagecount, auto& load, auto& spawn, auto& addrgossipseed, auto& addrgossip, auto& sync, auto& getrequest, auto& getresponse, auto& putrequest, auto& putresponse, auto& gossip, auto& gossipload, auto& mapl, auto& pg, auto& pl) {
+          .RegisterRules([&](auto& serverlist, auto& changeset, auto& messagecount, auto& spawn, auto& addrgossipseed, auto& addrgossip, auto& sync, auto& getrequest, auto& getresponse, auto& putrequest, auto& putresponse, auto& gossip, auto& gossipload, auto& ts, auto& kvs, auto& load, auto& pg, auto& pl) {
             using namespace fluent::infix;
+
+            auto advance_ts =
+                ts <= ts.add(1);
 
             auto receive_addr_seed = 
                 serverlist <= (addrgossipseed.Iterable() | ra::project<1>());
@@ -113,10 +117,13 @@ int main(int argc, char* argv[]) {
 
             auto send_sync =
                 sync <= 
-                (ra::make_cross((addrgossipseed.Iterable() | ra::project<1>()), mapl.Iterable()));
+                (ra::make_cross((addrgossipseed.Iterable() | ra::project<1>()), kvs.Iterable())
+                  | ra::map([](const auto& t) {
+                      return std::make_tuple(std::get<0>(t), std::get<1>(t), std::get<2>(t).Reveal());
+                    }));
 
             auto receive_sync =
-                mapl <=
+                kvs <=
                 (sync.Iterable() | ra::project<1,2>());
 
             auto receive_addr = 
@@ -125,15 +132,15 @@ int main(int argc, char* argv[]) {
             auto processget =
                 getresponse <=
                 (getrequest.Iterable() | ra::project<1,2>() |
-                 ra::map([&mapl](const std::tuple<client_address_t, k_t>& t) {
-                   return std::make_tuple(std::get<0>(t), mapl.at(std::get<1>(t)).Reveal());
+                 ra::map([&kvs](const std::tuple<client_address_t, k_t>& t) {
+                   return std::make_tuple(std::get<0>(t), kvs.at(std::get<1>(t)).Reveal());
                  }));
 
             auto processput =
                 putresponse <=
                 (putrequest.Iterable() | ra::project<1,2,3>() |
-                 ra::map([&mapl](const std::tuple<client_address_t, k_t, v_t>& t) {
-                   mapl.merge(std::get<1>(t), std::get<2>(t));
+                 ra::map([&kvs](const std::tuple<client_address_t, k_t, v_t>& t) {
+                   kvs.merge(std::get<1>(t), std::get<2>(t));
                    std::string result ("PUT Succeeded");
                    return std::make_tuple(std::get<0>(t), result);
                  }));
@@ -149,8 +156,8 @@ int main(int argc, char* argv[]) {
                                                            return std::get<0>(t) != server_address;
                                                          }))
                                               , changeset.Iterable()))
-                 | ra::map([&mapl](const auto& t) {
-                     return std::make_tuple(std::get<2>(t), std::get<3>(t), mapl.at(std::get<3>(t)).Reveal());
+                 | ra::map([&kvs](const auto& t) {
+                     return std::make_tuple(std::get<2>(t), std::get<3>(t), kvs.at(std::get<3>(t)).Reveal());
                    }));
 
             auto clearchangeset =
@@ -161,7 +168,7 @@ int main(int argc, char* argv[]) {
                    }));
 
             auto receivegossip =
-                mapl <=
+                kvs <=
                 (gossip.Iterable() | ra::project<1,2>());
 
             auto updategetchannelload =
@@ -174,7 +181,10 @@ int main(int argc, char* argv[]) {
 
             auto updateload = 
                 load <=
-                ra::make_cross(ra::make_iterable(&serveraddress_tuple), (ra::make_cross(pl.Iterable(), messagecount.Iterable()) | ra::project<3>() | ra::sum()));
+                ra::make_cross(ra::make_iterable(&serveraddress_tuple), (ra::make_cross(pl.Iterable(), messagecount.Iterable()) | ra::project<3>() | ra::sum()
+                                                                          | ra::map([&ts](const auto& t) {
+                                                                              return std::make_tuple(std::make_pair(ts.Reveal(), std::get<0>(t)));
+                                                                            })));
 
             auto receiveload =
                 load <=
@@ -185,12 +195,17 @@ int main(int argc, char* argv[]) {
                 ra::make_cross(serverlist.Iterable() | ra::filter([&](const std::tuple<server_address_t>& t) {
                                                            return std::get<0>(t) != server_address;
                                                          }), 
-                                ra::make_cross(ra::make_iterable(&serveraddress_tuple), (ra::make_cross(pl.Iterable(), messagecount.Iterable()) | ra::project<3>() | ra::sum())));
+                                ra::make_cross(ra::make_iterable(&serveraddress_tuple), (ra::make_cross(pl.Iterable(), messagecount.Iterable()) | ra::project<3>() | ra::sum()
+                                                                                          | ra::map([&ts](const auto& t) {
+                                                                                              return std::make_tuple(std::make_pair(ts.Reveal(), std::get<0>(t)));
+                                                                                            }))));
 
             auto spawnworker =
                 spawn <=
                 (ra::make_cross((ra::make_cross(pl.Iterable(), load.Iterable()) 
-                  | ra::project<3>() 
+                  | ra::map([](const auto& t) {
+                      return std::make_tuple(std::get<1>(std::get<3>(t).Reveal()));
+                    })
                   | ra::avg()
                   | ra::filter([&](const auto& t) {
                       return (seed_address == server_address && std::get<0>(t) >= THRESHOLD);
@@ -204,7 +219,7 @@ int main(int argc, char* argv[]) {
                     }));
 
 
-            return std::make_tuple(receive_addr_seed, send_addr_seed, send_sync, receive_sync, receive_addr, processget, processput, updatechangeset, sendgossip, clearchangeset, receivegossip, updategetchannelload, updateputchannelload, updateload, receiveload, sendload, spawnworker);
+            return std::make_tuple(advance_ts, receive_addr_seed, send_addr_seed, send_sync, receive_sync, receive_addr, processget, processput, updatechangeset, sendgossip, clearchangeset, receivegossip, updategetchannelload, updateputchannelload, updateload, receiveload, sendload, spawnworker);
           });
 
   f.Run();

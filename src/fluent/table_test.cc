@@ -167,13 +167,24 @@ TEST(Table, DeferredMergeAndDelete) {
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s3));
 }
 
-TEST(Table, ComplexType) {
+TEST(Table, LatticeType) {
   Table<MaxLattice<int>> t("t");
   MaxLattice<int> maxl1(10);
   MaxLattice<int> maxl2(20);
   std::set<std::tuple<MaxLattice<int>>> s = {};
   s.insert(std::make_tuple(maxl1));
   s.insert(std::make_tuple(maxl2));
+  t.Merge(ra::make_iterable(&s));
+  EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s));
+}
+
+TEST(Table, ComplexType) {
+  Table<std::pair<int, int>> t("t");
+  std::pair<int, int> p1(1,1);
+  std::pair<int, int> p2(2,2);
+  std::set<std::tuple<std::pair<int, int>>> s = {};
+  s.insert(std::make_tuple(p1));
+  s.insert(std::make_tuple(p2));
   t.Merge(ra::make_iterable(&s));
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s));
 }

@@ -1,6 +1,10 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
-ADD_LIBRARY(common string_util.cc)
+ADD_LIBRARY(common
+    error_code.cc
+    status.cc
+    string_util.cc
+)
 
 MACRO(CREATE_COMMON_TEST NAME)
     CREATE_NAMED_TEST(common_${NAME} ${NAME})

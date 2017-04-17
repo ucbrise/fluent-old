@@ -21,12 +21,15 @@ namespace lineagedb {
 template <template <typename> class Hash, template <typename> class ToSql>
 class NoopClient {
  public:
+  NoopClient() = default;
+  DISALLOW_COPY_AND_ASSIGN(NoopClient);
+  NoopClient(NoopClient&&) = default;
+  NoopClient& operator=(NoopClient&&) = default;
+
   static WARN_UNUSED StatusOr<NoopClient> WARN_UNUSED
   Make(std::string, std::size_t, std::string, const ConnectionConfig&) {
     return NoopClient();
   }
-
-  Status Init() { return Status::OK; }
 
   template <typename... Ts>
   Status AddCollection(const std::string&, const std::string&,
@@ -57,9 +60,6 @@ class NoopClient {
   }
 
   Status Exec(const std::string&) { return Status::OK; }
-
- private:
-  NoopClient(){};
 };
 
 }  // namespace lineagedb

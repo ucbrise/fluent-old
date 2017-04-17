@@ -13,6 +13,9 @@
 // limitations under the License.
 
 // This file was taken and modified from https://goo.gl/FHx9Hm.
+//
+#ifndef COMMON_ERROR_CODE_H_
+#define COMMON_ERROR_CODE_H_
 
 #include <string>
 
@@ -110,3 +113,5 @@ enum class ErrorCode {
 std::string ErrorCodeToString(ErrorCode error);
 
 }  // namespace fluent
+
+#endif  // COMMON_ERROR_CODE_H_

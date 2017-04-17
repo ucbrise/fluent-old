@@ -3,6 +3,8 @@
 
 #include <cstdint>
 
+#include <memory>
+
 #include "fmt/format.h"
 #include "glog/logging.h"
 #include "pqxx/pqxx"
@@ -50,12 +52,12 @@ inline std::int64_t size_t_to_int64(std::size_t hash) {
 //   }
 //
 //   // Construct a client which will connect to the lineagedb database.
-//   PqxxClient<Hash, ToSql> client(config);
-//
-//   // Initialize the lineagedb client with the name of our fluent node. A
-//   // lineagedb client should be used by exactly one fluent node. Also, the
-//   // name "lineage" is reserved; sorry about that.
-//   client.Init("my_fluent_node");
+//   using Client = PqxxClient<Hash, ToSql>;
+//   std::string name = "seanconnery";
+//   std::size_t id = 42;
+//   std::string address = "inproc://zardoz";
+//   StatusOr<Client> client_or = Client::Make(name, id, address, config);
+//   Client client = client_or.ConsumeValueOrDie();
 //
 //   // Add the types of our collections.
 //   client.AddCollection<int, float>("t", "Table")   // Table t[int, float].
@@ -91,43 +93,22 @@ template <typename Connection, typename Work, template <typename> class Hash,
           template <typename> class ToSql>
 class InjectablePqxxClient {
  public:
+  InjectablePqxxClient() : id_(0) {}
+  DISALLOW_COPY_AND_ASSIGN(InjectablePqxxClient);
+  InjectablePqxxClient(InjectablePqxxClient&&) = default;
+  InjectablePqxxClient& operator=(InjectablePqxxClient&&) = default;
+
   static WARN_UNUSED StatusOr<InjectablePqxxClient> Make(
       std::string name, std::size_t id, std::string address,
       const ConnectionConfig& connection_config) {
     try {
-      return InjectablePqxxClient(std::move(name), id, std::move(address),
+      InjectablePqxxClient client(std::move(name), id, std::move(address),
                                   connection_config);
+      RETURN_IF_ERROR(client.Init());
+      return client;
     } catch (const pqxx::pqxx_exception& e) {
       return Status(ErrorCode::INVALID_ARGUMENT, e.base().what());
     }
-  }
-
-  // TODO(mwhittaker): Handle hash collisions.
-  WARN_UNUSED Status Init() {
-    initialized_ = true;
-
-    RETURN_IF_ERROR(ExecuteQuery(
-        "Init",
-        fmt::format(R"(
-      INSERT INTO Nodes (id, name, address)
-      VALUES ({});
-    )",
-                    Join(SqlValues(std::make_tuple(id_, name_, address_))))));
-
-    return ExecuteQuery("CreateLineageTable", fmt::format(R"(
-      CREATE TABLE {}_lineage (
-        dep_node_id          bigint   NOT NULL,
-        dep_collection_name  text     NOT NULL,
-        dep_tuple_hash       bigint   NOT NULL,
-        dep_time             bigint,
-        rule_number          integer,
-        inserted             boolean  NOT NULL,
-        collection_name      text     NOT NULL,
-        tuple_hash           bigint   NOT NULL,
-        time                 integer  NOT NULL
-      );
-    )",
-                                                          name_));
   }
 
   template <typename... Ts>
@@ -135,9 +116,6 @@ class InjectablePqxxClient {
       const std::string& collection_name, const std::string& collection_type,
       const std::array<std::string, sizeof...(Ts)>& column_names) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >= 1 column.");
-    if (!initialized_) {
-      return Status(ErrorCode::FAILED_PRECONDITION, "Call Init first.");
-    };
 
     // For a fluent node `n` and collection `c`, we create a lineagedb relation
     // `n_c`. We also make a relation for the lineage of `n` called
@@ -179,9 +157,6 @@ class InjectablePqxxClient {
 
   WARN_UNUSED Status AddRule(std::size_t rule_number, bool is_bootstrap,
                              const std::string& rule_string) {
-    if (!initialized_) {
-      return Status(ErrorCode::FAILED_PRECONDITION, "Call Init first.");
-    };
     return ExecuteQuery(
         "AddRule",
         fmt::format(R"(
@@ -197,9 +172,6 @@ class InjectablePqxxClient {
                                  int time_inserted,
                                  const std::tuple<Ts...>& t) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >=1 column.");
-    if (!initialized_) {
-      return Status(ErrorCode::FAILED_PRECONDITION, "Call Init first.");
-    };
     std::int64_t hash = detail::size_t_to_int64(Hash<std::tuple<Ts...>>()(t));
     return ExecuteQuery("InsertTuple",
                         fmt::format(R"(
@@ -214,9 +186,6 @@ class InjectablePqxxClient {
   WARN_UNUSED Status DeleteTuple(const std::string& collection_name,
                                  int time_deleted, const std::tuple<Ts...>& t) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >=1 column.");
-    if (!initialized_) {
-      return Status(ErrorCode::FAILED_PRECONDITION, "Call Init first.");
-    };
     std::int64_t hash = detail::size_t_to_int64(Hash<std::tuple<Ts...>>()(t));
     return ExecuteQuery(
         "DeleteTuple", fmt::format(R"(
@@ -230,9 +199,6 @@ class InjectablePqxxClient {
   WARN_UNUSED Status AddNetworkedLineage(std::size_t dep_node_id, int dep_time,
                                          const std::string& collection_name,
                                          std::size_t tuple_hash, int time) {
-    if (!initialized_) {
-      return Status(ErrorCode::FAILED_PRECONDITION, "Call Init first.");
-    };
     return ExecuteQuery(
         "AddLineage",
         fmt::format(
@@ -255,9 +221,6 @@ class InjectablePqxxClient {
                                        int rule_number, bool inserted,
                                        const std::string& collection_name,
                                        std::size_t tuple_hash, int time) {
-    if (!initialized_) {
-      return Status(ErrorCode::FAILED_PRECONDITION, "Call Init first.");
-    };
     return ExecuteQuery(
         "AddLineage",
         fmt::format(
@@ -282,7 +245,7 @@ class InjectablePqxxClient {
  protected:
   InjectablePqxxClient(std::string name, std::size_t id, std::string address,
                        const ConnectionConfig& connection_config)
-      : connection_(connection_config.ToString()),
+      : connection_(std::make_unique<Connection>(connection_config.ToString())),
         name_(std::move(name)),
         id_(id),
         address_(std::move(address)) {
@@ -291,11 +254,37 @@ class InjectablePqxxClient {
         << connection_config.ToString();
   }
 
+  // TODO(mwhittaker): Handle hash collisions.
+  WARN_UNUSED Status Init() {
+    RETURN_IF_ERROR(ExecuteQuery(
+        "Init",
+        fmt::format(R"(
+      INSERT INTO Nodes (id, name, address)
+      VALUES ({});
+    )",
+                    Join(SqlValues(std::make_tuple(id_, name_, address_))))));
+
+    return ExecuteQuery("CreateLineageTable", fmt::format(R"(
+      CREATE TABLE {}_lineage (
+        dep_node_id          bigint   NOT NULL,
+        dep_collection_name  text     NOT NULL,
+        dep_tuple_hash       bigint   NOT NULL,
+        dep_time             bigint,
+        rule_number          integer,
+        inserted             boolean  NOT NULL,
+        collection_name      text     NOT NULL,
+        tuple_hash           bigint   NOT NULL,
+        time                 integer  NOT NULL
+      );
+    )",
+                                                          name_));
+  }
+
   // Transactionally execute the query `query` named `name`.
   virtual WARN_UNUSED Status ExecuteQuery(const std::string& name,
                                           const std::string& query) {
     try {
-      Work txn(connection_, name);
+      Work txn(*connection_, name);
       VLOG(1) << "Executing query: " << query;
       txn.exec(query);
       txn.commit();
@@ -325,19 +314,20 @@ class InjectablePqxxClient {
     }));
   }
 
-  // A connection to lineagedb database.
-  Connection connection_;
+  // A connection to lineage database. Note that we'd like InjectablePqxxClient
+  // to be default constructible so that we can return a
+  // StatusOr<InjectablePqxxClient>, but a pqxx::connection is not default
+  // constructible. We make connection_ a unique pointer so that
+  // InjectablePqxxClient is default constructible even if Connection is not.
+  std::unique_ptr<Connection> connection_;
 
-  // True after `Init()` is called;
-  bool initialized_ = false;
-
-  // The name of fluent node using this client.
+  // The name of the fluent node that owns this client.
   const std::string name_;
 
-  // Each fluent node named `n` has a unique id `hash(n)`.
+  // The id of the fluent node that owns this client.
   const std::int64_t id_;
 
-  // The address of the fluent program.
+  // The address of the fluent program that owns this client.
   const std::string address_;
 };
 

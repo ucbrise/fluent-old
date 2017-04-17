@@ -33,8 +33,11 @@ class StatusOr {
   // Builds from a non-OK status. Crashes if an OK status is specified.
   inline StatusOr(const Status& status);  // NOLINT
 
-  // Builds from the specified value.
+  // Copies from the specified value.
   inline StatusOr(const T& value);  // NOLINT
+
+  // Moves from the specified value.
+  inline StatusOr(T&& value);  // NOLINT
 
   // Copy constructor.
   inline StatusOr(const StatusOr& other);
@@ -103,6 +106,9 @@ inline StatusOr<T>::StatusOr(const Status& status) : status_(status) {
 
 template <typename T>
 inline StatusOr<T>::StatusOr(const T& value) : value_(value) {}
+
+template <typename T>
+inline StatusOr<T>::StatusOr(T&& value) : value_(std::move(value)) {}
 
 template <typename T>
 inline StatusOr<T>::StatusOr(const StatusOr& other)

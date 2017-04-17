@@ -33,6 +33,7 @@ class Status {
   // Make a Status from the specified error and message.
   Status(ErrorCode error, std::string error_message);
 
+  // Default copy and move constructors and move assignment operators.
   Status(const Status& other) = default;
   Status& operator=(const Status& other) = default;
   Status(Status&& other) = default;

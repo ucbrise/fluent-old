@@ -32,16 +32,16 @@ struct ToSqlType {
 template <template <typename> class Hash, template <typename> class ToSql>
 class MockClient {
  public:
+  MockClient() = default;
+  DISALLOW_COPY_AND_ASSIGN(MockClient);
+  MockClient(MockClient&&) = default;
+  MockClient& operator=(MockClient&&) = default;
+
   // Client Mocks //////////////////////////////////////////////////////////////
   static WARN_UNUSED StatusOr<MockClient> Make(std::string name, std::size_t id,
                                                std::string address,
                                                const ConnectionConfig& config) {
     return MockClient(std::move(name), id, std::move(address), config);
-  }
-
-  WARN_UNUSED Status Init() {
-    init_called_ = true;
-    return Status::OK;
   }
 
   template <typename... Ts>
@@ -146,7 +146,6 @@ class MockClient {
   // query
   using ExecTuple = std::tuple<std::string>;
 
-  bool GetInit() const { return init_called_; }
   const std::vector<AddCollectionTuple>& GetAddCollection() const {
     return add_collection_;
   }
@@ -181,7 +180,6 @@ class MockClient {
   const std::string address_;
   const ConnectionConfig config_;
 
-  bool init_called_ = false;
   std::vector<AddCollectionTuple> add_collection_;
   std::vector<AddRuleTuple> add_rule_;
   std::vector<InsertTupleTuple> insert_tuple_;

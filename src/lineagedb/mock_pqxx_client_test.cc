@@ -28,7 +28,6 @@ TEST(MockPqxxClient, Init) {
   StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
   ASSERT_EQ(Status::OK, client_or.status());
   Client client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, client.Init());
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(2));
@@ -58,7 +57,6 @@ TEST(MockPqxxClient, AddCollection) {
   StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
   ASSERT_EQ(Status::OK, client_or.status());
   Client client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, client.Init());
   ASSERT_EQ(Status::OK, (client.AddCollection<int, char, bool>(
                             "t", "Table", {{"x", "c", "b"}})));
 
@@ -89,7 +87,6 @@ TEST(MockPqxxClient, AddRule) {
   StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
   ASSERT_EQ(Status::OK, client_or.status());
   Client client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, client.Init());
   ASSERT_EQ(Status::OK, client.AddRule(0, true, "foo"));
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
@@ -110,7 +107,6 @@ TEST(MockPqxxClient, InsertTuple) {
   StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
   ASSERT_EQ(Status::OK, client_or.status());
   Client client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, client.Init());
   ASSERT_EQ(Status::OK, client.InsertTuple("t", 42, t));
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
@@ -134,7 +130,6 @@ TEST(MockPqxxClient, DeleteTuple) {
   StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
   ASSERT_EQ(Status::OK, client_or.status());
   Client client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, client.Init());
   ASSERT_EQ(Status::OK, client.DeleteTuple("t", 42, t));
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
@@ -159,7 +154,6 @@ TEST(MockPqxxClient, AddNetworkedLineage) {
   StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
   ASSERT_EQ(Status::OK, client_or.status());
   Client client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, client.Init());
   ASSERT_EQ(Status::OK, client.AddNetworkedLineage(0, 1, "foo", 2, 3));
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
@@ -183,7 +177,6 @@ TEST(MockPqxxClient, AddDerivedLineage) {
   StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
   ASSERT_EQ(Status::OK, client_or.status());
   Client client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, client.Init());
   ASSERT_EQ(Status::OK,
             client.AddDerivedLineage("foo", 1, 2, true, "bar", 3, 4));
 
@@ -205,7 +198,6 @@ TEST(MockPqxxClient, Exec) {
   StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
   ASSERT_EQ(Status::OK, client_or.status());
   Client client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, client.Init());
   ASSERT_EQ(Status::OK, client.Exec("who's on first?"));
   ASSERT_EQ(Status::OK, client.Exec("Yes."));
   ASSERT_EQ(Status::OK, client.Exec("the fellow's name."));

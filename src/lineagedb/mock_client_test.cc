@@ -20,16 +20,6 @@
 namespace fluent {
 namespace lineagedb {
 
-TEST(MockClient, Init) {
-  using Client = MockClient<Hash, MockToSql>;
-  StatusOr<Client> client_or = Client::Make("", 42, "", ConnectionConfig());
-  ASSERT_EQ(Status::OK, client_or.status());
-  Client client = client_or.ConsumeValueOrDie();
-  EXPECT_EQ(client.GetInit(), false);
-  ASSERT_EQ(Status::OK, client.Init());
-  EXPECT_EQ(client.GetInit(), true);
-}
-
 TEST(MockClient, AddCollection) {
   using Client = MockClient<Hash, MockToSql>;
   StatusOr<Client> client_or = Client::Make("", 42, "", ConnectionConfig());

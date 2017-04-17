@@ -31,7 +31,7 @@ class StatusOr {
   inline StatusOr();
 
   // Builds from a non-OK status. Crashes if an OK status is specified.
-  inline StatusOr(const ::util::Status& status);  // NOLINT
+  inline StatusOr(const Status& status);  // NOLINT
 
   // Builds from the specified value.
   inline StatusOr(const T& value);  // NOLINT
@@ -65,7 +65,7 @@ class StatusOr {
   inline const StatusOr& operator=(StatusOr<U>&& other);
 
   // Accessors.
-  inline const ::util::Status& status() const { return status_; }
+  inline const Status& status() const { return status_; }
 
   // Shorthand for status().ok().
   inline bool ok() const { return status_.ok(); }
@@ -75,6 +75,13 @@ class StatusOr {
     CHECK(ok()) << "Attempting to fetch value of non-OK StatusOr";
     return value_;
   }
+
+  inline T& ValueOrDie() {
+    CHECK(ok()) << "Attempting to fetch value of non-OK StatusOr";
+    return value_;
+  }
+
+  inline T ConsumeValueOrDie() { return std::move(ValueOrDie()); }
 
   template <typename U>
   friend class StatusOr;
@@ -90,7 +97,7 @@ template <typename T>
 inline StatusOr<T>::StatusOr() : status_(ErrorCode::UNKNOWN, "") {}
 
 template <typename T>
-inline StatusOr<T>::StatusOr(const ::util::Status& status) : status_(status) {
+inline StatusOr<T>::StatusOr(const Status& status) : status_(status) {
   CHECK(!status.ok()) << "Status::OK is not a valid argument to StatusOr";
 }
 

@@ -22,9 +22,13 @@ namespace fluent {
 namespace lineagedb {
 
 TEST(MockPqxxClient, Init) {
+  using Client = MockPqxxClient<Hash, ToSql>;
+
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client("name", 9001, "127.0.0.1", c);
-  client.Init();
+  StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
+  ASSERT_EQ(Status::OK, client_or.status());
+  Client client = client_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK, client.Init());
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(2));
@@ -48,10 +52,15 @@ TEST(MockPqxxClient, Init) {
 }
 
 TEST(MockPqxxClient, AddCollection) {
+  using Client = MockPqxxClient<Hash, ToSql>;
+
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client("name", 9001, "127.0.0.1", c);
-  client.Init();
-  client.AddCollection<int, char, bool>("t", "Table", {{"x", "c", "b"}});
+  StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
+  ASSERT_EQ(Status::OK, client_or.status());
+  Client client = client_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK, client.Init());
+  ASSERT_EQ(Status::OK, (client.AddCollection<int, char, bool>(
+                            "t", "Table", {{"x", "c", "b"}})));
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(4));
@@ -74,10 +83,14 @@ TEST(MockPqxxClient, AddCollection) {
 }
 
 TEST(MockPqxxClient, AddRule) {
+  using Client = MockPqxxClient<Hash, ToSql>;
+
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client("name", 9001, "127.0.0.1", c);
-  client.Init();
-  client.AddRule(0, true, "foo");
+  StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
+  ASSERT_EQ(Status::OK, client_or.status());
+  Client client = client_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK, client.Init());
+  ASSERT_EQ(Status::OK, client.AddRule(0, true, "foo"));
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(3));
@@ -88,13 +101,17 @@ TEST(MockPqxxClient, AddRule) {
 }
 
 TEST(MockPqxxClient, InsertTuple) {
+  using Client = MockPqxxClient<Hash, ToSql>;
   using tuple_t = std::tuple<int, bool, char>;
-  tuple_t t = {1, true, 'a'};
 
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client("name", 9001, "127.0.0.1", c);
-  client.Init();
-  client.InsertTuple("t", 42, t);
+  tuple_t t = {1, true, 'a'};
+
+  StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
+  ASSERT_EQ(Status::OK, client_or.status());
+  Client client = client_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK, client.Init());
+  ASSERT_EQ(Status::OK, client.InsertTuple("t", 42, t));
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
   std::int64_t hash = detail::size_t_to_int64(Hash<tuple_t>()(t));
@@ -108,13 +125,17 @@ TEST(MockPqxxClient, InsertTuple) {
 }
 
 TEST(MockPqxxClient, DeleteTuple) {
+  using Client = MockPqxxClient<Hash, ToSql>;
   using tuple_t = std::tuple<int, bool, char>;
-  tuple_t t = {1, true, 'a'};
 
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client("name", 9001, "127.0.0.1", c);
-  client.Init();
-  client.DeleteTuple("t", 42, t);
+  tuple_t t = {1, true, 'a'};
+
+  StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
+  ASSERT_EQ(Status::OK, client_or.status());
+  Client client = client_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK, client.Init());
+  ASSERT_EQ(Status::OK, client.DeleteTuple("t", 42, t));
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
   std::int64_t hash = detail::size_t_to_int64(Hash<tuple_t>()(t));
@@ -129,13 +150,17 @@ TEST(MockPqxxClient, DeleteTuple) {
 }
 
 TEST(MockPqxxClient, AddNetworkedLineage) {
+  using Client = MockPqxxClient<Hash, ToSql>;
   using tuple_t = std::tuple<int, bool, char>;
-  tuple_t t = {1, true, 'a'};
 
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client("name", 9001, "127.0.0.1", c);
-  client.Init();
-  client.AddNetworkedLineage(0, 1, "foo", 2, 3);
+  tuple_t t = {1, true, 'a'};
+
+  StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
+  ASSERT_EQ(Status::OK, client_or.status());
+  Client client = client_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK, client.Init());
+  ASSERT_EQ(Status::OK, client.AddNetworkedLineage(0, 1, "foo", 2, 3));
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
 
@@ -149,13 +174,18 @@ TEST(MockPqxxClient, AddNetworkedLineage) {
 }
 
 TEST(MockPqxxClient, AddDerivedLineage) {
+  using Client = MockPqxxClient<Hash, ToSql>;
   using tuple_t = std::tuple<int, bool, char>;
-  tuple_t t = {1, true, 'a'};
 
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client("name", 9001, "127.0.0.1", c);
-  client.Init();
-  client.AddDerivedLineage("foo", 1, 2, true, "bar", 3, 4);
+  tuple_t t = {1, true, 'a'};
+
+  StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
+  ASSERT_EQ(Status::OK, client_or.status());
+  Client client = client_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK, client.Init());
+  ASSERT_EQ(Status::OK,
+            client.AddDerivedLineage("foo", 1, 2, true, "bar", 3, 4));
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
 
@@ -169,14 +199,18 @@ TEST(MockPqxxClient, AddDerivedLineage) {
 }
 
 TEST(MockPqxxClient, Exec) {
+  using Client = MockPqxxClient<Hash, ToSql>;
+
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client("name", 9001, "127.0.0.1", c);
-  client.Init();
-  client.Exec("who's on first?");
-  client.Exec("Yes.");
-  client.Exec("the fellow's name.");
-  client.Exec("Who.");
-  client.Exec("The guy on first.");
+  StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
+  ASSERT_EQ(Status::OK, client_or.status());
+  Client client = client_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK, client.Init());
+  ASSERT_EQ(Status::OK, client.Exec("who's on first?"));
+  ASSERT_EQ(Status::OK, client.Exec("Yes."));
+  ASSERT_EQ(Status::OK, client.Exec("the fellow's name."));
+  ASSERT_EQ(Status::OK, client.Exec("Who."));
+  ASSERT_EQ(Status::OK, client.Exec("The guy on first."));
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(7));

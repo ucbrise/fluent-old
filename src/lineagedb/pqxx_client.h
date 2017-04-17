@@ -7,6 +7,10 @@
 #include "glog/logging.h"
 #include "pqxx/pqxx"
 
+#include "common/macros.h"
+#include "common/status.h"
+#include "common/status_macros.h"
+#include "common/status_or.h"
 #include "common/string_util.h"
 #include "common/tuple_util.h"
 #include "common/type_list.h"
@@ -87,30 +91,30 @@ template <typename Connection, typename Work, template <typename> class Hash,
           template <typename> class ToSql>
 class InjectablePqxxClient {
  public:
-  InjectablePqxxClient(std::string name, std::size_t id, std::string address,
-                       const ConnectionConfig& connection_config)
-      : connection_(connection_config.ToString()),
-        name_(std::move(name)),
-        id_(id),
-        address_(std::move(address)) {
-    LOG(INFO)
-        << "Established a lineagedb connection with the following parameters: "
-        << connection_config.ToString();
+  static WARN_UNUSED StatusOr<InjectablePqxxClient> Make(
+      std::string name, std::size_t id, std::string address,
+      const ConnectionConfig& connection_config) {
+    try {
+      return InjectablePqxxClient(std::move(name), id, std::move(address),
+                                  connection_config);
+    } catch (const pqxx::pqxx_exception& e) {
+      return Status(ErrorCode::INVALID_ARGUMENT, e.base().what());
+    }
   }
 
   // TODO(mwhittaker): Handle hash collisions.
-  void Init() {
+  WARN_UNUSED Status Init() {
     initialized_ = true;
 
-    ExecuteQuery(
+    RETURN_IF_ERROR(ExecuteQuery(
         "Init",
         fmt::format(R"(
       INSERT INTO Nodes (id, name, address)
       VALUES ({});
     )",
-                    Join(SqlValues(std::make_tuple(id_, name_, address_)))));
+                    Join(SqlValues(std::make_tuple(id_, name_, address_))))));
 
-    ExecuteQuery("CreateLineageTable", fmt::format(R"(
+    return ExecuteQuery("CreateLineageTable", fmt::format(R"(
       CREATE TABLE {}_lineage (
         dep_node_id          bigint   NOT NULL,
         dep_collection_name  text     NOT NULL,
@@ -123,23 +127,27 @@ class InjectablePqxxClient {
         time                 integer  NOT NULL
       );
     )",
-                                                   name_));
+                                                          name_));
   }
 
   template <typename... Ts>
-  void AddCollection(
+  WARN_UNUSED Status AddCollection(
       const std::string& collection_name, const std::string& collection_type,
       const std::array<std::string, sizeof...(Ts)>& column_names) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >= 1 column.");
-    CHECK(initialized_) << "Call Init first.";
+    if (!initialized_) {
+      return Status(ErrorCode::FAILED_PRECONDITION, "Call Init first.");
+    };
 
     // For a fluent node `n` and collection `c`, we create a lineagedb relation
     // `n_c`. We also make a relation for the lineage of `n` called
     // `n_lineage`. Thus, we have a naming conflict if `c == lineage`.
-    CHECK_NE(collection_name, std::string("lineage"))
-        << "Lineage is a reserved collection name.";
+    if (collection_name == "lineage") {
+      return Status(ErrorCode::INVALID_ARGUMENT,
+                    "Lineage is a reserved collection name.");
+    }
 
-    ExecuteQuery(
+    RETURN_IF_ERROR(ExecuteQuery(
         "AddCollection",
         fmt::format(
             R"(
@@ -148,7 +156,7 @@ class InjectablePqxxClient {
       VALUES ({});
     )",
             Join(SqlValues(std::make_tuple(id_, collection_name,
-                                           collection_type, column_names)))));
+                                           collection_type, column_names))))));
 
     std::vector<std::string> types = SqlTypes<Ts...>();
     std::vector<std::string> columns;
@@ -156,8 +164,8 @@ class InjectablePqxxClient {
       columns.push_back(
           fmt::format("{} {} NOT NULL", column_names[i], types[i]));
     }
-    ExecuteQuery("AddCollectionTable",
-                 fmt::format(R"(
+    return ExecuteQuery("AddCollectionTable",
+                        fmt::format(R"(
       CREATE TABLE {}_{} (
         hash          bigint  NOT NULL,
         time_inserted integer NOT NULL,
@@ -166,13 +174,15 @@ class InjectablePqxxClient {
         PRIMARY KEY (hash, time_inserted)
       );
     )",
-                             name_, collection_name, Join(columns)));
+                                    name_, collection_name, Join(columns)));
   }
 
-  void AddRule(std::size_t rule_number, bool is_bootstrap,
-               const std::string& rule_string) {
-    CHECK(initialized_) << "Call Init first.";
-    ExecuteQuery(
+  WARN_UNUSED Status AddRule(std::size_t rule_number, bool is_bootstrap,
+                             const std::string& rule_string) {
+    if (!initialized_) {
+      return Status(ErrorCode::FAILED_PRECONDITION, "Call Init first.");
+    };
+    return ExecuteQuery(
         "AddRule",
         fmt::format(R"(
       INSERT INTO Rules (node_id, rule_number, is_bootstrap, rule)
@@ -183,39 +193,47 @@ class InjectablePqxxClient {
   }
 
   template <typename... Ts>
-  void InsertTuple(const std::string& collection_name, int time_inserted,
-                   const std::tuple<Ts...>& t) {
+  WARN_UNUSED Status InsertTuple(const std::string& collection_name,
+                                 int time_inserted,
+                                 const std::tuple<Ts...>& t) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >=1 column.");
-    CHECK(initialized_) << "Call Init first.";
+    if (!initialized_) {
+      return Status(ErrorCode::FAILED_PRECONDITION, "Call Init first.");
+    };
     std::int64_t hash = detail::size_t_to_int64(Hash<std::tuple<Ts...>>()(t));
-    ExecuteQuery("InsertTuple", fmt::format(R"(
+    return ExecuteQuery("InsertTuple",
+                        fmt::format(R"(
       INSERT INTO {}_{}
       VALUES ({}, {}, NULL, {});
     )",
-                                            name_, collection_name, hash,
-                                            time_inserted, Join(SqlValues(t))));
+                                    name_, collection_name, hash, time_inserted,
+                                    Join(SqlValues(t))));
   }
 
   template <typename... Ts>
-  void DeleteTuple(const std::string& collection_name, int time_deleted,
-                   const std::tuple<Ts...>& t) {
+  WARN_UNUSED Status DeleteTuple(const std::string& collection_name,
+                                 int time_deleted, const std::tuple<Ts...>& t) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >=1 column.");
-    CHECK(initialized_) << "Call Init first.";
+    if (!initialized_) {
+      return Status(ErrorCode::FAILED_PRECONDITION, "Call Init first.");
+    };
     std::int64_t hash = detail::size_t_to_int64(Hash<std::tuple<Ts...>>()(t));
-    ExecuteQuery("DeleteTuple",
-                 fmt::format(R"(
+    return ExecuteQuery(
+        "DeleteTuple", fmt::format(R"(
       UPDATE {}_{}
       SET time_deleted = {}
       WHERE hash={} AND time_deleted IS NULL;
     )",
-                             name_, collection_name, time_deleted, hash));
+                                   name_, collection_name, time_deleted, hash));
   }
 
-  void AddNetworkedLineage(std::size_t dep_node_id, int dep_time,
-                           const std::string& collection_name,
-                           std::size_t tuple_hash, int time) {
-    CHECK(initialized_) << "Call Init first.";
-    ExecuteQuery(
+  WARN_UNUSED Status AddNetworkedLineage(std::size_t dep_node_id, int dep_time,
+                                         const std::string& collection_name,
+                                         std::size_t tuple_hash, int time) {
+    if (!initialized_) {
+      return Status(ErrorCode::FAILED_PRECONDITION, "Call Init first.");
+    };
+    return ExecuteQuery(
         "AddLineage",
         fmt::format(
             R"(
@@ -232,12 +250,15 @@ class InjectablePqxxClient {
                                            time)))));
   }
 
-  void AddDerivedLineage(const std::string& dep_collection_name,
-                         std::size_t dep_tuple_hash, int rule_number,
-                         bool inserted, const std::string& collection_name,
-                         std::size_t tuple_hash, int time) {
-    CHECK(initialized_) << "Call Init first.";
-    ExecuteQuery(
+  WARN_UNUSED Status AddDerivedLineage(const std::string& dep_collection_name,
+                                       std::size_t dep_tuple_hash,
+                                       int rule_number, bool inserted,
+                                       const std::string& collection_name,
+                                       std::size_t tuple_hash, int time) {
+    if (!initialized_) {
+      return Status(ErrorCode::FAILED_PRECONDITION, "Call Init first.");
+    };
+    return ExecuteQuery(
         "AddLineage",
         fmt::format(
             R"(
@@ -254,15 +275,34 @@ class InjectablePqxxClient {
                                 detail::size_t_to_int64(tuple_hash), time)))));
   }
 
-  void Exec(const std::string& query) { ExecuteQuery("Exec", query); }
+  WARN_UNUSED Status Exec(const std::string& query) {
+    return ExecuteQuery("Exec", query);
+  }
 
  protected:
+  InjectablePqxxClient(std::string name, std::size_t id, std::string address,
+                       const ConnectionConfig& connection_config)
+      : connection_(connection_config.ToString()),
+        name_(std::move(name)),
+        id_(id),
+        address_(std::move(address)) {
+    LOG(INFO)
+        << "Established a lineagedb connection with the following parameters: "
+        << connection_config.ToString();
+  }
+
   // Transactionally execute the query `query` named `name`.
-  virtual void ExecuteQuery(const std::string& name, const std::string& query) {
-    Work txn(connection_, name);
-    VLOG(1) << "Executing query: " << query;
-    txn.exec(query);
-    txn.commit();
+  virtual WARN_UNUSED Status ExecuteQuery(const std::string& name,
+                                          const std::string& query) {
+    try {
+      Work txn(connection_, name);
+      VLOG(1) << "Executing query: " << query;
+      txn.exec(query);
+      txn.commit();
+      return Status::OK;
+    } catch (const pqxx::pqxx_exception& e) {
+      return Status(ErrorCode::INVALID_ARGUMENT, e.base().what());
+    }
   }
 
  private:

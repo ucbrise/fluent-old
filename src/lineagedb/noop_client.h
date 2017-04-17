@@ -6,6 +6,9 @@
 #include <array>
 #include <string>
 
+#include "common/macros.h"
+#include "common/status.h"
+#include "common/status_or.h"
 #include "lineagedb/connection_config.h"
 
 namespace fluent {
@@ -18,29 +21,45 @@ namespace lineagedb {
 template <template <typename> class Hash, template <typename> class ToSql>
 class NoopClient {
  public:
-  NoopClient(std::string, std::size_t, std::string, const ConnectionConfig&) {}
+  static WARN_UNUSED StatusOr<NoopClient> WARN_UNUSED
+  Make(std::string, std::size_t, std::string, const ConnectionConfig&) {
+    return NoopClient();
+  }
 
-  void Init() {}
-
-  template <typename... Ts>
-  void AddCollection(const std::string&, const std::string&,
-                     const std::array<std::string, sizeof...(Ts)>&) {}
-
-  void AddRule(std::size_t, bool, const std::string&) {}
+  Status Init() { return Status::OK; }
 
   template <typename... Ts>
-  void InsertTuple(const std::string&, int, const std::tuple<Ts...>&) {}
+  Status AddCollection(const std::string&, const std::string&,
+                       const std::array<std::string, sizeof...(Ts)>&) {
+    return Status::OK;
+  }
+
+  Status AddRule(std::size_t, bool, const std::string&) { return Status::OK; }
 
   template <typename... Ts>
-  void DeleteTuple(const std::string&, int, const std::tuple<Ts...>&) {}
+  Status InsertTuple(const std::string&, int, const std::tuple<Ts...>&) {
+    return Status::OK;
+  }
 
-  void AddNetworkedLineage(std::size_t, int, const std::string&, std::size_t,
-                           int) {}
+  template <typename... Ts>
+  Status DeleteTuple(const std::string&, int, const std::tuple<Ts...>&) {
+    return Status::OK;
+  }
 
-  void AddDerivedLineage(const std::string&, std::size_t, int, bool,
-                         const std::string&, std::size_t, int) {}
+  Status AddNetworkedLineage(std::size_t, int, const std::string&, std::size_t,
+                             int) {
+    return Status::OK;
+  }
 
-  void Exec(const std::string&) {}
+  Status AddDerivedLineage(const std::string&, std::size_t, int, bool,
+                           const std::string&, std::size_t, int) {
+    return Status::OK;
+  }
+
+  Status Exec(const std::string&) { return Status::OK; }
+
+ private:
+  NoopClient(){};
 };
 
 }  // namespace lineagedb

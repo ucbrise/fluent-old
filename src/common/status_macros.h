@@ -33,8 +33,9 @@
 #ifndef COMMON_STATUS_MACROS_H_
 #define COMMON_STATUS_MACROS_H_
 
+#include "common/macros.h"
 #include "common/status.h"
-#include "common/statusor.h"
+#include "common/status_or.h"
 
 namespace fluent {
 

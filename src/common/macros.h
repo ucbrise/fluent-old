@@ -36,6 +36,22 @@ namespace fluent {
   TypeName(const TypeName&) = delete;      \
   void operator=(const TypeName&) = delete;
 
+// Prepending a function declaration with the WARN_UNUSED macro will cause the
+// compiler to emit a warning if the return value is not used. For example, the
+// following code will emit a warning because the return of f is not used.
+//
+//   WARN_UNUSED int f(int x) {
+//     return x;
+//   }
+//
+//   int main() {
+//     f(42); // Warning.
+//   }
+//
+// This code was taken from http://stackoverflow.com/a/2043239/3187068 and
+// works with both g++ and clang++.
+#define WARN_UNUSED __attribute__((warn_unused_result))
+
 }  // namespace fluent
 
 #endif  // COMMON_MACROS_H

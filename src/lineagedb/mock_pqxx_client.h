@@ -7,6 +7,9 @@
 #include <utility>
 #include <vector>
 
+#include "common/macros.h"
+#include "common/status.h"
+#include "common/status_or.h"
 #include "lineagedb/mock_connection.h"
 #include "lineagedb/mock_work.h"
 #include "lineagedb/pqxx_client.h"
@@ -37,14 +40,17 @@ template <template <typename> class Hash, template <typename> class ToSql>
 class MockPqxxClient
     : public InjectablePqxxClient<MockConnection, MockWork, Hash, ToSql> {
  public:
-  MockPqxxClient(std::string name, std::size_t id, std::string address,
-                 const ConnectionConfig& connection_config)
-      : InjectablePqxxClient<MockConnection, MockWork, Hash, ToSql>(
-            std::move(name), id, std::move(address), connection_config) {}
+  static WARN_UNUSED StatusOr<MockPqxxClient> Make(
+      std::string name, std::size_t id, std::string address,
+      const ConnectionConfig& connection_config) {
+    return MockPqxxClient(std::move(name), id, std::move(address),
+                          connection_config);
+  }
 
-  void ExecuteQuery(const std::string& name,
-                    const std::string& query) override {
+  WARN_UNUSED Status ExecuteQuery(const std::string& name,
+                                  const std::string& query) override {
     queries_.push_back({name, query});
+    return Status::OK;
   }
 
   const std::vector<std::pair<std::string, std::string>>& Queries() {
@@ -52,6 +58,11 @@ class MockPqxxClient
   }
 
  private:
+  MockPqxxClient(std::string name, std::size_t id, std::string address,
+                 const ConnectionConfig& connection_config)
+      : InjectablePqxxClient<MockConnection, MockWork, Hash, ToSql>(
+            std::move(name), id, std::move(address), connection_config) {}
+
   std::vector<std::pair<std::string, std::string>> queries_;
 };
 

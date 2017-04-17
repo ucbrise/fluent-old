@@ -6,6 +6,11 @@ ADD_LIBRARY(common
     string_util.cc
 )
 
+TARGET_LINK_LIBRARIES(common
+    ${FMT_LINK_DIRS}/libfmt.a
+    glog
+)
+
 MACRO(CREATE_COMMON_TEST NAME)
     CREATE_NAMED_TEST(common_${NAME} ${NAME})
     TARGET_LINK_LIBRARIES(common_${NAME} common glog)

@@ -1,0 +1,5 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
+
+ADD_EXECUTABLE(examples_ps_server_manager server_manager.cc)
+
+TARGET_LINK_LIBRARIES(examples_ps_server_manager fluent)

@@ -179,12 +179,12 @@ TEST(Table, LatticeType) {
 }
 
 TEST(Table, ComplexType) {
-  Table<std::pair<int, int>> t("t");
-  std::pair<int, int> p1(1,1);
-  std::pair<int, int> p2(2,2);
-  std::set<std::tuple<std::pair<int, int>>> s = {};
-  s.insert(std::make_tuple(p1));
-  s.insert(std::make_tuple(p2));
+  Table<std::set<std::tuple<int, int>>> t("t");
+  std::set<std::tuple<int, int>> s1 = {std::make_tuple(1, 1), std::make_tuple(2, 2)};
+  std::set<std::tuple<int, int>> s2 = {std::make_tuple(3, 3), std::make_tuple(4, 4)};
+  std::set<std::tuple<std::set<std::tuple<int, int>>>> s = {};
+  s.insert(std::make_tuple(s1));
+  s.insert(std::make_tuple(s2));
   t.Merge(ra::make_iterable(&s));
   EXPECT_THAT(t.Get(), testing::UnorderedElementsAreArray(s));
 }

@@ -5,6 +5,7 @@
 
 #include "zmq.hpp"
 
+#include "common/status.h"
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"
@@ -28,10 +29,11 @@ int ClientMain(const ClientArgs& args,
       std::make_tuple(args.server_address, args.client_address, args.nickname)};
 
   zmq::context_t context(1);
-  auto f =
+  fluent::Status status =
       fluent::fluent<LineageDbClient>("chat_client_" + args.nickname,
                                       args.client_address, &context,
                                       connection_config)
+          .ConsumeValueOrDie()
           .stdin()
           .stdout()
           .template channel<std::string, std::string, std::string>(
@@ -55,9 +57,11 @@ int ClientMain(const ClientArgs& args,
             auto to_out = out <= (mcast.Iterable() | ra::project<1>());
 
             return std::make_tuple(from_in, to_out);
-          });
+          })
+          .ConsumeValueOrDie()
+          .Run();
+  CHECK_EQ(fluent::Status::OK, status);
 
-  f.Run();
   return 0;
 }
 

@@ -7,6 +7,7 @@
 #include "glog/logging.h"
 #include "zmq.hpp"
 
+#include "common/status.h"
 #include "common/string_util.h"
 #include "examples/black_boxes/key_value.h"
 #include "examples/black_boxes/random_id_generator.h"
@@ -39,12 +40,13 @@ int main(int argc, char* argv[]) {
 
   zmq::context_t context(1);
   ldb::ConnectionConfig config{"localhost", 5432, argv[1], argv[2], argv[3]};
-  auto f = fluent::fluent<ldb::PqxxClient>("key_value_client", client_address,
-                                           &context, config)
-               .stdin()
-               .stdout()
-               .scratch<std::vector<std::string>>("split", {{"parts"}});
-  AddKeyValueApi(std::move(f))
+  auto fb = fluent::fluent<ldb::PqxxClient>("key_value_client", client_address,
+                                            &context, config)
+                .ConsumeValueOrDie()
+                .stdin()
+                .stdout()
+                .scratch<std::vector<std::string>>("split", {{"parts"}});
+  AddKeyValueApi(std::move(fb))
       .RegisterRules([&](auto& stdin, auto& stdout, auto& split, auto& set_req,
                          auto& set_resp, auto& get_req, auto& get_resp) {
         using namespace fluent::infix;
@@ -99,5 +101,6 @@ int main(int argc, char* argv[]) {
         return std::make_tuple(buffer_stdin, get_request, set_request,
                                get_response);
       })
+      .ConsumeValueOrDie()
       .Run();
 }

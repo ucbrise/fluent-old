@@ -58,7 +58,7 @@ namespace fluent {
 template <typename T>
 Status DoAssignOrReturn(T& lhs, StatusOr<T> result) {
   if (result.ok()) {
-    lhs = result.ValueOrDie();
+    lhs = result.ConsumeValueOrDie();
   }
   return result.status();
 }

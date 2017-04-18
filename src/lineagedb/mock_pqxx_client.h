@@ -44,10 +44,10 @@ template <template <typename> class Hash, template <typename> class ToSql>
 class MockPqxxClient
     : public InjectablePqxxClient<MockConnection, MockWork, Hash, ToSql> {
  public:
-  MockPqxxClient() = default;
   DISALLOW_COPY_AND_ASSIGN(MockPqxxClient);
   MockPqxxClient(MockPqxxClient&&) = default;
   MockPqxxClient& operator=(MockPqxxClient&&) = default;
+  virtual ~MockPqxxClient() = default;
 
   static WARN_UNUSED StatusOr<MockPqxxClient> Make(
       std::string name, std::size_t id, std::string address,

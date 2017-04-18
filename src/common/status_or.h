@@ -17,6 +17,7 @@
 #ifndef COMMON_STATUS_OR_H_
 #define COMMON_STATUS_OR_H_
 
+#include "boost/variant.hpp"
 #include "glog/logging.h"
 
 #include "common/status.h"
@@ -24,6 +25,7 @@
 namespace fluent {
 
 // A StatusOr holds a Status (in the case of an error), or a value T.
+// TODO(mwhittaker): Write unit tests for StatusOr.
 template <typename T>
 class StatusOr {
  public:
@@ -68,20 +70,33 @@ class StatusOr {
   inline const StatusOr& operator=(StatusOr<U>&& other);
 
   // Accessors.
-  inline const Status& status() const { return status_; }
+  inline const Status& status() const {
+    if (variant_.which() == 0) {
+      return boost::get<Status>(variant_);
+    } else {
+      return Status::OK;
+    }
+  }
 
   // Shorthand for status().ok().
-  inline bool ok() const { return status_.ok(); }
+  inline bool ok() const {
+    if (variant_.which() == 1) {
+      return true;
+    } else {
+      CHECK(!boost::get<Status>(variant_).ok());
+      return false;
+    }
+  }
 
   // Returns value or crashes if ok() is false.
   inline const T& ValueOrDie() const {
     CHECK(ok()) << "Attempting to fetch value of non-OK StatusOr";
-    return value_;
+    return boost::get<T>(variant_);
   }
 
   inline T& ValueOrDie() {
     CHECK(ok()) << "Attempting to fetch value of non-OK StatusOr";
-    return value_;
+    return boost::get<T>(variant_);
   }
 
   inline T ConsumeValueOrDie() { return std::move(ValueOrDie()); }
@@ -90,79 +105,66 @@ class StatusOr {
   friend class StatusOr;
 
  private:
-  Status status_;
-  T value_;
+  boost::variant<Status, T> variant_;
 };
 
 // Implementation.
 
 template <typename T>
-inline StatusOr<T>::StatusOr() : status_(ErrorCode::UNKNOWN, "") {}
+inline StatusOr<T>::StatusOr() : variant_(Status(ErrorCode::UNKNOWN, "")) {}
 
 template <typename T>
-inline StatusOr<T>::StatusOr(const Status& status) : status_(status) {
+inline StatusOr<T>::StatusOr(const Status& status) : variant_(status) {
   CHECK(!status.ok()) << "Status::OK is not a valid argument to StatusOr";
 }
 
 template <typename T>
-inline StatusOr<T>::StatusOr(const T& value) : value_(value) {}
+inline StatusOr<T>::StatusOr(const T& value) : variant_(value) {}
 
 template <typename T>
-inline StatusOr<T>::StatusOr(T&& value) : value_(std::move(value)) {}
+inline StatusOr<T>::StatusOr(T&& value) : variant_(std::move(value)) {}
 
 template <typename T>
 inline StatusOr<T>::StatusOr(const StatusOr& other)
-    : status_(other.status_), value_(other.value_) {}
+    : variant_(other.variant_) {}
 
 template <typename T>
 template <typename U>
 inline StatusOr<T>::StatusOr(const StatusOr<U>& other)
-    : status_(other.status_), value_(other.value_) {}
+    : variant_(other.variant_) {}
 
 template <typename T>
 inline StatusOr<T>::StatusOr(StatusOr&& other)
-    : status_(std::move(other.status_)), value_(std::move(other.value_)) {}
+    : variant_(std::move(other.variant_)) {}
 
 template <typename T>
 template <typename U>
 inline StatusOr<T>::StatusOr(StatusOr<U>&& other)
-    : status_(std::move(other.status_)), value_(std::move(other.value_)) {}
+    : variant_(std::move(other.variant_)) {}
 
 template <typename T>
 inline const StatusOr<T>& StatusOr<T>::operator=(const StatusOr& other) {
-  status_ = other.status_;
-  if (status_.ok()) {
-    value_ = other.value_;
-  }
+  variant_ = other.variant_;
   return *this;
 }
 
 template <typename T>
 template <typename U>
 inline const StatusOr<T>& StatusOr<T>::operator=(const StatusOr<U>& other) {
-  status_ = other.status_;
-  if (status_.ok()) {
-    value_ = other.value_;
-  }
+  variant_ = other.variant_;
   return *this;
 }
 
 template <typename T>
 inline const StatusOr<T>& StatusOr<T>::operator=(StatusOr&& other) {
-  status_ = std::move(other.status_);
-  if (status_.ok()) {
-    value_ = std::move(other.value_);
-  }
+  variant_ = std::move(other.variant_);
   return *this;
 }
 
 template <typename T>
 template <typename U>
 inline const StatusOr<T>& StatusOr<T>::operator=(StatusOr<U>&& other) {
-  status_ = std::move(other.status_);
-  if (status_.ok()) {
-    value_ = std::move(other.value_);
-  }
+  variant_ = std::move(other.variant_);
   return *this;
 }
 

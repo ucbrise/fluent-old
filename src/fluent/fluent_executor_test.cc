@@ -12,6 +12,8 @@
 #include "gtest/gtest.h"
 #include "zmq.hpp"
 
+#include "common/status.h"
+#include "common/status_or.h"
 #include "common/string_util.h"
 #include "fluent/channel.h"
 #include "fluent/fluent_builder.h"
@@ -42,32 +44,36 @@ auto noopfluent(const std::string& name, const std::string& address,
 TEST(FluentExecutor, SimpleProgram) {
   zmq::context_t context(1);
   lineagedb::ConnectionConfig connection_config;
-  auto f = noopfluent("name", "inproc://yolo", &context, connection_config)
-               .table<std::size_t>("t", {{"x"}})
-               .scratch<int, int, float>("s", {{"x", "y", "z"}})
-               .channel<std::string, float, char>("c", {{"addr", "x", "y"}})
-               .RegisterRules([](auto& t, auto& s, auto& c) {
-                 using namespace fluent::infix;
-                 return std::make_tuple(t <= (t.Iterable() | ra::count()),
-                                        t <= (s.Iterable() | ra::count()),
-                                        t <= (c.Iterable() | ra::count()));
-               });
+  auto fb_or = noopfluent("name", "inproc://yolo", &context, connection_config);
+  ASSERT_EQ(Status::OK, fb_or.status());
+  auto fe_or = fb_or.ConsumeValueOrDie()
+                   .table<std::size_t>("t", {{"x"}})
+                   .scratch<int, int, float>("s", {{"x", "y", "z"}})
+                   .channel<std::string, float, char>("c", {{"addr", "x", "y"}})
+                   .RegisterRules([](auto& t, auto& s, auto& c) {
+                     using namespace fluent::infix;
+                     return std::make_tuple(t <= (t.Iterable() | ra::count()),
+                                            t <= (s.Iterable() | ra::count()),
+                                            t <= (c.Iterable() | ra::count()));
+                   });
+  ASSERT_EQ(Status::OK, fe_or.status());
+  auto f = fe_or.ConsumeValueOrDie();
 
   using T = std::set<std::tuple<int>>;
   using S = std::set<std::tuple<int, int, float>>;
   using C = std::set<std::tuple<std::string, float, char>>;
 
-  f.Tick();
+  ASSERT_EQ(Status::OK, f.Tick());
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
   EXPECT_THAT(f.Get<2>().Get(), UnorderedElementsAreArray(C{}));
 
-  f.Tick();
+  ASSERT_EQ(Status::OK, f.Tick());
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}, {1}}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
   EXPECT_THAT(f.Get<2>().Get(), UnorderedElementsAreArray(C{}));
 
-  f.Tick();
+  ASSERT_EQ(Status::OK, f.Tick());
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}, {1}, {2}}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
   EXPECT_THAT(f.Get<2>().Get(), UnorderedElementsAreArray(C{}));
@@ -79,8 +85,10 @@ TEST(FluentExecutor, SimpleBootstrap) {
 
   zmq::context_t context(1);
   lineagedb::ConnectionConfig connection_config;
-  auto f =
-      noopfluent("name", "inproc://yolo", &context, connection_config)
+  auto fb_or = noopfluent("name", "inproc://yolo", &context, connection_config);
+  ASSERT_EQ(Status::OK, fb_or.status());
+  auto fe_or =
+      fb_or.ConsumeValueOrDie()
           .table<int>("t", {{"x"}})
           .scratch<int>("s", {{"x"}})
           .RegisterBootstrapRules([&xs](auto& t, auto& s) {
@@ -89,10 +97,12 @@ TEST(FluentExecutor, SimpleBootstrap) {
                                    s <= ra::make_iterable("xs", &xs));
           })
           .RegisterRules([&xs](auto&, auto&) { return std::make_tuple(); });
+  ASSERT_EQ(Status::OK, fe_or.status());
+  auto f = fe_or.ConsumeValueOrDie();
 
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(Tuples{}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(Tuples{}));
-  f.BootstrapTick();
+  ASSERT_EQ(Status::OK, f.BootstrapTick());
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(xs));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(Tuples{}));
 }
@@ -104,8 +114,10 @@ TEST(FluentExecutor, MildlyComplexProgram) {
 
   zmq::context_t context(1);
   lineagedb::ConnectionConfig connection_config;
-  auto f =
-      noopfluent("name", "inproc://yolo", &context, connection_config)
+  auto fb_or = noopfluent("name", "inproc://yolo", &context, connection_config);
+  ASSERT_EQ(Status::OK, fb_or.status());
+  auto fe_or =
+      fb_or.ConsumeValueOrDie()
           .table<std::size_t>("t", {{"x"}})
           .scratch<std::size_t>("s", {{"x"}})
           .stdout()
@@ -119,6 +131,8 @@ TEST(FluentExecutor, MildlyComplexProgram) {
             auto f = stdout += (s.Iterable() | ra::map(int_tuple_to_string));
             return std::make_tuple(a, b, c, d, e, f);
           });
+  ASSERT_EQ(Status::OK, fb_or.status());
+  auto f = fe_or.ConsumeValueOrDie();
 
   using T = std::set<std::tuple<int>>;
   CapturedStdout captured;
@@ -127,12 +141,12 @@ TEST(FluentExecutor, MildlyComplexProgram) {
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(T{}));
   EXPECT_STREQ("", captured.Get().c_str());
 
-  f.Tick();
+  ASSERT_EQ(Status::OK, f.Tick());
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(T{}));
   EXPECT_STREQ("1\n1\n", captured.Get().c_str());
 
-  f.Tick();
+  ASSERT_EQ(Status::OK, f.Tick());
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}, {1}}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(T{}));
   EXPECT_STREQ("1\n1\n2\n2\n", captured.Get().c_str());
@@ -150,30 +164,35 @@ TEST(FluentExecutor, ComplexProgram) {
 
   zmq::context_t context(1);
   lineagedb::ConnectionConfig connection_config;
-  auto f = noopfluent("name", "inproc://yolo", &context, connection_config)
-               .table<std::size_t>("t", {{"x"}})
-               .scratch<std::size_t>("s", {{"x"}})
-               .RegisterRules([plus_one_times_two, is_even](auto& t, auto& s) {
-                 using namespace fluent::infix;
-                 auto a = t += (s.Iterable() | ra::count());
-                 auto b = t <= (t.Iterable() | ra::map(plus_one_times_two));
-                 auto c = s <= t.Iterable();
-                 auto d = t -= (s.Iterable() | ra::filter(is_even));
-                 return std::make_tuple(a, b, c, d);
-               });
+  auto fb_or = noopfluent("name", "inproc://yolo", &context, connection_config);
+  ASSERT_EQ(Status::OK, fb_or.status());
+  auto fe_or =
+      fb_or.ConsumeValueOrDie()
+          .table<std::size_t>("t", {{"x"}})
+          .scratch<std::size_t>("s", {{"x"}})
+          .RegisterRules([plus_one_times_two, is_even](auto& t, auto& s) {
+            using namespace fluent::infix;
+            auto a = t += (s.Iterable() | ra::count());
+            auto b = t <= (t.Iterable() | ra::map(plus_one_times_two));
+            auto c = s <= t.Iterable();
+            auto d = t -= (s.Iterable() | ra::filter(is_even));
+            return std::make_tuple(a, b, c, d);
+          });
+  ASSERT_EQ(Status::OK, fe_or.status());
+  auto f = fe_or.ConsumeValueOrDie();
 
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
 
-  f.Tick();
+  ASSERT_EQ(Status::OK, f.Tick());
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
 
-  f.Tick();
+  ASSERT_EQ(Status::OK, f.Tick());
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
 
-  f.Tick();
+  ASSERT_EQ(Status::OK, f.Tick());
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
 }
@@ -187,38 +206,50 @@ TEST(FluentExecutor, SimpleCommunication) {
 
   zmq::context_t context(1);
   lineagedb::ConnectionConfig connection_config;
-  auto ping =
-      noopfluent("name", "inproc://ping", &context, connection_config)
+
+  auto ping_fb_or =
+      noopfluent("name", "inproc://ping", &context, connection_config);
+  ASSERT_EQ(Status::OK, ping_fb_or.status());
+  auto ping_fe_or =
+      ping_fb_or.ConsumeValueOrDie()
           .channel<std::string, int>("c", {{"addr", "x"}})
           .RegisterRules([&reroute](auto& c) {
             using namespace fluent::infix;
             return std::make_tuple(
                 c <= (c.Iterable() | ra::map(reroute("inproc://pong"))));
           });
-  auto pong =
-      noopfluent("name", "inproc://pong", &context, connection_config)
+  ASSERT_EQ(Status::OK, ping_fe_or.status());
+  auto ping = ping_fe_or.ConsumeValueOrDie();
+
+  auto pong_fb_or =
+      noopfluent("name", "inproc://pong", &context, connection_config);
+  ASSERT_EQ(Status::OK, pong_fb_or.status());
+  auto pong_fe_or =
+      pong_fb_or.ConsumeValueOrDie()
           .channel<std::string, int>("c", {{"addr", "x"}})
           .RegisterRules([&reroute](auto& c) {
             using namespace fluent::infix;
             return std::make_tuple(
                 c <= (c.Iterable() | ra::map(reroute("inproc://ping"))));
           });
+  ASSERT_EQ(Status::OK, pong_fe_or.status());
+  auto pong = pong_fe_or.ConsumeValueOrDie();
 
   using C = std::set<std::tuple<std::string, int>>;
   C catalyst = {{"inproc://pong", 42}};
   ping.MutableGet<0>().Merge(catalyst, 9001);
 
   for (int i = 0; i < 3; ++i) {
-    pong.Receive();
+    ASSERT_EQ(Status::OK, pong.Receive());
     EXPECT_THAT(pong.Get<0>().Get(),
                 UnorderedElementsAreArray(C{{"inproc://pong", 42}}));
-    pong.Tick();
+    ASSERT_EQ(Status::OK, pong.Tick());
     EXPECT_THAT(pong.Get<0>().Get(), UnorderedElementsAreArray(C{}));
 
-    ping.Receive();
+    ASSERT_EQ(Status::OK, ping.Receive());
     EXPECT_THAT(ping.Get<0>().Get(),
                 UnorderedElementsAreArray(C{{"inproc://ping", 42}}));
-    ping.Tick();
+    ASSERT_EQ(Status::OK, ping.Tick());
     EXPECT_THAT(ping.Get<0>().Get(), UnorderedElementsAreArray(C{}));
   }
 }
@@ -226,17 +257,21 @@ TEST(FluentExecutor, SimpleCommunication) {
 TEST(FluentExecutor, SimpleProgramWithLineage) {
   zmq::context_t context(1);
   lineagedb::ConnectionConfig connection_config;
-  auto f = fluent<ldb::MockClient, Hash, ldb::MockToSql>(
-               "name", "inproc://yolo", &context, connection_config)
-               .table<std::size_t>("t", {{"x"}})
-               .scratch<std::size_t>("s", {{"x"}})
-               .channel<std::string, float, char>("c", {{"addr", "x", "y"}})
-               .RegisterRules([](auto& t, auto& s, auto& c) {
-                 using namespace fluent::infix;
-                 return std::make_tuple(t <= (t.Iterable() | ra::count()),
-                                        t <= (s.Iterable() | ra::count()),
-                                        s <= (c.Iterable() | ra::count()));
-               });
+  auto fb_or = fluent<ldb::MockClient, Hash, ldb::MockToSql>(
+      "name", "inproc://yolo", &context, connection_config);
+  ASSERT_EQ(Status::OK, fb_or.status());
+  auto fe_or = fb_or.ConsumeValueOrDie()
+                   .table<std::size_t>("t", {{"x"}})
+                   .scratch<std::size_t>("s", {{"x"}})
+                   .channel<std::string, float, char>("c", {{"addr", "x", "y"}})
+                   .RegisterRules([](auto& t, auto& s, auto& c) {
+                     using namespace fluent::infix;
+                     return std::make_tuple(t <= (t.Iterable() | ra::count()),
+                                            t <= (s.Iterable() | ra::count()),
+                                            s <= (c.Iterable() | ra::count()));
+                   });
+  ASSERT_EQ(Status::OK, fe_or.status());
+  auto f = fe_or.ConsumeValueOrDie();
   const ldb::MockClient<Hash, ldb::MockToSql>& client = f.GetLineageDbClient();
   Hash<std::tuple<std::size_t>> hash;
 
@@ -251,7 +286,6 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
   using DeleteTupleTuple = MockClient::DeleteTupleTuple;
   using AddDerivedLineageTuple = MockClient::AddDerivedLineageTuple;
 
-  EXPECT_TRUE(client.GetInit());
   ASSERT_EQ(client.GetAddRule().size(), static_cast<std::size_t>(3));
   EXPECT_EQ(client.GetAddCollection()[0],
             AddCollectionTuple("t", "Table", {"x"}, {"unsigned long"}));
@@ -265,12 +299,11 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
   EXPECT_EQ(client.GetAddRule()[1], AddRuleTuple(1, false, "t <= Count(s)"));
   EXPECT_EQ(client.GetAddRule()[2], AddRuleTuple(2, false, "s <= Count(c)"));
 
-  f.Tick();
+  ASSERT_EQ(Status::OK, f.Tick());
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
   EXPECT_THAT(f.Get<2>().Get(), UnorderedElementsAreArray(C{}));
 
-  EXPECT_TRUE(client.GetInit());
   ASSERT_EQ(client.GetAddRule().size(), static_cast<std::size_t>(3));
   ASSERT_EQ(client.GetAddCollection().size(), static_cast<std::size_t>(3));
   ASSERT_EQ(client.GetInsertTuple().size(), static_cast<std::size_t>(3));
@@ -283,12 +316,11 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
             static_cast<std::size_t>(0));
   ASSERT_EQ(client.GetAddDerivedLineage().size(), static_cast<std::size_t>(0));
 
-  f.Tick();
+  ASSERT_EQ(Status::OK, f.Tick());
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}, {1}}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
   EXPECT_THAT(f.Get<2>().Get(), UnorderedElementsAreArray(C{}));
 
-  EXPECT_TRUE(client.GetInit());
   ASSERT_EQ(client.GetAddRule().size(), static_cast<std::size_t>(3));
   ASSERT_EQ(client.GetAddCollection().size(), static_cast<std::size_t>(3));
   ASSERT_EQ(client.GetInsertTuple().size(), static_cast<std::size_t>(6));
@@ -303,12 +335,11 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
   EXPECT_EQ(client.GetAddDerivedLineage()[0],
             AddDerivedLineageTuple("t", hash({0}), 0, true, "t", hash({1}), 5));
 
-  f.Tick();
+  ASSERT_EQ(Status::OK, f.Tick());
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}, {1}, {2}}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
   EXPECT_THAT(f.Get<2>().Get(), UnorderedElementsAreArray(C{}));
 
-  EXPECT_TRUE(client.GetInit());
   ASSERT_EQ(client.GetAddRule().size(), static_cast<std::size_t>(3));
   ASSERT_EQ(client.GetAddCollection().size(), static_cast<std::size_t>(3));
   ASSERT_EQ(client.GetInsertTuple().size(), static_cast<std::size_t>(9));
@@ -330,21 +361,26 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
 TEST(FluentExecutor, BlackBoxLineage) {
   zmq::context_t context(1);
   lineagedb::ConnectionConfig connection_config;
-  auto f = fluent<ldb::MockClient, Hash, ldb::MockToSql>(
-               "name", "inproc://yolo", &context, connection_config)
-               .channel<std::string, std::string, std::int64_t, int>(
-                   "f_request", {{"dst_addr", "src_addr", "id", "x"}})
-               .channel<std::string, std::int64_t, int>("f_response",
-                                                        {{"addr", "id", "y"}})
-               .RegisterRules([](auto&, auto&) { return std::make_tuple(); });
-  f.RegisterBlackBoxLineage<0, 1>([](const std::string& time_inserted,
-                                     const std::string& x,
-                                     const std::string& y) {
-    (void)time_inserted;
-    (void)x;
-    (void)y;
-    return "hello world";
-  });
+  auto fb_or = fluent<ldb::MockClient, Hash, ldb::MockToSql>(
+      "name", "inproc://yolo", &context, connection_config);
+  ASSERT_EQ(Status::OK, fb_or.status());
+  auto fe_or =
+      fb_or.ConsumeValueOrDie()
+          .channel<std::string, std::string, std::int64_t, int>(
+              "f_request", {{"dst_addr", "src_addr", "id", "x"}})
+          .channel<std::string, std::int64_t, int>("f_response",
+                                                   {{"addr", "id", "y"}})
+          .RegisterRules([](auto&, auto&) { return std::make_tuple(); });
+  ASSERT_EQ(Status::OK, fe_or.status());
+  auto f = fe_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK, (f.RegisterBlackBoxLineage<0, 1>(
+                            [](const std::string& time_inserted,
+                               const std::string& x, const std::string& y) {
+                              (void)time_inserted;
+                              (void)x;
+                              (void)y;
+                              return "hello world";
+                            })));
 
   const ldb::MockClient<Hash, ldb::MockToSql>& client = f.GetLineageDbClient();
   ASSERT_EQ(client.GetExec().size(), static_cast<std::size_t>(2));

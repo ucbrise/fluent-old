@@ -32,7 +32,6 @@ struct ToSqlType {
 template <template <typename> class Hash, template <typename> class ToSql>
 class MockClient {
  public:
-  MockClient() = default;
   DISALLOW_COPY_AND_ASSIGN(MockClient);
   MockClient(MockClient&&) = default;
   MockClient& operator=(MockClient&&) = default;

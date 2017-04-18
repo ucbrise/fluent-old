@@ -8,6 +8,9 @@
 #include <type_traits>
 #include <vector>
 
+#include "common/macros.h"
+#include "common/status.h"
+#include "common/status_macros.h"
 #include "common/type_list.h"
 
 // From functional programming languages like Hasell and OCaml, we're used to
@@ -47,18 +50,7 @@
 namespace fluent {
 namespace detail {
 
-// Iteri
-template <std::size_t I, typename F, typename... Ts>
-typename std::enable_if<I == sizeof...(Ts)>::type TupleIteriImpl(
-    const std::tuple<Ts...>&, F&) {}
-
-template <std::size_t I, typename F, typename... Ts>
-typename std::enable_if<I != sizeof...(Ts)>::type TupleIteriImpl(
-    const std::tuple<Ts...>& t, F& f) {
-  f(I, std::get<I>(t));
-  TupleIteriImpl<I + 1>(t, f);
-}
-
+// Iteri (non-const)
 template <std::size_t I, typename F, typename... Ts>
 typename std::enable_if<I == sizeof...(Ts)>::type TupleIteriImpl(
     std::tuple<Ts...>&, F&) {}
@@ -66,6 +58,18 @@ typename std::enable_if<I == sizeof...(Ts)>::type TupleIteriImpl(
 template <std::size_t I, typename F, typename... Ts>
 typename std::enable_if<I != sizeof...(Ts)>::type TupleIteriImpl(
     std::tuple<Ts...>& t, F& f) {
+  f(I, std::get<I>(t));
+  TupleIteriImpl<I + 1>(t, f);
+}
+
+// Iteri (const)
+template <std::size_t I, typename F, typename... Ts>
+typename std::enable_if<I == sizeof...(Ts)>::type TupleIteriImpl(
+    const std::tuple<Ts...>&, F&) {}
+
+template <std::size_t I, typename F, typename... Ts>
+typename std::enable_if<I != sizeof...(Ts)>::type TupleIteriImpl(
+    const std::tuple<Ts...>& t, F& f) {
   f(I, std::get<I>(t));
   TupleIteriImpl<I + 1>(t, f);
 }
@@ -85,7 +89,20 @@ auto TupleMapImpl(
                         TupleMapImpl<I + 1>(t, f));
 }
 
-// Fold
+// Fold (non-const)
+template <std::size_t I, typename F, typename Acc, typename... Ts>
+typename std::enable_if<I == sizeof...(Ts), Acc>::type TupleFoldImpl(
+    const Acc& acc, std::tuple<Ts...>&, const F&) {
+  return acc;
+}
+
+template <std::size_t I, typename F, typename Acc, typename... Ts>
+typename std::enable_if<I != sizeof...(Ts), Acc>::type TupleFoldImpl(
+    const Acc& acc, std::tuple<Ts...>& t, F& f) {
+  return TupleFoldImpl<I + 1>(f(acc, std::get<I>(t)), t, f);
+}
+
+// Fold (const)
 template <std::size_t I, typename F, typename Acc, typename... Ts>
 typename std::enable_if<I == sizeof...(Ts), Acc>::type TupleFoldImpl(
     const Acc& acc, const std::tuple<Ts...>&, const F&) {
@@ -131,8 +148,61 @@ std::tuple<typename std::result_of<F(const Ts&)>::type...> TupleMap(
 
 // `TupleFold(a, (x, y, z), f)` returns `f(f(f(a, x), y), z)`.
 template <typename F, typename Acc, typename... Ts>
+Acc TupleFold(const Acc& acc, std::tuple<Ts...>& t, F f) {
+  return detail::TupleFoldImpl<0>(acc, t, f);
+}
+
+template <typename F, typename Acc, typename... Ts>
 Acc TupleFold(const Acc& acc, const std::tuple<Ts...>& t, F f) {
   return detail::TupleFoldImpl<0>(acc, t, f);
+}
+
+// `TupleIteriStatus((a, ..., z), f)` executes the following;
+//
+//   RETURN_IF_ERROR(f(0, a));
+//   RETURN_IF_ERROR(f(1, b));
+//   ...
+//   RETURN_IF_ERROR(f(25, z));
+template <typename F, typename... Ts>
+WARN_UNUSED Status TupleIteriStatus(std::tuple<Ts...>& t, F f) {
+  using Acc = std::pair<Status, std::size_t>;
+  return std::get<0>(
+      TupleFold(Acc(Status::OK, 0), t, [&f](const Acc& acc, auto& x) {
+        const auto& status = std::get<0>(acc);
+        std::size_t i = std::get<1>(acc);
+        return status.ok() ? Acc(f(i, x), i + 1) : acc;
+      }));
+}
+
+template <typename F, typename... Ts>
+WARN_UNUSED Status TupleIteriStatus(const std::tuple<Ts...>& t, F f) {
+  using Acc = std::pair<Status, std::size_t>;
+  return std::get<0>(
+      TupleFold(Acc(Status::OK, 0), t, [&f](const Acc& acc, const auto& x) {
+        const auto& status = std::get<0>(acc);
+        std::size_t i = std::get<1>(acc);
+        return status.ok() ? Acc(f(i, x), i + 1) : acc;
+      }));
+}
+
+// `TupleIterStatus((a, ..., z), f)` executes the following;
+//
+//   RETURN_IF_ERROR(f(a));
+//   RETURN_IF_ERROR(f(b));
+//   ...
+//   RETURN_IF_ERROR(f(z));
+template <typename F, typename... Ts>
+WARN_UNUSED Status TupleIterStatus(std::tuple<Ts...>& t, F f) {
+  return TupleFold(Status::OK, t, [&f](const auto& status, auto& x) {
+    return status.ok() ? f(x) : status;
+  });
+}
+
+template <typename F, typename... Ts>
+WARN_UNUSED Status TupleIterStatus(const std::tuple<Ts...>& t, F f) {
+  return TupleFold(Status::OK, t, [&f](const auto& status, const auto& x) {
+    return status.ok() ? f(x) : status;
+  });
 }
 
 // `TupleToVector(t)` converts `t` into a vector.

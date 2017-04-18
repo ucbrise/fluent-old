@@ -93,10 +93,10 @@ template <typename Connection, typename Work, template <typename> class Hash,
           template <typename> class ToSql>
 class InjectablePqxxClient {
  public:
-  InjectablePqxxClient() : id_(0) {}
   DISALLOW_COPY_AND_ASSIGN(InjectablePqxxClient);
   InjectablePqxxClient(InjectablePqxxClient&&) = default;
   InjectablePqxxClient& operator=(InjectablePqxxClient&&) = default;
+  virtual ~InjectablePqxxClient() = default;
 
   static WARN_UNUSED StatusOr<InjectablePqxxClient> Make(
       std::string name, std::size_t id, std::string address,

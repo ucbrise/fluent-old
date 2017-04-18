@@ -16,6 +16,10 @@
 #include "zmq.hpp"
 
 #include "common/hash_util.h"
+#include "common/macros.h"
+#include "common/status.h"
+#include "common/status_macros.h"
+#include "common/status_or.h"
 #include "common/string_util.h"
 #include "common/type_list.h"
 #include "fluent/channel.h"
@@ -106,9 +110,9 @@ class FluentBuilder<
   using BootstrapRules =
       std::tuple<Rule<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>;
 
+  DISALLOW_COPY_AND_ASSIGN(FluentBuilder);
   FluentBuilder(FluentBuilder&&) = default;
   FluentBuilder& operator=(FluentBuilder&&) = default;
-  DISALLOW_COPY_AND_ASSIGN(FluentBuilder);
 
   // Create a table, scratch, channel, stdin, stdout, or periodic. Note the
   // `&&` at the end of each declaration. This means that these methods can
@@ -154,9 +158,10 @@ class FluentBuilder<
                                          const auto& t, int time) {
           using tuple_type = typename std::decay<decltype(t)>::type;
           std::size_t tuple_hash = Hash<tuple_type>()(t);
-          client->InsertTuple(channel_name, time, t);
-          client->AddNetworkedLineage(dep_node_id, dep_time, channel_name,
-                                      tuple_hash, time);
+          RETURN_IF_ERROR(client->InsertTuple(channel_name, time, t));
+          RETURN_IF_ERROR(client->AddNetworkedLineage(
+              dep_node_id, dep_time, channel_name, tuple_hash, time));
+          return Status::OK;
         })));
     return AddCollection(std::move(c));
   }
@@ -220,14 +225,47 @@ class FluentBuilder<
   // implemented by Collection's `<=` operator. `RegisterRules` will execute
   // `f` to generate the rules and use them to construct a `FluentExecutor`.
   template <typename F>
-  FluentExecutor<TypeList<Cs...>, BootstrapRules,
-                 typename std::result_of<F(Cs&...)>::type, LineageDbClient,
-                 Hash, ToSql>
+  WARN_UNUSED StatusOr<FluentExecutor<TypeList<Cs...>, BootstrapRules,
+                                      typename std::result_of<F(Cs&...)>::type,
+                                      LineageDbClient, Hash, ToSql>>
   RegisterRules(const F& f) && {
     return RegisterRulesImpl(f, std::make_index_sequence<sizeof...(Cs)>());
   }
 
  private:
+  static WARN_UNUSED StatusOr<FluentBuilder> Make(
+      const std::string& name, const std::string& address,
+      zmq::context_t* context,
+      const lineagedb::ConnectionConfig& connection_config) {
+    const std::size_t id = Hash<std::string>()(name);
+    using Client = LineageDbClient<Hash, ToSql>;
+    StatusOr<Client> client_or =
+        Client::Make(name, id, address, connection_config);
+    RETURN_IF_ERROR(client_or.status());
+    return FluentBuilder(
+        name, id, address, context,
+        std::make_unique<Client>(client_or.ConsumeValueOrDie()));
+  }
+
+  // Constructs an empty FluentBuilder. Note that this constructor should only
+  // be called when Cs and BootstrapRules are both empty. This private
+  // constructor is used primarily by the `fluent` function down below.
+  FluentBuilder(const std::string& name, std::size_t id,
+                const std::string& address, zmq::context_t* context,
+                std::unique_ptr<LineageDbClient<Hash, ToSql>> lineagedb_client)
+      : name_(name),
+        id_(id),
+        network_state_(std::make_unique<NetworkState>(address, context)),
+        stdin_(nullptr),
+        lineagedb_client_(std::move(lineagedb_client)) {
+    static_assert(
+        sizeof...(Cs) == 0,
+        "This constructor must only be called on empty FluentBuilders.");
+    static_assert(
+        std::tuple_size<BootstrapRules>::value == 0,
+        "This constructor must only be called on empty FluentBuilders.");
+  }
+
   // Constructs an empty FluentBuilder. Note that this constructor should
   // only be called when Cs is empty (i.e. sizeof...(Cs) == 0). This private
   // constructor is used primarily by the `fluent` function down below.
@@ -289,7 +327,7 @@ class FluentBuilder<
   RegisterBootstrapRulesImpl(const F& f, std::index_sequence<Is...>) {
     auto boostrap_rules = f(*std::get<Is>(collections_)...);
     TupleIter(boostrap_rules, [](const auto& rule) {
-      LOG(INFO) << "Registering a bootstrap rule: " << rule.ToDebugString();
+      LOG(INFO) << "Registering bootstrap rule: " << rule.ToDebugString();
     });
     return {std::move(name_),
             id_,
@@ -303,25 +341,21 @@ class FluentBuilder<
   }
 
   // See `RegisterRules`.
-  template <typename F, std::size_t... Is>
-  FluentExecutor<TypeList<Cs...>, BootstrapRules,
-                 typename std::result_of<F(Cs&...)>::type, LineageDbClient,
-                 Hash, ToSql>
-  RegisterRulesImpl(const F& f, std::index_sequence<Is...>) {
+  template <typename F, std::size_t... Is,
+            typename Executor =
+                FluentExecutor<TypeList<Cs...>, BootstrapRules,
+                               typename std::result_of<F(Cs&...)>::type,
+                               LineageDbClient, Hash, ToSql>>
+  StatusOr<Executor> RegisterRulesImpl(const F& f, std::index_sequence<Is...>) {
     auto relalgs = f(*std::get<Is>(collections_)...);
     TupleIter(relalgs, [](const auto& rule) {
-      LOG(INFO) << "Registering a rule: " << rule.ToDebugString();
+      LOG(INFO) << "Registering rule: " << rule.ToDebugString();
     });
-    return {std::move(name_),
-            id_,
-            std::move(collections_),
-            std::move(boostrap_rules_),
-            std::move(parsers_),
-            std::move(network_state_),
-            stdin_,
-            std::move(periodics_),
-            std::move(lineagedb_client_),
-            std::move(relalgs)};
+    return Executor::Make(std::move(name_), id_, std::move(collections_),
+                          std::move(boostrap_rules_), std::move(parsers_),
+                          std::move(network_state_), stdin_,
+                          std::move(periodics_), std::move(lineagedb_client_),
+                          std::move(relalgs));
   }
 
   // The name of the fluent program.
@@ -382,8 +416,8 @@ class FluentBuilder<
   template <template <template <typename> class, template <typename> class>
             class LineageDbClient_,
             template <typename> class Hash_, template <typename> class ToSql_>
-  friend FluentBuilder<TypeList<>, std::tuple<>, LineageDbClient_, Hash_,
-                       ToSql_>
+  friend StatusOr<
+      FluentBuilder<TypeList<>, std::tuple<>, LineageDbClient_, Hash_, ToSql_>>
   fluent(const std::string& name, const std::string& address,
          zmq::context_t* context,
          const lineagedb::ConnectionConfig& connection_config);
@@ -395,11 +429,12 @@ template <template <template <typename> class, template <typename> class>
           class LineageDbClient,
           template <typename> class Hash = Hash,
           template <typename> class ToSql = lineagedb::ToSql>
-FluentBuilder<TypeList<>, std::tuple<>, LineageDbClient, Hash, ToSql> fluent(
-    const std::string& name, const std::string& address,
-    zmq::context_t* context,
-    const lineagedb::ConnectionConfig& connection_config) {
-  return {name, address, context, connection_config};
+StatusOr<FluentBuilder<TypeList<>, std::tuple<>, LineageDbClient, Hash, ToSql>>
+fluent(const std::string& name, const std::string& address,
+       zmq::context_t* context,
+       const lineagedb::ConnectionConfig& connection_config) {
+  return FluentBuilder<TypeList<>, std::tuple<>, LineageDbClient, Hash,
+                       ToSql>::Make(name, address, context, connection_config);
 }
 
 }  // namespace fluent

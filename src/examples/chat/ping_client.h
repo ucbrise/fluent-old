@@ -6,6 +6,7 @@
 
 #include "zmq.hpp"
 
+#include "common/status.h"
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"
@@ -31,9 +32,10 @@ int PingClientMain(const PingClientArgs& args,
       std::make_tuple(args.server_address, args.client_address, args.nickname)};
 
   zmq::context_t context(1);
-  auto f =
+  fluent::Status status =
       fluent::fluent<LineageDbClient>("chat_ping_client", args.client_address,
                                       &context, connection_config)
+          .ConsumeValueOrDie()
           .template channel<std::string, std::string, std::string>(
               "connect", {{"server_addr", "client_addr", "nickname"}})
           .template channel<std::string, std::string>("mcast",
@@ -51,9 +53,11 @@ int PingClientMain(const PingClientArgs& args,
                                       return std::make_tuple(
                                           args.server_address, args.msg);
                                     })));
-          });
+          })
+          .ConsumeValueOrDie()
+          .Run();
+  CHECK_EQ(fluent::Status::OK, status);
 
-  f.Run();
   return 0;
 }
 

@@ -71,7 +71,8 @@ struct Hash<std::vector<T>> {
 template <typename... Ts>
 struct Hash<std::tuple<Ts...>> {
   std::size_t operator()(const std::tuple<Ts...>& t) {
-    return TupleFold(static_cast<std::size_t>(0), t, detail::HashCombine());
+    detail::HashCombine hash_combine;
+    return TupleFold(static_cast<std::size_t>(0), t, hash_combine);
   }
 };
 

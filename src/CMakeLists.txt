@@ -22,10 +22,11 @@ SET(CMAKE_CXX_FLAGS_COMMON
      -Wall \
      -Wextra \
      -Werror \
+     -Wno-unused-local-typedefs \
      -pedantic \
-     -g \
-     -fsanitize=address \
-     -fsanitize=undefined")
+     -g") 
+     #-fsanitize=address \
+     #-fsanitize=undefined")
 SET(CMAKE_CXX_FLAGS_DEBUG
     "${CMAKE_CXX_FLAGS_DEBUG} \
      ${CMAKE_CXX_FLAGS_COMMON}")
@@ -40,6 +41,9 @@ ADD_SUBDIRECTORY(vendor/range-v3)
 ADD_SUBDIRECTORY(vendor/zeromq)
 ADD_SUBDIRECTORY(vendor/zeromqcpp)
 
+find_package(Boost 1.59 REQUIRED serialization)
+
+INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR})
 INCLUDE_DIRECTORIES(.)
 INCLUDE_DIRECTORIES(${GBENCH_INCLUDE_DIRS})
@@ -50,6 +54,7 @@ INCLUDE_DIRECTORIES(${RANGEV3_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${ZEROMQCPP_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${ZEROMQ_INCLUDE_DIRS})
 
+LINK_DIRECTORIES(${Boost_LIBRARY_DIR})
 LINK_DIRECTORIES(${GLOG_LINK_DIRS})
 LINK_DIRECTORIES(${ZEROMQ_LINK_DIRS})
 

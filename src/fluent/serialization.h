@@ -1,8 +1,18 @@
 #ifndef FLUENT_SERIALIZATION_H_
 #define FLUENT_SERIALIZATION_H_
 
+#include <sstream>
 #include <string>
 
+#include "glog/logging.h"
+
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/set.hpp>
+#include <boost/serialization/utility.hpp>
+
+#include "common/tuple_util.h"
 #include "common/type_traits.h"
 
 namespace fluent {
@@ -26,15 +36,23 @@ namespace fluent {
 // TODO(mwhittaker): Give an example of defining your own `ToString` and
 // `FromString` functions.
 
-// `ToString` dispatches to `std::to_string` by default.
 template <typename T>
 std::string ToString(const T& x) {
-  return std::to_string(x);
+  std::stringstream ss;
+  boost::archive::text_oarchive oarch(ss);
+  oarch << x;
+  return ss.str();
 }
 
-// Unlike `ToString`, C++ doesn't provide a nice default implementation.
 template <typename T>
-T FromString(const std::string&);
+T FromString(const std::string& s) {
+  std::stringstream ss;
+  ss << s;
+  boost::archive::text_iarchive iarch(ss);
+  T res;
+  iarch >> res;
+  return res;
+}
 
 // std::string
 template <>
@@ -53,13 +71,6 @@ std::string ToString(const char& c) {
   return std::string(1, c);
 }
 
-//lww pair
-template <typename K, typename V>
-std::string ToString(const std::pair<K, V>& p) {
-  std::string delimiter = "|";
-  return ToString(std::get<0>(p)) + delimiter + ToString(std::get<1>(p));
-}
-
 template <>
 char FromString<char>(const std::string& s) {
   return s[0];
@@ -67,11 +78,21 @@ char FromString<char>(const std::string& s) {
 
 // int
 template <>
+std::string ToString(const int& i) {
+  return std::to_string(i);
+}
+
+template <>
 int FromString<int>(const std::string& s) {
   return std::stoi(s);
 }
 
 // long
+template <>
+std::string ToString(const long& l) {
+  return std::to_string(l);
+}
+
 template <>
 long FromString<long>(const std::string& s) {
   return std::stol(s);
@@ -79,11 +100,21 @@ long FromString<long>(const std::string& s) {
 
 // long long
 template <>
+std::string ToString(const long long& ll) {
+  return std::to_string(ll);
+}
+
+template <>
 long long FromString<long long>(const std::string& s) {
   return std::stoll(s);
 }
 
 // unsigned long
+template <>
+std::string ToString(const unsigned long& ul) {
+  return std::to_string(ul);
+}
+
 template <>
 unsigned long FromString<unsigned long>(const std::string& s) {
   return std::stoul(s);
@@ -91,11 +122,21 @@ unsigned long FromString<unsigned long>(const std::string& s) {
 
 // unsigned long long
 template <>
+std::string ToString(const unsigned long long& ull) {
+  return std::to_string(ull);
+}
+
+template <>
 unsigned long long FromString<unsigned long long>(const std::string& s) {
   return std::stoull(s);
 }
 
 // float
+template <>
+std::string ToString(const float& f) {
+  return std::to_string(f);
+}
+
 template <>
 float FromString<float>(const std::string& s) {
   return std::stof(s);
@@ -103,38 +144,37 @@ float FromString<float>(const std::string& s) {
 
 // double
 template <>
+std::string ToString(const double& d) {
+  return std::to_string(d);
+}
+
+template <>
 double FromString<double>(const std::string& s) {
   return std::stod(s);
 }
 
 // long double
 template <>
+std::string ToString(const long double& ld) {
+  return std::to_string(ld);
+}
+
+template <>
 long double FromString<long double>(const std::string& s) {
   return std::stold(s);
 }
 
-// lww pair for indy monitoring
-template <>
-std::pair<long, std::size_t> FromString<std::pair<long, std::size_t>>(const std::string& s) {
-  std::string str = s;
-  std::string delimiter = "|";
-  std::string p1 = str.substr(0, str.find(delimiter));
-  str.erase(0, str.find(delimiter) + delimiter.length());
-  std::string p2 = str;
-  return std::make_pair(FromString<long>(p1), FromString<std::size_t>(p2));
+}  // namespace fluent
+
+namespace boost {
+namespace serialization {
+
+template<typename Archive, typename... Ts>
+void serialize(Archive& ar, std::tuple<Ts...>& t, const unsigned int) {
+    fluent::TupleIter(t, [&ar](auto& x) { ar & x; });
 }
 
-// template <typename T>
-// typename std::enable_if<IsPair<T>::value, T>::type
-// FromString(const std::string& s) {
-//   std::string str = s;
-//   std::string delimiter = "|";
-//   std::string p1 = str.substr(0, str.find(delimiter));
-//   str.erase(0, str.find(delimiter) + delimiter.length());
-//   std::string p2 = str;
-//   return T(FromString<T::first_type>(p1), FromString<T::second_type>(p2));
-// }
-
-}  // namespace fluent
+} // namespace serialization
+} // namespace boost
 
 #endif  // FLUENT_SERIALIZATION_H_

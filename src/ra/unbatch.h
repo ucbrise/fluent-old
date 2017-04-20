@@ -20,13 +20,18 @@ class PhysicalUnbatch {
   explicit PhysicalUnbatch(PhysicalChild child) : child_(std::move(child)) {}
 
   auto ToRange() {
-    return child_.ToRange() | ranges::view::for_each([](const auto& t) {
+    auto rng = child_.ToRange();
+    for (auto iter = ranges::begin(rng); iter != ranges::end(rng); ++iter) {
+      batch_.insert(*iter);
+    }
+    return ranges::view::all(batch_) | ranges::view::for_each([](const auto& t) {
       return ranges::yield_from(ranges::view::all(std::get<0>(t)));
     }); 
   }
 
  private:
   PhysicalChild child_;
+  std::set<std::tuple<std::set<typename TypeListToTuple<typename LogicalUnbatch::column_types>::type>>> batch_;
 };
 
 template <typename LogicalChild>

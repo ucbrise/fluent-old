@@ -1,5 +1,6 @@
 #include "ra/batch.h"
 #include "ra/iterable.h"
+#include "ra/project.h"
 #include "ra/unbatch.h"
 
 #include <tuple>
@@ -23,6 +24,14 @@ TEST(Relalg, SimpleUnbatchTest) {
   std::set<std::tuple<std::set<std::tuple<std::string, int>>>> ys;
   ys.insert(std::make_tuple(xs));
   auto relalg = ra::make_iterable(&ys) | ra::unbatch();
+  ExpectRngsUnorderedEqual(relalg.ToPhysical().ToRange(), xs);
+}
+
+TEST(Relalg, ProjectUnbatchTest) {
+  std::set<std::tuple<std::string, int>> xs = {{"A", 1}, {"B", 2}};
+  std::set<std::tuple<std::string, std::set<std::tuple<std::string, int>>>> ys;
+  ys.insert(std::make_tuple("hello", xs));
+  auto relalg = ra::make_iterable(&ys) | ra::project<1>() | ra::unbatch();
   ExpectRngsUnorderedEqual(relalg.ToPhysical().ToRange(), xs);
 }
 

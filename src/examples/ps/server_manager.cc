@@ -35,21 +35,23 @@ int main(int argc, char* argv[]) {
     fluent::fluent(self_address, &context)
     .table<node_type_t, address_t>("membership")
     .channel<address_t, node_type_t, address_t>("join_request")
-    .channel<address_t, node_type_t, address_t>("outgoing_membership")
-    .RegisterBootstrapRules([&](auto&, auto&, auto&) {})
-    .RegisterRules([&](auto& membership, auto& join_request, auto& outgoing_membership) {
+    .channel<address_t, std::set<std::tuple<node_type_t, address_t>>>("membership_channel")
+    .RegisterBootstrapRules([&](auto&, auto&, auto&) {
+      return std::make_tuple();
+    })
+    .RegisterRules([&](auto& membership, auto& join_request, auto& membership_channel) {
             using namespace fluent::infix;
 
             auto add_membership =
                 membership <= (join_request.Iterable() | ra::project<1,2>());
 
             auto broadcast_membership =
-                outgoing_membership <=
-                (ra::make_cross(membership.Iterable(), 
+                membership_channel <=
+                (ra::make_cross((membership.Iterable() | ra::project<1>()), (ra::make_cross(membership.Iterable(), 
                     (membership.Iterable() | ra::count() | ra::filter([&](const auto& t) {
                         return std::get<0>(t) == num_nodes;
                     })))
-                | ra::project<0, 1>())
+                | ra::project<0, 1>() | ra::batch())))
 
             return std::make_tuple(add_membership, broadcast_membership);
     });

@@ -10,6 +10,7 @@
 #include "fmt/format.h"
 #include "range/v3/all.hpp"
 
+#include "common/sizet_list.h"
 #include "common/string_util.h"
 #include "common/tuple_util.h"
 #include "common/type_list.h"
@@ -21,9 +22,22 @@ namespace fluent {
 namespace ra {
 
 template <std::size_t... Is>
-struct Keys {};
+using Keys = SizetList<Is...>;
 
 namespace detail {
+
+template <typename Typelist, typename SizetList>
+struct TypeListProjectBySizetList;
+
+template <typename... Ts, std::size_t... Is>
+struct TypeListProjectBySizetList<TypeList<Ts...>, SizetList<Is...>> {
+  using type = typename TypeListProject<TypeList<Ts...>, Is...>::type;
+};
+
+template <typename... Ts, std::size_t... Is>
+auto TupleProjectBySizetList(const std::tuple<Ts...>& t, SizetList<Is...>) {
+  return TupleProject<Is...>(t);
+}
 
 template <typename T>
 struct TypeOfGet {
@@ -78,11 +92,11 @@ class PhysicalGroupBy {
   }
 
  private:
-  template <template <std::size_t, typename> class AggregateImpl,
-            std::size_t AggregateColumn, typename T>
+  template <template <typename, typename> class AggregateImpl,
+            typename AggregateColumn, typename T>
   void UpdateAgg(AggregateImpl<AggregateColumn, T>* agg,
                  const child_column_tuple& t) {
-    agg->Update(std::get<AggregateColumn>(t));
+    agg->Update(detail::TupleProjectBySizetList(t, AggregateColumn()));
   }
 
   template <std::size_t... Is>
@@ -99,17 +113,19 @@ class PhysicalGroupBy {
 template <typename LogicalChild, typename KeyColumns, typename... Aggregates>
 class GroupBy;
 
-template <typename LogicalChild, std::size_t... Ks,
-          template <std::size_t> class... Aggregates,
-          std::size_t... AggregateColumns>
-class GroupBy<LogicalChild, Keys<Ks...>, Aggregates<AggregateColumns>...> {
+template <typename LogicalChild, std::size_t... Ks, typename... Aggregates>
+class GroupBy<LogicalChild, Keys<Ks...>, Aggregates...> {
  public:
   using keys = Keys<Ks...>;
   using child_column_types = typename LogicalChild::column_types;
   using key_types = typename TypeListProject<child_column_types, Ks...>::type;
-  using aggregate_impl_types =
-      TypeList<typename Aggregates<AggregateColumns>::template type<
-          typename TypeListGet<child_column_types, AggregateColumns>::type>...>;
+
+  using aggregate_impl_types = TypeList<  //
+      typename Aggregates::template type<
+          typename detail::TypeListProjectBySizetList<
+              child_column_types,
+              typename SizetListFrom<Aggregates>::type>::type>...  //
+      >;
   using aggregate_types =
       typename TypeListMap<aggregate_impl_types, detail::TypeOfGet>::type;
   using column_types =
@@ -118,15 +134,13 @@ class GroupBy<LogicalChild, Keys<Ks...>, Aggregates<AggregateColumns>...> {
   explicit GroupBy(LogicalChild child) : child_(std::move(child)) {}
 
   auto ToPhysical() const {
-    return PhysicalGroupBy<
-        decltype(child_.ToPhysical()),
-        GroupBy<LogicalChild, Keys<Ks...>, Aggregates<AggregateColumns>...>>(
+    return PhysicalGroupBy<decltype(child_.ToPhysical()), GroupBy>(
         child_.ToPhysical());
   }
 
   std::string ToDebugString() const {
     return fmt::format("GroupBy<Keys<{}>, {}>({})", Join(Ks...),
-                       Join(Aggregates<AggregateColumns>::ToDebugString()...),
+                       Join(Aggregates::ToDebugString()...),
                        child_.ToDebugString());
   }
 
@@ -137,20 +151,14 @@ class GroupBy<LogicalChild, Keys<Ks...>, Aggregates<AggregateColumns>...> {
 template <typename KeyColumns, typename... Aggregates>
 struct group_by;
 
-template <std::size_t... Ks, template <std::size_t> class... Aggregates,
-          std::size_t... AggregateColumns>
-struct group_by<Keys<Ks...>, Aggregates<AggregateColumns>...> {};
+template <std::size_t... Ks, typename... Aggregates>
+struct group_by<Keys<Ks...>, Aggregates...> {};
 
-template <typename LogicalChild, std::size_t... Ks,
-          template <std::size_t> class... Aggregates,
-          std::size_t... AggregateColumns>
-GroupBy<typename std::decay<LogicalChild>::type, Keys<Ks...>,
-        Aggregates<AggregateColumns>...>
-operator|(LogicalChild&& child,
-          group_by<Keys<Ks...>, Aggregates<AggregateColumns>...>) {
+template <typename LogicalChild, std::size_t... Ks, typename... Aggregates>
+GroupBy<typename std::decay<LogicalChild>::type, Keys<Ks...>, Aggregates...>
+operator|(LogicalChild&& child, group_by<Keys<Ks...>, Aggregates...>) {
   return GroupBy<typename std::decay<LogicalChild>::type, Keys<Ks...>,
-                 Aggregates<AggregateColumns>...>(
-      std::forward<LogicalChild&&>(child));
+                 Aggregates...>(std::forward<LogicalChild&&>(child));
 }
 
 }  // namespace ra

@@ -18,8 +18,8 @@ struct ServerArgs {
   std::string server_address;
 };
 
-template <template <template <typename> class, template <typename> class>
-          class LineageDbClient>
+template <template <template <typename> class, template <typename> class,
+                    typename> class LineageDbClient>
 int ServerMain(const ServerArgs& args,
                const fluent::lineagedb::ConnectionConfig& connection_config) {
   zmq::context_t context(1);

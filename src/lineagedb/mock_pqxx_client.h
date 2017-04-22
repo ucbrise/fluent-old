@@ -40,9 +40,10 @@ namespace lineagedb {
 //
 // A MockPqxxClient is used to unit test a PqxxClient. See
 // `mock_pqxx_client_test.cc`.
-template <template <typename> class Hash, template <typename> class ToSql>
-class MockPqxxClient
-    : public InjectablePqxxClient<MockConnection, MockWork, Hash, ToSql> {
+template <template <typename> class Hash, template <typename> class ToSql,
+          typename Clock>
+class MockPqxxClient : public InjectablePqxxClient<MockConnection, MockWork,
+                                                   Hash, ToSql, Clock> {
  public:
   DISALLOW_COPY_AND_ASSIGN(MockPqxxClient);
   MockPqxxClient(MockPqxxClient&&) = default;
@@ -71,7 +72,7 @@ class MockPqxxClient
  private:
   MockPqxxClient(std::string name, std::size_t id, std::string address,
                  const ConnectionConfig& connection_config)
-      : InjectablePqxxClient<MockConnection, MockWork, Hash, ToSql>(
+      : InjectablePqxxClient<MockConnection, MockWork, Hash, ToSql, Clock>(
             std::move(name), id, std::move(address), connection_config) {}
 
   std::vector<std::pair<std::string, std::string>> queries_;

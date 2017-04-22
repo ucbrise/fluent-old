@@ -46,9 +46,10 @@ namespace fluent {
 
 // See below.
 template <typename Collections, typename BootstrapRules, typename Rules,
-          template <template <typename> class, template <typename> class>
-          class LineageDbClient,
-          template <typename> class Hash, template <typename> class ToSql>
+          template <template <typename> class, template <typename> class,
+                    typename> class LineageDbClient,
+          template <typename> class Hash, template <typename> class ToSql,
+          typename Clock>
 class FluentExecutor;
 
 // # Overview
@@ -76,13 +77,15 @@ class FluentExecutor;
 template <typename... Cs, typename... BootstrapLhss,
           typename... BootstrapRuleTags, typename... BootstrapRhss,
           typename... Lhss, typename... RuleTags, typename... Rhss,
-          template <template <typename> class, template <typename> class>
-          class LineageDbClient,
-          template <typename> class Hash, template <typename> class ToSql>
+          template <template <typename> class, template <typename> class,
+                    typename> class LineageDbClient,
+          template <typename> class Hash, template <typename> class ToSql,
+          typename Clock>
 class FluentExecutor<
     TypeList<Cs...>,
     std::tuple<Rule<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>,
-    std::tuple<Rule<Lhss, RuleTags, Rhss>...>, LineageDbClient, Hash, ToSql> {
+    std::tuple<Rule<Lhss, RuleTags, Rhss>...>, LineageDbClient, Hash, ToSql,
+    Clock> {
   static_assert(sizeof...(BootstrapLhss) == sizeof...(BootstrapRuleTags) &&
                     sizeof...(BootstrapRuleTags) == sizeof...(BootstrapRhss),
                 "The ith entry of BootstrapLhss corresponds to the left-hand "
@@ -112,7 +115,7 @@ class FluentExecutor<
       BootstrapRules bootstrap_rules, std::map<std::string, Parser> parsers,
       std::unique_ptr<NetworkState> network_state, Stdin* stdin,
       std::vector<Periodic*> periodics,
-      std::unique_ptr<LineageDbClient<Hash, ToSql>> lineagedb_client,
+      std::unique_ptr<LineageDbClient<Hash, ToSql, Clock>> lineagedb_client,
       Rules rules) {
     FluentExecutor f(std::move(name), id, std::move(collections),
                      std::move(bootstrap_rules), std::move(parsers),
@@ -122,14 +125,14 @@ class FluentExecutor<
     return f;
   }
 
-  FluentExecutor(std::string name, std::size_t id,
-                 std::tuple<std::unique_ptr<Cs>...> collections,
-                 BootstrapRules bootstrap_rules,
-                 std::map<std::string, Parser> parsers,
-                 std::unique_ptr<NetworkState> network_state, Stdin* stdin,
-                 std::vector<Periodic*> periodics,
-                 std::unique_ptr<LineageDbClient<Hash, ToSql>> lineagedb_client,
-                 Rules rules)
+  FluentExecutor(
+      std::string name, std::size_t id,
+      std::tuple<std::unique_ptr<Cs>...> collections,
+      BootstrapRules bootstrap_rules, std::map<std::string, Parser> parsers,
+      std::unique_ptr<NetworkState> network_state, Stdin* stdin,
+      std::vector<Periodic*> periodics,
+      std::unique_ptr<LineageDbClient<Hash, ToSql, Clock>> lineagedb_client,
+      Rules rules)
       : name_(std::move(name)),
         id_(id),
         collections_(std::move(collections)),
@@ -161,7 +164,7 @@ class FluentExecutor<
   // LineageDbClient is MockClient, this method allows us to unit test that
   // FluentExecutors are properly tracking lineage and history. See
   // fluent_executor_test.cc for some examples.
-  const LineageDbClient<Hash, ToSql>& GetLineageDbClient() {
+  const LineageDbClient<Hash, ToSql, Clock>& GetLineageDbClient() {
     return *lineagedb_client_.get();
   }
 
@@ -379,8 +382,8 @@ class FluentExecutor<
 
     // Read from stdin.
     if (stdin_ != nullptr && pollitems[1].revents & ZMQ_POLLIN) {
-      RETURN_IF_ERROR(lineagedb_client_->InsertTuple(stdin_->Name(), time_,
-                                                     stdin_->GetLine()));
+      RETURN_IF_ERROR(lineagedb_client_->InsertTuple(
+          stdin_->Name(), time_, Clock::now(), stdin_->GetLine()));
     }
 
     // Trigger periodics.
@@ -450,7 +453,8 @@ class FluentExecutor<
   WARN_UNUSED Status TickCollection(Collection* c) {
     auto deleted = c->Tick();
     for (const auto& t : deleted) {
-      RETURN_IF_ERROR(lineagedb_client_->DeleteTuple(c->Name(), time_, t));
+      RETURN_IF_ERROR(
+          lineagedb_client_->DeleteTuple(c->Name(), time_, Clock::now(), t));
     }
     return Status::OK;
   }
@@ -485,8 +489,9 @@ class FluentExecutor<
     while (timeout_queue_.size() != 0 && timeout_queue_.top().timeout <= now) {
       PeriodicTimeout timeout = timeout_queue_.top();
       timeout_queue_.pop();
-      RETURN_IF_ERROR(lineagedb_client_->InsertTuple(
-          timeout.periodic->Name(), time_, timeout.periodic->Tock()));
+      RETURN_IF_ERROR(lineagedb_client_->InsertTuple(timeout.periodic->Name(),
+                                                     time_, Clock::now(),
+                                                     timeout.periodic->Tock()));
       timeout.timeout = now + timeout.periodic->Period();
       timeout_queue_.push(timeout);
     }
@@ -622,8 +627,8 @@ class FluentExecutor<
       }
 
       if (inserted) {
-        RETURN_IF_ERROR(lineagedb_client_->InsertTuple(collection->Name(),
-                                                       time_, lt.tuple));
+        RETURN_IF_ERROR(lineagedb_client_->InsertTuple(
+            collection->Name(), time_, Clock::now(), lt.tuple));
         switch (GetCollectionType<Lhs>::value) {
           case CollectionType::CHANNEL:
           case CollectionType::STDOUT: {
@@ -631,8 +636,8 @@ class FluentExecutor<
             // really inserted at all. Channels send their tuples away and
             // stdout just prints the message to the screen. Thus, we insert
             // and then immediately delete the tuple.
-            RETURN_IF_ERROR(lineagedb_client_->DeleteTuple(collection->Name(),
-                                                           time_, lt.tuple));
+            RETURN_IF_ERROR(lineagedb_client_->DeleteTuple(
+                collection->Name(), time_, Clock::now(), lt.tuple));
           }
           case CollectionType::TABLE:
           case CollectionType::SCRATCH:
@@ -642,8 +647,8 @@ class FluentExecutor<
           }
         }
       } else {
-        RETURN_IF_ERROR(lineagedb_client_->DeleteTuple(collection->Name(),
-                                                       time_, lt.tuple));
+        RETURN_IF_ERROR(lineagedb_client_->DeleteTuple(
+            collection->Name(), time_, Clock::now(), lt.tuple));
       }
 
       update_collection(*collection, std::set<tuple_type>{lt.tuple});
@@ -705,7 +710,7 @@ class FluentExecutor<
   std::unique_ptr<NetworkState> network_state_;
   Stdin* const stdin_;
   std::vector<Periodic*> periodics_;
-  std::unique_ptr<LineageDbClient<Hash, ToSql>> lineagedb_client_;
+  std::unique_ptr<LineageDbClient<Hash, ToSql, Clock>> lineagedb_client_;
 
   // A collection of rules (lhs, type, rhs) where
   //

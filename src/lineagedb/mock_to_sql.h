@@ -3,6 +3,7 @@
 
 #include <cstdint>
 
+#include <chrono>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -114,6 +115,18 @@ struct MockToSql<std::array<T, N>> {
       values.push_back(MockToSql<T>().Value(x));
     }
     return fmt::format("[{}]", Join(values));
+  }
+};
+
+template <typename Clock>
+struct MockToSql<std::chrono::time_point<Clock>> {
+  std::string Type() { return "time_point"; }
+
+  std::string Value(const std::chrono::time_point<Clock>& t) {
+    return fmt::format(
+        "epoch + {} seconds",
+        std::chrono::duration_cast<std::chrono::seconds>(t.time_since_epoch())
+            .count());
   }
 };
 

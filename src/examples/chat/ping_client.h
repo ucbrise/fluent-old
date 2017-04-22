@@ -23,8 +23,8 @@ struct PingClientArgs {
   std::string msg;
 };
 
-template <template <template <typename> class, template <typename> class>
-          class LineageDbClient>
+template <template <template <typename> class, template <typename> class,
+                    typename> class LineageDbClient>
 int PingClientMain(const PingClientArgs& args,
                    const lineagedb::ConnectionConfig& connection_config) {
   using connect_tuple_t = std::tuple<std::string, std::string, std::string>;

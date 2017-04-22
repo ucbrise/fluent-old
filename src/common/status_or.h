@@ -90,12 +90,12 @@ class StatusOr {
 
   // Returns value or crashes if ok() is false.
   inline const T& ValueOrDie() const {
-    CHECK(ok()) << "Attempting to fetch value of non-OK StatusOr";
+    CHECK(ok()) << "Attempting to fetch value of non-OK StatusOr: " << status();
     return boost::get<T>(variant_);
   }
 
   inline T& ValueOrDie() {
-    CHECK(ok()) << "Attempting to fetch value of non-OK StatusOr";
+    CHECK(ok()) << "Attempting to fetch value of non-OK StatusOr: " << status();
     return boost::get<T>(variant_);
   }
 

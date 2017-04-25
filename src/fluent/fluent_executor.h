@@ -615,6 +615,7 @@ class FluentExecutor<
 
     auto phy = ra.ToPhysical();
     auto rng = phy.ToRange();
+    std::chrono::time_point<Clock> physical_time = Clock::now();
     for (auto iter = ranges::begin(rng); iter != ranges::end(rng); iter++) {
       const auto& lt = *iter;
 
@@ -622,8 +623,8 @@ class FluentExecutor<
 
       for (const ra::LineageTuple& l : lt.lineage) {
         RETURN_IF_ERROR(lineagedb_client_->AddDerivedLineage(
-            l.collection, l.hash, rule_number, inserted, collection->Name(),
-            tuple_hash, time_));
+            l.collection, l.hash, rule_number, inserted, physical_time,
+            collection->Name(), tuple_hash, time_));
       }
 
       if (inserted) {
@@ -652,6 +653,7 @@ class FluentExecutor<
       }
 
       update_collection(*collection, std::set<tuple_type>{lt.tuple});
+      physical_time = Clock::now();
     };
     return Status::OK;
   }

@@ -138,23 +138,30 @@ TEST(MockClient, AddNetworkedLineage) {
 
 TEST(MockClient, AddDerivedLineage) {
   using Client = MockClient<Hash, MockToSql, MockClock>;
+  using time_point = std::chrono::time_point<MockClock>;
+  using std::chrono::seconds;
+
   StatusOr<Client> client_or = Client::Make("", 42, "", ConnectionConfig());
   ASSERT_EQ(Status::OK, client_or.status());
   Client client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, (client.AddDerivedLineage("0", 1, 2, true, "3", 4, 5)));
   ASSERT_EQ(Status::OK,
-            (client.AddDerivedLineage("10", 11, 12, true, "13", 14, 15)));
+            (client.AddDerivedLineage("0", 1, 2, true, time_point(seconds(1)),
+                                      "3", 4, 5)));
   ASSERT_EQ(Status::OK,
-            (client.AddDerivedLineage("20", 21, 22, true, "23", 24, 25)));
+            (client.AddDerivedLineage("10", 11, 12, true,
+                                      time_point(seconds(2)), "13", 14, 15)));
+  ASSERT_EQ(Status::OK,
+            (client.AddDerivedLineage("20", 21, 22, true,
+                                      time_point(seconds(3)), "23", 24, 25)));
 
   using Tuple = MockClient<Hash, MockToSql, MockClock>::AddDerivedLineageTuple;
   ASSERT_EQ(client.GetAddDerivedLineage().size(), static_cast<std::size_t>(3));
   EXPECT_EQ(client.GetAddDerivedLineage()[0],
-            Tuple("0", 1, 2, true, "3", 4, 5));
+            Tuple("0", 1, 2, true, time_point(seconds(1)), "3", 4, 5));
   EXPECT_EQ(client.GetAddDerivedLineage()[1],
-            Tuple("10", 11, 12, true, "13", 14, 15));
+            Tuple("10", 11, 12, true, time_point(seconds(2)), "13", 14, 15));
   EXPECT_EQ(client.GetAddDerivedLineage()[2],
-            Tuple("20", 21, 22, true, "23", 24, 25));
+            Tuple("20", 21, 22, true, time_point(seconds(3)), "23", 24, 25));
 }
 
 TEST(MockClient, Exec) {

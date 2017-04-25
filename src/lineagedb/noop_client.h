@@ -63,8 +63,9 @@ class NoopClient {
   }
 
   WARN_UNUSED Status AddDerivedLineage(const std::string&, std::size_t, int,
-                                       bool, const std::string&, std::size_t,
-                                       int) {
+                                       bool,
+                                       const std::chrono::time_point<Clock>&,
+                                       const std::string&, std::size_t, int) {
     return Status::OK;
   }
 

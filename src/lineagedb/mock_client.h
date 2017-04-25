@@ -111,14 +111,14 @@ class MockClient {
     return Status::OK;
   }
 
-  WARN_UNUSED Status AddDerivedLineage(const std::string& dep_collection_name,
-                                       std::size_t dep_tuple_hash,
-                                       int rule_number, bool inserted,
-                                       const std::string& collection_name,
-                                       std::size_t tuple_hash, int time) {
-    add_derived_lineage_.push_back(
-        std::make_tuple(dep_collection_name, dep_tuple_hash, rule_number,
-                        inserted, collection_name, tuple_hash, time));
+  WARN_UNUSED Status AddDerivedLineage(
+      const std::string& dep_collection_name, std::size_t dep_tuple_hash,
+      int rule_number, bool inserted,
+      const std::chrono::time_point<Clock>& physical_time,
+      const std::string& collection_name, std::size_t tuple_hash, int time) {
+    add_derived_lineage_.push_back(std::make_tuple(
+        dep_collection_name, dep_tuple_hash, rule_number, inserted,
+        physical_time, collection_name, tuple_hash, time));
     return Status::OK;
   }
 
@@ -145,10 +145,11 @@ class MockClient {
   // dep_node_id, dep_time, collection_name, tuple_hash, time
   using AddNetworkedLineageTuple =
       std::tuple<std::size_t, int, std::string, std::size_t, int>;
-  // dep_collection_name, dep_tuple_hash, rule_number, inserted,
+  // dep_collection_name, dep_tuple_hash, rule_number, inserted, physical_time,
   // collection_name, tuple_hash, time
-  using AddDerivedLineageTuple = std::tuple<std::string, std::size_t, int, bool,
-                                            std::string, std::size_t, int>;
+  using AddDerivedLineageTuple =
+      std::tuple<std::string, std::size_t, int, bool,
+                 std::chrono::time_point<Clock>, std::string, std::size_t, int>;
   // query
   using ExecTuple = std::tuple<std::string>;
 

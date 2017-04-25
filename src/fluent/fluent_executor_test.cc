@@ -289,6 +289,7 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
   using AddDerivedLineageTuple = MockClient::AddDerivedLineageTuple;
 
   using time_point = std::chrono::time_point<MockClock>;
+  using std::chrono::seconds;
 
   ASSERT_EQ(client.GetAddRule().size(), static_cast<std::size_t>(3));
   EXPECT_EQ(client.GetAddCollection()[0],
@@ -324,7 +325,7 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
             static_cast<std::size_t>(0));
   ASSERT_EQ(client.GetAddDerivedLineage().size(), static_cast<std::size_t>(0));
 
-  MockClock::Advance(std::chrono::seconds(1));
+  MockClock::Advance(seconds(1));
   ASSERT_EQ(Status::OK, f.Tick());
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}, {1}}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
@@ -333,26 +334,23 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
   ASSERT_EQ(client.GetAddRule().size(), static_cast<std::size_t>(3));
   ASSERT_EQ(client.GetAddCollection().size(), static_cast<std::size_t>(3));
   ASSERT_EQ(client.GetInsertTuple().size(), static_cast<std::size_t>(6));
-  EXPECT_EQ(
-      client.GetInsertTuple()[3],
-      InsertTupleTuple("t", 5, time_point(std::chrono::seconds(1)), {"1"}));
-  EXPECT_EQ(
-      client.GetInsertTuple()[4],
-      InsertTupleTuple("t", 6, time_point(std::chrono::seconds(1)), {"0"}));
-  EXPECT_EQ(
-      client.GetInsertTuple()[5],
-      InsertTupleTuple("s", 7, time_point(std::chrono::seconds(1)), {"0"}));
+  EXPECT_EQ(client.GetInsertTuple()[3],
+            InsertTupleTuple("t", 5, time_point(seconds(1)), {"1"}));
+  EXPECT_EQ(client.GetInsertTuple()[4],
+            InsertTupleTuple("t", 6, time_point(seconds(1)), {"0"}));
+  EXPECT_EQ(client.GetInsertTuple()[5],
+            InsertTupleTuple("s", 7, time_point(seconds(1)), {"0"}));
   ASSERT_EQ(client.GetDeleteTuple().size(), static_cast<std::size_t>(2));
-  EXPECT_EQ(
-      client.GetDeleteTuple()[1],
-      DeleteTupleTuple("s", 8, time_point(std::chrono::seconds(1)), {"0"}));
+  EXPECT_EQ(client.GetDeleteTuple()[1],
+            DeleteTupleTuple("s", 8, time_point(seconds(1)), {"0"}));
   ASSERT_EQ(client.GetAddNetworkedLineage().size(),
             static_cast<std::size_t>(0));
   ASSERT_EQ(client.GetAddDerivedLineage().size(), static_cast<std::size_t>(1));
   EXPECT_EQ(client.GetAddDerivedLineage()[0],
-            AddDerivedLineageTuple("t", hash({0}), 0, true, "t", hash({1}), 5));
+            AddDerivedLineageTuple("t", hash({0}), 0, true,
+                                   time_point(seconds(1)), "t", hash({1}), 5));
 
-  MockClock::Advance(std::chrono::seconds(1));
+  MockClock::Advance(seconds(1));
   ASSERT_EQ(Status::OK, f.Tick());
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}, {1}, {2}}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
@@ -361,27 +359,24 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
   ASSERT_EQ(client.GetAddRule().size(), static_cast<std::size_t>(3));
   ASSERT_EQ(client.GetAddCollection().size(), static_cast<std::size_t>(3));
   ASSERT_EQ(client.GetInsertTuple().size(), static_cast<std::size_t>(9));
-  EXPECT_EQ(
-      client.GetInsertTuple()[6],
-      InsertTupleTuple("t", 9, time_point(std::chrono::seconds(2)), {"2"}));
-  EXPECT_EQ(
-      client.GetInsertTuple()[7],
-      InsertTupleTuple("t", 10, time_point(std::chrono::seconds(2)), {"0"}));
-  EXPECT_EQ(
-      client.GetInsertTuple()[8],
-      InsertTupleTuple("s", 11, time_point(std::chrono::seconds(2)), {"0"}));
+  EXPECT_EQ(client.GetInsertTuple()[6],
+            InsertTupleTuple("t", 9, time_point(seconds(2)), {"2"}));
+  EXPECT_EQ(client.GetInsertTuple()[7],
+            InsertTupleTuple("t", 10, time_point(seconds(2)), {"0"}));
+  EXPECT_EQ(client.GetInsertTuple()[8],
+            InsertTupleTuple("s", 11, time_point(seconds(2)), {"0"}));
   ASSERT_EQ(client.GetDeleteTuple().size(), static_cast<std::size_t>(3));
-  EXPECT_EQ(
-      client.GetDeleteTuple()[2],
-      DeleteTupleTuple("s", 12, time_point(std::chrono::seconds(2)), {"0"}));
+  EXPECT_EQ(client.GetDeleteTuple()[2],
+            DeleteTupleTuple("s", 12, time_point(seconds(2)), {"0"}));
   ASSERT_EQ(client.GetAddNetworkedLineage().size(),
             static_cast<std::size_t>(0));
-  EXPECT_THAT(client.GetAddDerivedLineage(),
-              UnorderedElementsAreArray(std::set<AddDerivedLineageTuple>{
-                  {"t", hash({0}), 0, true, "t", hash({1}), 5},
-                  {"t", hash({0}), 0, true, "t", hash({2}), 9},
-                  {"t", hash({1}), 0, true, "t", hash({2}), 9},
-              }));
+  EXPECT_THAT(
+      client.GetAddDerivedLineage(),
+      UnorderedElementsAreArray(std::set<AddDerivedLineageTuple>{
+          {"t", hash({0}), 0, true, time_point(seconds(1)), "t", hash({1}), 5},
+          {"t", hash({0}), 0, true, time_point(seconds(2)), "t", hash({2}), 9},
+          {"t", hash({1}), 0, true, time_point(seconds(2)), "t", hash({2}), 9},
+      }));
 }
 
 TEST(FluentExecutor, BlackBoxLineage) {

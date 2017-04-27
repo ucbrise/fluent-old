@@ -36,6 +36,38 @@ TEST(GroupBy, SimpleSum) {
   ExpectRngsUnorderedEqual(grouped.ToPhysical().ToRange(), expected);
 }
 
+TEST(GroupBy, CountString) {
+  std::vector<std::tuple<int, std::string>> xs = {
+      {1, "A"}, {1, "B"}, {2, "A"}, {2, "B"}
+  };
+  std::vector<std::tuple<int, std::size_t>> expected = {
+      {1, 2}, {2, 2}
+  };
+
+  auto grouped = ra::make_iterable(&xs) |
+                 ra::group_by<ra::Keys<0>, ra::agg::Count<0>>();
+  static_assert(std::is_same<decltype(grouped)::column_types,
+                             TypeList<int, std::size_t>>::value,
+                "");
+  ExpectRngsUnorderedEqual(grouped.ToPhysical().ToRange(), expected);
+}
+
+TEST(GroupBy, SumDouble) {
+  std::vector<std::tuple<int, double, double>> xs = {
+      {1, 2.0, 2.0}, {1, 3.0, 3.0}, {2, 4.0, 4.0}, {2, 5.0, 5.0}
+  };
+  std::vector<std::tuple<int, double>> expected = {
+      {1, 5.0}, {2, 9.0}
+  };
+
+  auto grouped = ra::make_iterable(&xs) |
+                 ra::group_by<ra::Keys<0>, ra::agg::Sum<1>>();
+  static_assert(std::is_same<decltype(grouped)::column_types,
+                             TypeList<int, double>>::value,
+                "");
+  ExpectRngsUnorderedEqual(grouped.ToPhysical().ToRange(), expected);
+}
+
 }  // namespace fluent
 
 int main(int argc, char** argv) {

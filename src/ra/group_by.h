@@ -38,7 +38,7 @@ class PhysicalGroupBy {
   using key_types = typename LogicalGroupBy::key_types;
   using key_tuple = typename TypeListToTuple<key_types>::type;
 
-  using child_column_types = typename LogicalGroupBy::column_types;
+  using child_column_types = typename LogicalGroupBy::child_column_types;
   using child_column_tuple = typename TypeListToTuple<child_column_types>::type;
 
   using aggregate_impl_types = typename LogicalGroupBy::aggregate_impl_types;
@@ -119,7 +119,7 @@ class GroupBy<LogicalChild, Keys<Ks...>, Aggregates<AggregateColumns>...> {
 
   explicit GroupBy(LogicalChild child) : child_(std::move(child)) {}
 
-  auto ToPhysical() {
+  auto ToPhysical() const {
     return PhysicalGroupBy<
         decltype(child_.ToPhysical()),
         GroupBy<LogicalChild, Keys<Ks...>, Aggregates<AggregateColumns>...>>(

@@ -51,6 +51,7 @@ public:
 		return MinLattice<T>(this->element_ - n);
 	}
 
+	// TODO:CHENGGANG FIX THIS
 	friend bool operator<(const MinLattice<T>& lhs, const MinLattice<T>& rhs) {
 		return lhs.element_ < rhs.element_;
 	}

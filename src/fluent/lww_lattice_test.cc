@@ -16,11 +16,11 @@ using ::testing::UnorderedElementsAreArray;
 namespace fluent {
 
 TEST(LwwLattice, SimpleMerge) {
-  LwwLattice<int> l("l");
+  LwwLattice<long, int> l("l");
   EXPECT_THAT(std::get<0>(l.Reveal()), 0);
   EXPECT_THAT(std::get<1>(l.Reveal()), 0);
 
-  LwwLattice<int> o("o", std::pair<int, int>(10, 10));
+  LwwLattice<long, int> o("o", std::pair<int, int>(10, 10));
 
   std::pair<int, int> p1(8, 5);
   std::pair<int, int> p2(4, 3);

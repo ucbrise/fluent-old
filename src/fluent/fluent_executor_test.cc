@@ -238,7 +238,11 @@ TEST(FluentExecutor, Lattices) {
         t <= ra::make_iterable(&xs),
         bl <= omapl.size().gt_eq(0),
         maxl <= omaxl,
-        mapl <= ra::make_iterable(&ys)
+        mapl <= (ra::make_iterable(&ys) | ra::map([](const auto& t) {
+                                        MapLattice<int, MaxLattice<int>> l;
+                                        l.insert_pair(std::get<0>(t), MaxLattice<int>(std::get<1>(t)));
+                                        return std::make_tuple(l);
+                                      }))
       );
     });
   // clang-format on

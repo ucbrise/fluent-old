@@ -1,11 +1,11 @@
 #ifndef FLUENT_MAP_LATTICE_H_
 #define FLUENT_MAP_LATTICE_H_
 
+#include <unordered_map>
+
 #include "ra/map_iterable.h"
 #include "fluent/base_lattice.h"
 #include "fluent/max_lattice.h"
-
-#include <unordered_map>
 
 namespace fluent {
 
@@ -66,7 +66,7 @@ public:
 		auto begin = std::make_move_iterator(std::begin(buf));
 		auto end = std::make_move_iterator(std::end(buf));
 		for (auto it = begin; it != end; it++) {
-		  merge(std::get<0>(*it), std::get<1>(*it));
+		  merge(std::get<0>(*it));
 		}
 	}
 

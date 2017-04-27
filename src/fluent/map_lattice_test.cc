@@ -17,30 +17,15 @@ using ::testing::UnorderedElementsAreArray;
 
 namespace fluent {
 
-namespace {
-
-template <typename A, typename B, typename C>
-const A& fst(const std::tuple<A, B, C>& t) {
-  return std::get<0>(t);
-}
-
-template <typename A, typename B, typename C>
-const B& snd(const std::tuple<A, B, C>& t) {
-  return std::get<1>(t);
-}
-
-template <typename A, typename B, typename C>
-const C& thd(const std::tuple<A, B, C>& t) {
-  return std::get<2>(t);
-}
-
-}  // namespace
-
 TEST(MapLattice, SimpleMerge) {
   std::set<std::tuple<int, int>> s1 = {{1, 5}, {1, 4}};
   MapLattice<int, MaxLattice<int>> mapl("mapl");
 
-  mapl.Merge(ra::make_iterable(&s1));
+  mapl.Merge(ra::make_iterable(&s1) | ra::map([](const auto& t) {
+                                        MapLattice<int, MaxLattice<int>> l;
+                                        l.insert_pair(std::get<0>(t), MaxLattice<int>(std::get<1>(t)));
+                                        return std::make_tuple(l);
+                                      }));
   std::unordered_map<int, MaxLattice<int>> res = mapl.Reveal();
   for (auto it = res.begin(); it != res.end(); it++) {
     EXPECT_THAT((it->second).Reveal(), 5);

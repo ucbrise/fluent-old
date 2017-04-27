@@ -1,5 +1,9 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
 ADD_EXECUTABLE(examples_ps_server_manager server_manager.cc)
+ADD_EXECUTABLE(examples_ps_worker_node worker_node.cc)
+ADD_EXECUTABLE(examples_ps_server_node server_node.cc)
 
 TARGET_LINK_LIBRARIES(examples_ps_server_manager fluent)
+TARGET_LINK_LIBRARIES(examples_ps_worker_node fluent)
+TARGET_LINK_LIBRARIES(examples_ps_server_node fluent)

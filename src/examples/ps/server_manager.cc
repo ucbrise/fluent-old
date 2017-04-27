@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
   }
 
   const address_t self_address = argv[1];
-  const int num_nodes = argv[2];
+  const int num_nodes = std::stoi(argv[2]);
   zmq::context_t context(1);
 
   std::vector<std::tuple<address_t>>
@@ -49,9 +49,9 @@ int main(int argc, char* argv[]) {
                 membership_channel <=
                 (ra::make_cross((membership.Iterable() | ra::project<1>()), (ra::make_cross(membership.Iterable(), 
                     (membership.Iterable() | ra::count() | ra::filter([&](const auto& t) {
-                        return std::get<0>(t) == num_nodes;
+                        return std::get<0>(t) == (unsigned long)num_nodes;
                     })))
-                | ra::project<0, 1>() | ra::batch())))
+                | ra::project<0, 1>() | ra::batch())));
 
             return std::make_tuple(add_membership, broadcast_membership);
     });

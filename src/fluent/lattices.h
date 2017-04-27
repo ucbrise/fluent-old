@@ -6,6 +6,7 @@
 #include "fluent/max_lattice.h"
 #include "fluent/map_lattice.h"
 #include "fluent/min_lattice.h"
+#include "fluent/set_lattice.h"
 
 
 #endif  // FLUENT_LATTICES_H

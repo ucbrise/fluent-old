@@ -16,7 +16,16 @@ class PhysicalIterable {
  public:
   explicit PhysicalIterable(const T* iterable) : iterable_(iterable) {}
 
-  auto ToRange() { return ranges::view::all(*iterable_); }
+  auto ToRange() {
+    return ToRange(std::make_tuple());
+  }
+
+  template <typename TP>
+  auto ToRange(const TP t) { 
+  	return ranges::view::all(*iterable_) | ranges::view::transform([t](const auto& l) {
+  		return std::tuple_cat(t, l);
+  	}); 
+  }
 
  private:
   const T* iterable_;

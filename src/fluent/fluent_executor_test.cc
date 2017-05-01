@@ -18,6 +18,7 @@
 #include "fluent/channel.h"
 #include "fluent/fluent_builder.h"
 #include "fluent/infix.h"
+#include "fluent/mock_pickler.h"
 #include "lineagedb/connection_config.h"
 #include "lineagedb/mock_client.h"
 #include "lineagedb/mock_to_sql.h"
@@ -36,7 +37,7 @@ namespace {
 auto noopfluent(const std::string& name, const std::string& address,
                 zmq::context_t* context,
                 const ldb::ConnectionConfig& connection_config) {
-  return fluent<ldb::NoopClient, Hash, ldb::ToSql, MockClock>(
+  return fluent<ldb::NoopClient, Hash, ldb::ToSql, MockPickler, MockClock>(
       name, address, context, connection_config);
 }
 
@@ -258,8 +259,9 @@ TEST(FluentExecutor, SimpleCommunication) {
 TEST(FluentExecutor, SimpleProgramWithLineage) {
   zmq::context_t context(1);
   lineagedb::ConnectionConfig connection_config;
-  auto fb_or = fluent<ldb::MockClient, Hash, ldb::MockToSql, MockClock>(
-      "name", "inproc://yolo", &context, connection_config);
+  auto fb_or =
+      fluent<ldb::MockClient, Hash, ldb::MockToSql, MockPickler, MockClock>(
+          "name", "inproc://yolo", &context, connection_config);
   ASSERT_EQ(Status::OK, fb_or.status());
   auto fe_or = fb_or.ConsumeValueOrDie()
                    .table<std::size_t>("t", {{"x"}})
@@ -382,8 +384,9 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
 TEST(FluentExecutor, BlackBoxLineage) {
   zmq::context_t context(1);
   lineagedb::ConnectionConfig connection_config;
-  auto fb_or = fluent<ldb::MockClient, Hash, ldb::MockToSql, MockClock>(
-      "name", "inproc://yolo", &context, connection_config);
+  auto fb_or =
+      fluent<ldb::MockClient, Hash, ldb::MockToSql, MockPickler, MockClock>(
+          "name", "inproc://yolo", &context, connection_config);
   ASSERT_EQ(Status::OK, fb_or.status());
   auto fe_or =
       fb_or.ConsumeValueOrDie()

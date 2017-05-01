@@ -49,7 +49,7 @@ template <typename Collections, typename BootstrapRules, typename Rules,
           template <template <typename> class, template <typename> class,
                     typename> class LineageDbClient,
           template <typename> class Hash, template <typename> class ToSql,
-          typename Clock>
+          template <typename> class Pickler, typename Clock>
 class FluentExecutor;
 
 // # Overview
@@ -80,12 +80,12 @@ template <typename... Cs, typename... BootstrapLhss,
           template <template <typename> class, template <typename> class,
                     typename> class LineageDbClient,
           template <typename> class Hash, template <typename> class ToSql,
-          typename Clock>
+          template <typename> class Pickler, typename Clock>
 class FluentExecutor<
     TypeList<Cs...>,
     std::tuple<Rule<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>,
     std::tuple<Rule<Lhss, RuleTags, Rhss>...>, LineageDbClient, Hash, ToSql,
-    Clock> {
+    Pickler, Clock> {
   static_assert(sizeof...(BootstrapLhss) == sizeof...(BootstrapRuleTags) &&
                     sizeof...(BootstrapRuleTags) == sizeof...(BootstrapRhss),
                 "The ith entry of BootstrapLhss corresponds to the left-hand "
@@ -365,10 +365,10 @@ class FluentExecutor<
       }
 
       const std::size_t dep_node_id =
-          FromString<std::size_t>(zmq_util::message_to_string(msgs[0]));
+          Pickler<std::size_t>().Load(zmq_util::message_to_string(msgs[0]));
       const std::string channel_name = zmq_util::message_to_string(msgs[1]);
       const int dep_time =
-          FromString<int>(zmq_util::message_to_string(msgs[2]));
+          Pickler<int>().Load(zmq_util::message_to_string(msgs[2]));
 
       if (parsers_.find(channel_name) != std::end(parsers_)) {
         RETURN_IF_ERROR(parsers_[channel_name](dep_node_id, dep_time,
@@ -510,10 +510,11 @@ class FluentExecutor<
 
   // See RegisterBlackBoxLineage.
   // TODO(mwhittaker): Use a Status class.
-  template <typename... RequestTs, typename... ResponseTs, typename F>
-  WARN_UNUSED Status
-  RegisterBlackBoxLineageImpl(const Channel<RequestTs...>& request,
-                              const Channel<ResponseTs...>& response, F f) {
+  template <template <typename> class Pickler_, typename... RequestTs,
+            typename... ResponseTs, typename F>
+  WARN_UNUSED Status RegisterBlackBoxLineageImpl(
+      const Channel<Pickler_, RequestTs...>& request,
+      const Channel<Pickler_, ResponseTs...>& response, F f) {
     // Validate request types.
     const std::string request_columns_err =
         "The first three columns of a request channel must be a dst_addr, "
@@ -658,14 +659,14 @@ class FluentExecutor<
     return Status::OK;
   }
 
-  template <typename... Ts, typename Rhs>
-  WARN_UNUSED Status ExecuteRule(int rule_number, Channel<Ts...>* collection,
-                                 MergeTag, const Rhs& ra) {
+  template <template <typename> class Pickler_, typename... Ts, typename Rhs>
+  WARN_UNUSED Status ExecuteRule(int rule_number,
+                                 Channel<Pickler_, Ts...>* collection, MergeTag,
+                                 const Rhs& ra) {
     return ExecuteRule(
         rule_number, collection, ra, true,
-        [this](Channel<Ts...>& c, const std::set<std::tuple<Ts...>>& ts) {
-          c.Merge(ts, time_);
-        });
+        [this](Channel<Pickler_, Ts...>& c,
+               const std::set<std::tuple<Ts...>>& ts) { c.Merge(ts, time_); });
   }
 
   template <typename Lhs, typename Rhs>

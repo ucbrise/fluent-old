@@ -16,8 +16,8 @@
 #include "common/macros.h"
 #include "common/status.h"
 #include "common/type_traits.h"
+#include "fluent/mock_pickler.h"
 #include "fluent/rule_tags.h"
-#include "fluent/serialization.h"
 #include "fluent/socket_cache.h"
 #include "ra/iterable.h"
 #include "zmq_util/zmq_util.h"
@@ -26,17 +26,17 @@ namespace fluent {
 namespace detail {
 
 // See `GetParser`.
-template <typename... Ts, std::size_t... Is>
+template <template <typename> class Pickler, typename... Ts, std::size_t... Is>
 std::tuple<Ts...> parse_tuple_impl(const std::vector<std::string>& columns,
                                    std::index_sequence<Is...>) {
-  return {FromString<Ts>(columns[Is])...};
+  return {Pickler<Ts>().Load(columns[Is])...};
 }
 
 // See `GetParser`.
-template <typename... Ts>
+template <template <typename> class Pickler, typename... Ts>
 std::tuple<Ts...> parse_tuple(const std::vector<std::string>& columns) {
   using Indices = std::make_index_sequence<sizeof...(Ts)>;
-  return parse_tuple_impl<Ts...>(columns, Indices());
+  return parse_tuple_impl<Pickler, Ts...>(columns, Indices());
 }
 
 }  // namespace detail
@@ -54,7 +54,7 @@ using Parser = std::function<Status(
 // specifying the ZeroMQ to which the tuple should be sent. For example, if
 // adding the tuple ("inproc://a", 1, 2, 3) will send the tuple ("inproc://a",
 // 1, 2, 3) to the node at address ("inproc//a", 1, 2, 3).
-template <typename T, typename... Ts>
+template <template <typename> class Pickler, typename T, typename... Ts>
 class Channel {
   static_assert(std::is_same<std::string, T>::value,
                 "The first column of a channel must be a string specifying a "
@@ -84,8 +84,6 @@ class Channel {
     return ra::make_iterable(name_, &ts_);
   }
 
-  // Merge assumes a `std::string ToString(const U&)` function exists for `U`
-  // in `T, Ts...`.
   void Merge(const std::set<std::tuple<T, Ts...>>& ts, int time) {
     for (const std::tuple<T, Ts...>& t : ts) {
       VLOG(1) << "Channel " << this->Name() << " sending tuple to "
@@ -95,7 +93,7 @@ class Channel {
       msgs.push_back(zmq_util::string_to_message(ToString(id_)));
       msgs.push_back(zmq_util::string_to_message(this->Name()));
       msgs.push_back(zmq_util::string_to_message(ToString(time)));
-      auto strings = TupleMap(t, [](const auto& x) { return ToString(x); });
+      auto strings = TupleMap(t, [this](const auto& x) { return ToString(x); });
       TupleIter(strings, [&msgs](const std::string& s) {
         msgs.push_back(zmq_util::string_to_message(s));
       });
@@ -113,16 +111,12 @@ class Channel {
 
   // `GetParser(f)` returns a parser (see Parser above) which parses a tuple
   // destined for this channel and then invokes `f`.
-  //
-  // The ith element of the tuple is parsed using a global `Ti
-  // FromString<Ti>(const std::string&)` function which is assumed to exists
-  // (see `serialization.h` for more information).
   template <typename F>
   Parser GetParser(F f) {
     return [this, f](std::size_t dep_node_id, int dep_time,
                      const std::string& channel_name,
                      const std::vector<std::string>& columns, int time) {
-      const auto t = detail::parse_tuple<T, Ts...>(columns);
+      const auto t = detail::parse_tuple<Pickler, T, Ts...>(columns);
       RETURN_IF_ERROR(f(dep_node_id, dep_time, channel_name, t, time));
       ts_.insert(t);
       return Status::OK;
@@ -130,6 +124,11 @@ class Channel {
   }
 
  private:
+  template <typename U>
+  std::string ToString(const U& x) {
+    return Pickler<typename std::decay<U>::type>().Dump(x);
+  }
+
   const std::size_t id_;
   const std::string name_;
   const std::array<std::string, 1 + sizeof...(Ts)> column_names_;

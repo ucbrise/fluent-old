@@ -24,6 +24,7 @@
 #include "common/type_list.h"
 #include "fluent/channel.h"
 #include "fluent/fluent_executor.h"
+#include "fluent/mock_pickler.h"
 #include "fluent/network_state.h"
 #include "fluent/periodic.h"
 #include "fluent/rule.h"
@@ -43,6 +44,7 @@ template <typename Collections, typename BootstrapRules,
                     typename> class LineageDbClient,
           template <typename> class Hash = Hash,
           template <typename> class ToSql = lineagedb::ToSql,
+          template <typename> class Pickler = MockPickler,
           typename Clock = std::chrono::system_clock>
 class FluentBuilder;
 
@@ -66,10 +68,10 @@ class FluentBuilder;
 // `collections_` will have the following type:
 //
 //   std::tuple<
-//     std::unique_ptr<Table<int, char, float>>,          // t1
-//     std::unique_ptr<Table<float, int>>,                // t2
-//     std::unique_ptr<Scratch<int, int, float>>,         // s
-//     std::unique_ptr<Channel<std::string, float, char>> // c
+//     std::unique_ptr<Table<int, char, float>>,             // t1
+//     std::unique_ptr<Table<float, int>>,                   // t2
+//     std::unique_ptr<Scratch<int, int, float>>,            // s
+//     std::unique_ptr<Channel<_, std::string, float, char>> // c
 //   >
 //
 // `boostrap_rules_` is a collection of rules of the form (lhs, type, rhs)
@@ -93,11 +95,11 @@ template <typename... Cs, typename... BootstrapLhss,
           template <template <typename> class, template <typename> class,
                     typename> class LineageDbClient,
           template <typename> class Hash, template <typename> class ToSql,
-          typename Clock>
+          template <typename> class Pickler, typename Clock>
 class FluentBuilder<
     TypeList<Cs...>,
     std::tuple<Rule<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>,
-    LineageDbClient, Hash, ToSql, Clock> {
+    LineageDbClient, Hash, ToSql, Pickler, Clock> {
   static_assert(sizeof...(BootstrapLhss) == sizeof...(BootstrapRuleTags) &&
                     sizeof...(BootstrapRuleTags) == sizeof...(BootstrapRhss),
                 "The ith entry of BootstrapLhss corresponds to the left-hand "
@@ -123,7 +125,7 @@ class FluentBuilder<
 
   template <typename... Us>
   FluentBuilder<TypeList<Cs..., Table<Us...>>, BootstrapRules, LineageDbClient,
-                Hash, ToSql, Clock>
+                Hash, ToSql, Pickler, Clock>
   table(const std::string& name,
         std::array<std::string, sizeof...(Us)> column_names) && {
     LOG(INFO) << "Adding table " << name << "(" << Join(column_names) << ").";
@@ -133,7 +135,7 @@ class FluentBuilder<
 
   template <typename... Us>
   FluentBuilder<TypeList<Cs..., Scratch<Us...>>, BootstrapRules,
-                LineageDbClient, Hash, ToSql, Clock>
+                LineageDbClient, Hash, ToSql, Pickler, Clock>
   scratch(const std::string& name,
           std::array<std::string, sizeof...(Us)> column_names) && {
     LOG(INFO) << "Adding scratch " << name << "(" << Join(column_names) << ").";
@@ -142,12 +144,12 @@ class FluentBuilder<
   }
 
   template <typename... Us>
-  FluentBuilder<TypeList<Cs..., Channel<Us...>>, BootstrapRules,
-                LineageDbClient, Hash, ToSql, Clock>
+  FluentBuilder<TypeList<Cs..., Channel<Pickler, Us...>>, BootstrapRules,
+                LineageDbClient, Hash, ToSql, Pickler, Clock>
   channel(const std::string& name,
           std::array<std::string, sizeof...(Us)> column_names) && {
     LOG(INFO) << "Adding channel " << name << "(" << Join(column_names) << ").";
-    auto c = std::make_unique<Channel<Us...>>(
+    auto c = std::make_unique<Channel<Pickler, Us...>>(
         id_, name, std::move(column_names), &network_state_->socket_cache);
     CHECK(parsers_.find(c->Name()) == parsers_.end())
         << "The channel name '" << c->Name()
@@ -170,7 +172,7 @@ class FluentBuilder<
   }
 
   FluentBuilder<TypeList<Cs..., Stdin>, BootstrapRules, LineageDbClient, Hash,
-                ToSql, Clock>
+                ToSql, Pickler, Clock>
   stdin() && {
     LOG(INFO) << "Adding stdin.";
     auto stdin = std::make_unique<Stdin>();
@@ -179,14 +181,14 @@ class FluentBuilder<
   }
 
   FluentBuilder<TypeList<Cs..., Stdout>, BootstrapRules, LineageDbClient, Hash,
-                ToSql, Clock>
+                ToSql, Pickler, Clock>
   stdout() && {
     LOG(INFO) << "Adding stdout.";
     return AddCollection(std::make_unique<Stdout>());
   }
 
   FluentBuilder<TypeList<Cs..., Periodic>, BootstrapRules, LineageDbClient,
-                Hash, ToSql, Clock>
+                Hash, ToSql, Pickler, Clock>
   periodic(const std::string& name, const Periodic::period& period) && {
     LOG(INFO) << "Adding Periodic named " << name << ".";
     auto p = std::make_unique<Periodic>(name, period);
@@ -197,7 +199,7 @@ class FluentBuilder<
   // See `RegisterRules`
   template <typename F>
   FluentBuilder<TypeList<Cs...>, typename std::result_of<F(Cs&...)>::type,
-                LineageDbClient, Hash, ToSql, Clock>
+                LineageDbClient, Hash, ToSql, Pickler, Clock>
   RegisterBootstrapRules(const F& f) && {
     static_assert(sizeof...(BootstrapLhss) == 0,
                   "You are registering bootstrap rules with a FluentBuilder "
@@ -228,9 +230,9 @@ class FluentBuilder<
   // implemented by Collection's `<=` operator. `RegisterRules` will execute
   // `f` to generate the rules and use them to construct a `FluentExecutor`.
   template <typename F>
-  WARN_UNUSED StatusOr<FluentExecutor<TypeList<Cs...>, BootstrapRules,
-                                      typename std::result_of<F(Cs&...)>::type,
-                                      LineageDbClient, Hash, ToSql, Clock>>
+  WARN_UNUSED StatusOr<FluentExecutor<
+      TypeList<Cs...>, BootstrapRules, typename std::result_of<F(Cs&...)>::type,
+      LineageDbClient, Hash, ToSql, Pickler, Clock>>
   RegisterRules(const F& f) && {
     return RegisterRulesImpl(f, std::make_index_sequence<sizeof...(Cs)>());
   }
@@ -309,7 +311,7 @@ class FluentBuilder<
   // Return a new FluentBuilder with `c` appended to `collections`.
   template <typename C>
   FluentBuilder<TypeList<Cs..., C>, BootstrapRules, LineageDbClient, Hash,
-                ToSql, Clock>
+                ToSql, Pickler, Clock>
   AddCollection(std::unique_ptr<C> c) {
     std::tuple<std::unique_ptr<Cs>..., std::unique_ptr<C>> collections =
         std::tuple_cat(std::move(collections_), std::make_tuple(std::move(c)));
@@ -327,7 +329,7 @@ class FluentBuilder<
   // See `RegisterBootstrapRules`.
   template <typename F, std::size_t... Is>
   FluentBuilder<TypeList<Cs...>, typename std::result_of<F(Cs&...)>::type,
-                LineageDbClient, Hash, ToSql, Clock>
+                LineageDbClient, Hash, ToSql, Pickler, Clock>
   RegisterBootstrapRulesImpl(const F& f, std::index_sequence<Is...>) {
     auto boostrap_rules = f(*std::get<Is>(collections_)...);
     TupleIter(boostrap_rules, [](const auto& rule) {
@@ -349,7 +351,7 @@ class FluentBuilder<
             typename Executor =
                 FluentExecutor<TypeList<Cs...>, BootstrapRules,
                                typename std::result_of<F(Cs&...)>::type,
-                               LineageDbClient, Hash, ToSql, Clock>>
+                               LineageDbClient, Hash, ToSql, Pickler, Clock>>
   StatusOr<Executor> RegisterRulesImpl(const F& f, std::index_sequence<Is...>) {
     auto relalgs = f(*std::get<Is>(collections_)...);
     TupleIter(relalgs, [](const auto& rule) {
@@ -408,7 +410,8 @@ class FluentBuilder<
   template <typename, typename,
             template <template <typename> class, template <typename> class,
                       typename> class,
-            template <typename> class, template <typename> class, typename>
+            template <typename> class, template <typename> class,
+            template <typename> class, typename>
   friend class FluentBuilder;
 
   // The `fluent` function is used to construct a FluentBuilder without any
@@ -421,9 +424,9 @@ class FluentBuilder<
   template <template <template <typename> class, template <typename> class,
                       typename> class LineageDbClient_,
             template <typename> class Hash_, template <typename> class ToSql_,
-            typename Clock_>
+            template <typename> class Pickler_, typename Clock_>
   friend StatusOr<FluentBuilder<TypeList<>, std::tuple<>, LineageDbClient_,
-                                Hash_, ToSql_, Clock_>>
+                                Hash_, ToSql_, Pickler_, Clock_>>
   fluent(const std::string& name, const std::string& address,
          zmq::context_t* context,
          const lineagedb::ConnectionConfig& connection_config);
@@ -435,14 +438,16 @@ template <template <template <typename> class, template <typename> class,
                     typename> class LineageDbClient,
           template <typename> class Hash = Hash,
           template <typename> class ToSql = lineagedb::ToSql,
+          template <typename> class Pickler = MockPickler,
           typename Clock = std::chrono::system_clock>
 StatusOr<FluentBuilder<TypeList<>, std::tuple<>, LineageDbClient, Hash, ToSql,
-                       Clock>>
+                       Pickler, Clock>>
 fluent(const std::string& name, const std::string& address,
        zmq::context_t* context,
        const lineagedb::ConnectionConfig& connection_config) {
   return FluentBuilder<TypeList<>, std::tuple<>, LineageDbClient, Hash, ToSql,
-                       Clock>::Make(name, address, context, connection_config);
+                       Pickler, Clock>::Make(name, address, context,
+                                             connection_config);
 }
 
 }  // namespace fluent

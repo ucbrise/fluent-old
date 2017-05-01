@@ -14,12 +14,12 @@ namespace fluent {
 
 // `CollectionTypes` returns the types of the columns of a collection.
 //
-//   - CollectionTypes<Table<Ts...>>   == TypeList<Ts...>
+//   - CollectionTypes<Table<Ts...>> == TypeList<Ts...>
 //   - CollectionTypes<Scratch<Ts...>> == TypeList<Ts...>
-//   - CollectionTypes<Channel<Ts...>> == TypeList<Ts...>
-//   - CollectionTypes<Stdin>          == TypeList<std::string>
-//   - CollectionTypes<Stdout>         == TypeList<std::string>
-//   - CollectionTypes<Periodic>       == TypeList<Periodic::id, Periodic::time>
+//   - CollectionTypes<Channel<Pickler, Ts...>> == TypeList<Ts...>
+//   - CollectionTypes<Stdin> == TypeList<std::string>
+//   - CollectionTypes<Stdout> == TypeList<std::string>
+//   - CollectionTypes<Periodic> == TypeList<Periodic::id, Periodic::time>
 template <typename Collection>
 struct CollectionTypes;
 
@@ -33,8 +33,8 @@ struct CollectionTypes<Scratch<Ts...>> {
   using type = TypeList<Ts...>;
 };
 
-template <typename... Ts>
-struct CollectionTypes<Channel<Ts...>> {
+template <template <typename> class Pickler, typename... Ts>
+struct CollectionTypes<Channel<Pickler, Ts...>> {
   using type = TypeList<Ts...>;
 };
 
@@ -76,11 +76,6 @@ struct CollectionTypes<Periodic> {
 //     return true;
 //   }
 //
-//   template <typename... Ts>
-//   bool is_templated(const Channel<Ts...>&) {
-//     return true;
-//   }
-//
 //   ...
 //
 // The CollectionType enum class provides a way to dispatch based on the type
@@ -100,8 +95,8 @@ template <typename... Ts>
 struct GetCollectionType<Scratch<Ts...>>
     : public std::integral_constant<CollectionType, CollectionType::SCRATCH> {};
 
-template <typename... Ts>
-struct GetCollectionType<Channel<Ts...>>
+template <template <typename> class Pickler, typename... Ts>
+struct GetCollectionType<Channel<Pickler, Ts...>>
     : public std::integral_constant<CollectionType, CollectionType::CHANNEL> {};
 
 template <>

@@ -14,3 +14,4 @@
 -Ibuild/vendor/zeromq/src/zeromq/include
 -Ibuild/vendor/fmt/src/fmt
 -Ibuild/vendor/libpqxx/src/libpqxx/include
+-Ibuild/vendor/redox/src/redox/include

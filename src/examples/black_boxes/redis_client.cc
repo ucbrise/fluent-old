@@ -24,13 +24,15 @@ namespace ldb = fluent::lineagedb;
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
 
-  if (argc != 6) {
+  if (argc != 7) {
     std::cerr << "usage: " << argv[0] << " \\" << std::endl  //
               << "  <db_user> \\" << std::endl               //
               << "  <db_password> \\" << std::endl           //
               << "  <db_dbname> \\" << std::endl             //
               << "  <server_address> \\" << std::endl        //
-              << "  <client_address> \\" << std::endl;
+              << "  <client_address> \\" << std::endl        //
+              << "  <name> \\" << std::endl                  //
+        ;
     return 1;
   }
 
@@ -39,13 +41,14 @@ int main(int argc, char* argv[]) {
   const std::string db_dbname = argv[3];
   const std::string server_address = argv[4];
   const std::string client_address = argv[5];
+  const std::string name = argv[6];
   RandomIdGenerator id_gen;
 
   zmq::context_t context(1);
   ldb::ConnectionConfig config{"localhost", 5432, db_user, db_password,
                                db_dbname};
-  auto fb = fluent::fluent<ldb::PqxxClient>("redis_client", client_address,
-                                            &context, config)
+  auto fb = fluent::fluent<ldb::PqxxClient>("redis_client_" + name,
+                                            client_address, &context, config)
                 .ConsumeValueOrDie()
                 .stdin()
                 .stdout()

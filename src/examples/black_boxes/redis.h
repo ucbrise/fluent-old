@@ -9,6 +9,10 @@ auto AddRedisApi(FluentBuilder f) {
           "set_request", {{"dst_addr", "src_addr", "id", "key", "value"}})
       .template channel<string, std::int64_t, bool>(  //
           "set_response", {{"addr", "id", "success"}})
+      .template channel<string, string, std::int64_t, string, string>(
+          "append_request", {{"dst_addr", "src_addr", "id", "key", "value"}})
+      .template channel<string, std::int64_t, int>(  //
+          "append_response", {{"addr", "id", "length"}})
       .template channel<string, string, std::int64_t, string>(
           "get_request", {{"dst_addr", "src_addr", "id", "key"}})
       .template channel<string, std::int64_t, string>(

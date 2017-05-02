@@ -33,8 +33,6 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  std::map<std::string, std::string> kvs;
-
   const std::string db_user = argv[1];
   const std::string db_password = argv[2];
   const std::string db_dbname = argv[3];
@@ -54,13 +52,13 @@ int main(int argc, char* argv[]) {
       AddRedisApi(fluent::fluent<ldb::PqxxClient>("redis_server", address,
                                                   &context, config)
                       .ConsumeValueOrDie())
-          .RegisterRules([&](auto& set_req, auto& set_resp, auto& get_req,
-                             auto& get_resp) {
+          .RegisterRules([&](auto& set_req, auto& set_resp, auto& append_req,
+                             auto& append_resp, auto& get_req, auto& get_resp) {
             using namespace fluent::infix;
 
             auto set =
                 set_resp <=
-                (set_req.Iterable() | ra::map([&kvs, &rdx](const auto& t) {
+                (set_req.Iterable() | ra::map([&rdx](const auto& t) {
                    const std::string& src_addr = std::get<1>(t);
                    const std::int64_t id = std::get<2>(t);
                    const std::string& key = std::get<3>(t);
@@ -68,31 +66,60 @@ int main(int argc, char* argv[]) {
                    return std::make_tuple(src_addr, id, rdx.set(key, value));
                  }));
 
-            auto get =
-                get_resp <=
-                (get_req.Iterable() | ra::map([&kvs, &rdx](const auto& t) {
+            auto append =
+                append_resp <=
+                (append_req.Iterable() | ra::map([&rdx](const auto& t) {
                    const std::string& src_addr = std::get<1>(t);
                    const std::int64_t id = std::get<2>(t);
                    const std::string& key = std::get<3>(t);
-                   return std::make_tuple(src_addr, id, rdx.get(key));
+                   const std::string& value = std::get<4>(t);
+                   redox::Command<int>& c =
+                       rdx.commandSync<int>({"APPEND", key, value});
+                   CHECK(c.ok()) << "APPEND " << key << " " << value
+                                 << " failed.";
+                   int reply = c.reply();
+                   c.free();
+                   return std::make_tuple(src_addr, id, reply);
+
                  }));
 
-            return std::make_tuple(set, get);
+            auto get = get_resp <=
+                       (get_req.Iterable() | ra::map([&rdx](const auto& t) {
+                          const std::string& src_addr = std::get<1>(t);
+                          const std::int64_t id = std::get<2>(t);
+                          const std::string& key = std::get<3>(t);
+                          return std::make_tuple(src_addr, id, rdx.get(key));
+                        }));
+
+            return std::make_tuple(set, append, get);
           })
           .ConsumeValueOrDie();
-  fluent::Status status = f.RegisterBlackBoxLineage<2, 3>(
+  fluent::Status status = f.RegisterBlackBoxLineage<4, 5>(
       [](const std::string& time_inserted, const std::string& key,
          const std::string& value) {
         (void)value;
         return fmt::format(R"(
-          SELECT
-            CAST('redis_server_set_request' as TEXT), hash, time_inserted
-          FROM redis_server_set_request
-          WHERE key = {} AND time_inserted <= {}
-          ORDER BY time_inserted DESC
-          LIMIT 1;
+          -- Most recent SET time.
+          WITH max_set_time AS (
+            SELECT MAX(time_inserted) as max_set_time
+            FROM redis_server_set_request
+            WHERE key = {} AND time_inserted <= {}
+          )
+
+          -- Most recent SET.
+          SELECT CAST('redis_server_set_request' as TEXT), hash, time_inserted
+          FROM redis_server_set_request, max_set_time
+          WHERE key = {} AND time_inserted = max_set_time.max_set_time
+          UNION
+
+          -- All subsequent APPENDs.
+          SELECT CAST('redis_server_append_request' as TEXT),
+                 hash,
+                 time_inserted
+          FROM redis_server_append_request, max_set_time
+          WHERE key={} AND time_inserted >= max_set_time.max_set_time;
         )",
-                           key, time_inserted, time_inserted);
+                           key, time_inserted, key, key);
       });
   CHECK_EQ(fluent::Status::OK, status);
   CHECK_EQ(fluent::Status::OK, f.Run());

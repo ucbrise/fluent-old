@@ -55,10 +55,12 @@ int main(int argc, char* argv[]) {
                 .scratch<std::vector<std::string>>("split", {{"parts"}});
   AddRedisApi(std::move(fb))
       .RegisterRules([&](auto& stdin, auto& stdout, auto& split, auto& set_req,
-                         auto& set_resp, auto& get_req, auto& get_resp) {
+                         auto& set_resp, auto& append_req, auto& append_resp,
+                         auto& get_req, auto& get_resp) {
         using namespace fluent::infix;
 
         (void)set_resp;
+        (void)append_resp;
 
         auto buffer_stdin =
             split <= (stdin.Iterable() |
@@ -85,6 +87,24 @@ int main(int argc, char* argv[]) {
                            parts[1]};
                  }));
 
+        auto append_request =
+            append_req <=
+            (split.Iterable() |
+             ra::filter([](
+                 const std::tuple<std::vector<std::string>>& parts_tuple) {
+               const std::vector<std::string>& parts = std::get<0>(parts_tuple);
+               return parts.size() == 3 && parts[0] == "APPEND";
+             }) |
+             ra::map(
+                 [&](const std::tuple<std::vector<std::string>>& parts_tuple)
+                     -> std::tuple<std::string, std::string, std::int64_t,
+                                   std::string, std::string> {
+                   const std::vector<std::string>& parts =
+                       std::get<0>(parts_tuple);
+                   return {server_address, client_address, id_gen.Generate(),
+                           parts[1], parts[2]};
+                 }));
+
         auto set_request =
             set_req <=
             (split.Iterable() |
@@ -106,7 +126,7 @@ int main(int argc, char* argv[]) {
         auto get_response = stdout <= (get_resp.Iterable() | ra::project<2>());
 
         return std::make_tuple(buffer_stdin, get_request, set_request,
-                               get_response);
+                               append_request, get_response);
       })
       .ConsumeValueOrDie()
       .Run();

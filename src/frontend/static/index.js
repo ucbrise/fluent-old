@@ -170,6 +170,32 @@ fluent.increment_time = function() {
   }
 }
 
+fluent.render_current_rule = function(node) {
+  assert(node !== null);
+
+  var time = node.time;
+  var rules = document.getElementById("rules");
+  var lis = rules.getElementsByTagName("li");
+  for (var i = 0; i < lis.length; ++i) {
+    lis[i].classList.remove("current_rule");
+  }
+
+  if (node.bootstrap_rules.length == 0) {
+    var num_head = 0;
+  } else {
+    var num_head = node.bootstrap_rules.length + 1;
+  }
+
+  if (time == 0) {
+    // Do nothing.
+  } else if (time <= num_head) {
+    lis[time - 1].classList.add("current_rule");
+  } else {
+    var i = (time - num_head - 1) % (lis.length - num_head);
+    lis[i + num_head].classList.add("current_rule");
+  }
+}
+
 // Main ////////////////////////////////////////////////////////////////////////
 function main() {
   // Create the Vue!
@@ -180,6 +206,11 @@ function main() {
       select_node: fluent.select_node,
       decrement_time: fluent.decrement_time,
       increment_time: fluent.increment_time,
+    },
+    updated: function() {
+      if (this.node !== null) {
+        fluent.render_current_rule(this.node);
+      }
     }
   });
 

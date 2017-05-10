@@ -7,9 +7,8 @@
 </head>
 
 <body>
-  <div id="container"
-    v-on:keyup.left="decrement_time"
-    v-on:keyup.right="increment_time">
+  <div id="container">
+    <!-- Nodes -->
     <div id="nodes" class="column">
       <h1>Nodes</h1>
       <ul id="nodes_list">
@@ -22,6 +21,7 @@
       </ul>
     </div>
 
+    <!-- Rules -->
     <div id="rules" class="column" v-if="node !== null">
       <h1>Rules</h1>
 
@@ -50,6 +50,7 @@
       </ul>
     </div>
 
+    <!-- Collections -->
     <div id="collections" class="column" v-if="node !== null">
       <h1>Collections</h1>
 

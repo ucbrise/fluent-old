@@ -13,18 +13,6 @@ body {
     padding-top: 20px;
 }
 
-#nodesrules, #collections {
-    float: left;
-}
-
-#nodesrules {
-    width: 5in;
-}
-
-#nodes {
-    margin-bottom: 1em;
-}
-
 #nodes ul {
     padding: 0;
     list-style-type: none;

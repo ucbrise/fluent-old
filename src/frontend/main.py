@@ -4,125 +4,129 @@ import psycopg2
 app = flask.Flask(__name__)
 db = psycopg2.connect("dbname=vagrant")
 
-def get_collection_names(cur, node_name):
+# Helper Functions #############################################################
+def with_cursor(f, *args):
+    with db.cursor() as cur:
+        return flask.jsonify(f(cur, *args))
+
+def escape(x):
+    if type(x) == long:
+        return str(x)
+    else:
+        return x
+
+# Functions ####################################################################
+def nodes_(cur):
+    cur.execute("SELECT name, address FROM nodes;")
+    return cur.fetchall()
+
+def node_address_(cur, name):
+    cur.execute("""
+        SELECT N.address
+        FROM Nodes N
+        WHERE N.name = %s;
+    """, (name,))
+    rows = cur.fetchall()
+    assert len(rows) == 1
+    return rows[0][0]
+
+def node_bootstrap_rules_(cur, name):
+    cur.execute("""
+        SELECT R.rule
+        FROM Nodes N, Rules R
+        WHERE N.name = %s AND N.id = R.node_id AND R.is_bootstrap
+        ORDER BY R.rule_number;
+    """, (name,))
+    return [t[0] for t in cur.fetchall()]
+
+def node_rules_(cur, name):
+    cur.execute("""
+        SELECT R.rule
+        FROM Nodes N, Rules R
+        WHERE N.name = %s AND N.id = R.node_id AND (NOT R.is_bootstrap)
+        ORDER BY R.rule_number;
+    """, (name,))
+    return [t[0] for t in cur.fetchall()]
+
+def node_collection_names_(cur, name):
     cur.execute("""
         SELECT C.collection_name
         FROM Nodes N, Collections C
         WHERE N.name = %s AND N.id = C.node_id;
-    """, (node_name,))
+    """, (name,))
     return [t[0] for t in cur.fetchall()]
 
-def get_collection(cur, node_name, collection_name, time):
-    collection = {"name": collection_name, "type": "", "tuples": []}
+def node_collection_(cur, node_name, collection_name, time):
+    collection = {}
 
-    # Type, Column Names
+    # Fetch type and column names.
     cur.execute("""
-        SELECT collection_type, column_names
-        FROM Collections
-        WHERE collection_name = %s;
-    """, (collection_name, ))
-    t = cur.fetchone()
-    collection["type"] = t[0]
-    collection["column_names"] = t[1]
+        SELECT C.collection_type, C.column_names
+        FROM Nodes N, Collections C
+        WHERE N.name = %s AND N.id = C.node_id AND collection_name = %s;
+    """, (node_name, collection_name))
+    print(node_name +"_" +collection_name)
+    rows = cur.fetchall()
+    assert len(rows) == 1, rows
+    collection["type"] = rows[0][0]
+    collection["column_names"] = rows[0][1]
 
-    # Tuples
+    # Fetch tuples.
     cur.execute("""
         SELECT *
         FROM {}_{}
         WHERE (time_inserted = %s AND time_inserted = time_deleted) OR
-              (time_inserted <= %s AND (time_deleted IS NULL OR time_deleted > %s))
+              (time_inserted <= %s AND (time_deleted IS NULL OR
+                                        time_deleted > %s))
     """.format(node_name, collection_name), (time, time, time))
-    collection["tuples"] += [[str(t[0])] + list(t[3:]) for t in cur.fetchall()]
+    collection["tuples"] = [[escape(x) for x in t] for t in cur.fetchall()]
 
     return collection
 
+# Endpoints ####################################################################
 @app.route("/")
 def index():
     return flask.send_file("index.html")
 
 @app.route("/nodes")
 def nodes():
-    cur = db.cursor()
-    cur.execute("SELECT name, address FROM nodes;")
-    nodes = cur.fetchall()
-    cur.close()
-    return flask.jsonify(nodes=nodes)
+    return with_cursor(nodes_)
 
-@app.route("/node")
-def node():
-    node_name = flask.request.args.get('name', "")
-    cur = db.cursor()
+@app.route("/node_address")
+def node_address():
+    node_name = flask.request.args.get("node_name", "")
+    assert node_name is not None
+    return with_cursor(node_address_, node_name)
 
-    # Address.
-    cur.execute("""
-        SELECT N.address
-        FROM Nodes N
-        WHERE N.name = %s;
-    """, (node_name,))
-    address = cur.fetchone()[0]
+@app.route("/node_bootstrap_rules")
+def node_bootstrap_rules():
+    node_name = flask.request.args.get("node_name", "")
+    assert node_name is not None
+    return with_cursor(node_bootstrap_rules_, node_name)
 
-    # Bootstrap rules.
-    cur.execute("""
-        SELECT R.rule
-        FROM Nodes N, Rules R
-        WHERE N.name = %s AND N.id = R.node_id AND R.is_bootstrap
-        ORDER BY R.rule_number;
-    """, (node_name,))
-    bootstrap_rules = [t[0] for t in cur.fetchall()]
+@app.route("/node_rules")
+def node_rules():
+    node_name = flask.request.args.get("node_name", "")
+    assert node_name is not None
+    return with_cursor(node_rules_, node_name)
 
-    # Rules.
-    cur.execute("""
-        SELECT R.rule
-        FROM Nodes N, Rules R
-        WHERE N.name = %s AND N.id = R.node_id AND (NOT R.is_bootstrap)
-        ORDER BY R.rule_number;
-    """, (node_name,))
-    rules = [t[0] for t in cur.fetchall()]
+@app.route("/node_collection_names")
+def node_collection_names():
+    node_name = flask.request.args.get("node_name", "")
+    assert node_name is not None
+    return with_cursor(node_collection_names_, node_name)
 
-    # Collection names.
-    collection_names = get_collection_names(cur, node_name)
+@app.route("/node_collection")
+def node_collection():
+    node_name = flask.request.args.get("node_name")
+    collection_name = flask.request.args.get("collection_name")
+    time = flask.request.args.get("time", type=int)
+    assert node_name is not None
+    assert collection_name is not None
+    assert time is not None
+    return with_cursor(node_collection_, node_name, collection_name, time)
 
-    # Time.
-    times = []
-    for collection_name in collection_names:
-        cur.execute("""
-            SELECT MAX(time_inserted)
-            FROM {}_{};
-        """.format(node_name, collection_name))
-        times.append(cur.fetchone()[0])
-    # If no rules have been executed at all, then max(times) is None and we
-    # default to a time of 0.
-    max_time = max(times) or 0
-
-    # Collections.
-    collections = [get_collection(cur, node_name, collection_name, max_time)
-                   for collection_name in collection_names]
-
-    cur.close()
-
-    n = {
-        "name": node_name,
-        "address": address,
-        "bootstrap_rules": bootstrap_rules,
-        "rules": rules,
-        "time": max_time,
-        "collections": collections,
-        "clicked_tuple": None,
-        "lineage_tuples": None,
-    }
-    return flask.jsonify(node=n)
-
-@app.route("/collections")
-def collections():
-    node_name = flask.request.args.get("name", "")
-    time = flask.request.args.get("time", 0, type=int)
-    cur = db.cursor()
-    collection_names = get_collection_names(cur, node_name)
-    collections = [get_collection(cur, node_name, collection_name, time)
-                   for collection_name in collection_names]
-    cur.close()
-    return flask.jsonify(collections=collections)
-
+# TODO(mwhittaker): Rewrite.
 @app.route("/lineage")
 def lineage():
     node_name = flask.request.args.get("node_name", "")

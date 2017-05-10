@@ -7,37 +7,88 @@
 </head>
 
 <body>
-  <div id="container">
-    <div id="nodesrules">
-      <div id="nodes" class="column">
-        <h1>Nodes</h1>
-        <button id="refresh_nodes_list">Refresh</button>
-        <ul id="nodes_list"></ul>
-      </div>
-
-      <div id="rules" class="column">
-        <h1>Rules</h1>
-        <ol id="bootstrap_rules_list" start="0"></ol>
-        <ul id="bootstrap_tick_list"></ul>
-        <ul id="receive_list"><li>Receive</li></ul>
-        <ol id="rules_list" start="0"></ol>
-        <ul id="tick_list"><li>Tick</li></ul>
-      </div>
+  <div id="container"
+    v-on:keyup.left="decrement_time"
+    v-on:keyup.right="increment_time">
+    <div id="nodes" class="column">
+      <h1>Nodes</h1>
+      <ul id="nodes_list">
+        <li class="node"
+            v-for="name_address in node_name_addresses"
+            v-on:click="select_node(name_address.name, name_address.address)">
+          <span class="name">{{name_address.name}}</span>
+          <span class="address">{{name_address.address}}</span>
+        </li>
+      </ul>
     </div>
 
-    <div id="collections" class="column">
+    <div id="rules" class="column" v-if="node !== null">
+      <h1>Rules</h1>
+
+      <ol id="bootstrap_rules_list" start="0">
+        <li v-for="bootstrap_rule in node.bootstrap_rules">
+          {{bootstrap_rule}}
+        </li>
+      </ol>
+
+      <ul id="bootstrap_tick_list" v-if="node.bootstrap_rules.length > 0">
+        <li>Tick</li>
+      </ul>
+
+      <ul id="receive_list">
+        <li>Receive</li>
+      </ul>
+
+      <ol id="rules_list" start="0">
+        <li v-for="rule in node.rules">
+          {{rule}}
+        </li>
+      </ol>
+
+      <ul id="tick_list">
+        <li>Tick</li>
+      </ul>
+    </div>
+
+    <div id="collections" class="column" v-if="node !== null">
       <h1>Collections</h1>
+
       <div id="collections_time">
         <center>
-          <button id="time_down">-</button>
-          Time: <span id="time">0</span>
-          <button id="time_up">+</button>
+          <button v-on:click="decrement_time">-</button>
+          Time: <span id="time">{{node.time}}</span>
+          <button v-on:click="increment_time">+</button>
         </center>
       </div>
-      <div id="collections_container"></div>
+
+      <div id="collections_container">
+        <div v-for="collection in node.collections">
+          <span class="collection_name">{{collection.name}}</span>
+          <span class="collection_type">{{collection.type}}</span>
+
+          <table>
+            <tr>
+              <th v-for="column_name in collection.column_names">
+                {{column_name}}
+              </th>
+            </tr>
+            <tr v-for="tuple in collection.tuples">
+              <!--
+              The first five columns of a relation are hash, logical time
+              inserted, logical time deleted, physical time inserted, and
+              physical time deleted. We do not include those in the UI.
+              -->
+              <td v-for="x in tuple.slice(5)">
+                {{x}}
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 
+  <script src="https://unpkg.com/vue"></script>
   <script type="text/javascript" src="static/index.js"></script>
 </body>
 </html>

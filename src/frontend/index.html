@@ -79,7 +79,10 @@
               inserted, logical time deleted, physical time inserted, and
               physical time deleted. We do not include those in the UI.
               -->
-              <td v-for="x in tuple.slice(5)">
+              <td
+                  v-for="x in tuple.slice(5)"
+                  v-on:click="get_lineage(node.name, collection.name,
+                                          tuple[0], node.time)">
                 {{x}}
               </td>
             </tr>

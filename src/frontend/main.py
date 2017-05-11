@@ -65,7 +65,6 @@ def node_collection_(cur, node_name, collection_name, time):
         FROM Nodes N, Collections C
         WHERE N.name = %s AND N.id = C.node_id AND collection_name = %s;
     """, (node_name, collection_name))
-    print(node_name +"_" +collection_name)
     rows = cur.fetchall()
     assert len(rows) == 1, rows
     collection["type"] = rows[0][0]
@@ -82,6 +81,59 @@ def node_collection_(cur, node_name, collection_name, time):
     collection["tuples"] = [[escape(x) for x in t] for t in cur.fetchall()]
 
     return collection
+
+def backwards_lineage_(cur, node_name, collection_name, hash, time):
+    # The time of the most recent insertion of the tuple.
+    cur.execute("""
+        SELECT MAX(time_inserted)
+        FROM {}_{}
+        WHERE hash = %s AND (
+                  (time_inserted = %s AND time_inserted = time_deleted) OR
+                  (time_inserted <= %s AND (time_deleted IS NULL OR
+                                            time_deleted > %s))
+              );
+    """.format(node_name, collection_name), (hash, time, time, time))
+    rows = cur.fetchall()
+    assert len(rows) == 1, rows
+    latest_insert_time = rows[0][0]
+
+    # The backwards lineage.
+    cur.execute("""
+        SELECT
+            N.name,
+            L.dep_collection_name,
+            L.dep_tuple_hash,
+            L.dep_time
+        FROM Nodes N, {}_lineage L
+        WHERE N.id = L.dep_node_id AND
+              L.collection_name = %s AND
+              L.tuple_hash = %s AND
+              time = %s;
+    """.format(node_name), (collection_name, hash, latest_insert_time))
+    lineage_tuples = []
+    rows = [t for t in cur.fetchall()]
+    for row in rows:
+        t = {
+            "node_name": row[0],
+            "collection_name": row[1],
+            "hash": row[2],
+            "time": row[3],
+        }
+
+        # TODO(mwhittaker): Document.
+        if t["time"] is None:
+            cur.execute("""
+                SELECT MAX(time_inserted)
+                FROM {}_{}
+                WHERE hash = %s AND time_inserted <= %s
+            """.format(t["node_name"], t["collection_name"]),
+            (t["hash"], latest_insert_time))
+            time_rows = cur.fetchall()
+            assert len(time_rows) == 1, time_rows
+            t["time"] = time_rows[0][0]
+
+        lineage_tuples.append(t)
+    return lineage_tuples
 
 # Endpoints ####################################################################
 @app.route("/")
@@ -126,48 +178,15 @@ def node_collection():
     assert time is not None
     return with_cursor(node_collection_, node_name, collection_name, time)
 
-# TODO(mwhittaker): Rewrite.
-@app.route("/lineage")
-def lineage():
+@app.route("/backwards_lineage")
+def backwards_lineage():
     node_name = flask.request.args.get("node_name", "")
     collection_name = flask.request.args.get("collection_name", "")
-    tuple_hash = flask.request.args.get("hash", 0, type=int)
+    hash = flask.request.args.get("hash", 0, type=int)
     time = flask.request.args.get("time", 0, type=int)
-
-    cur = db.cursor()
-
-    # The time of the most recent insertion of the tuple.
-    cur.execute("""
-        SELECT MAX(time_inserted)
-        FROM {}_{}
-        WHERE hash = %s AND (
-                (time_inserted = %s AND time_inserted = time_deleted) OR
-                (time_inserted <= %s AND (time_deleted IS NULL OR time_deleted > %s))
-              );
-    """.format(node_name, collection_name), (tuple_hash, time, time, time))
-    latest_insert_time = cur.fetchone()[0]
-
-    # The lineage.
-    cur.execute("""
-        SELECT
-            N.name,
-            L.dep_collection_name,
-            L.dep_tuple_hash,
-            L.dep_time
-        FROM Nodes N, {}_lineage L
-        WHERE N.id = L.dep_node_id AND
-              L.collection_name = %s AND
-              L.tuple_hash = %s AND
-              time = %s;
-    """.format(node_name), (collection_name, tuple_hash, latest_insert_time))
-    lineage_tuples = [
-        {
-            "node_name": t[0],
-            "collection_name": t[1],
-            "tuple_hash": str(t[2]),
-            "time": t[3] if t[3] is not None else latest_insert_time,
-        } for t in cur.fetchall()
-    ]
-
-    cur.close()
-    return flask.jsonify(lineage=lineage_tuples)
+    assert node_name is not None
+    assert collection_name is not None
+    assert hash is not None
+    assert time is not None
+    return with_cursor(backwards_lineage_, node_name, collection_name, hash,
+                       time)

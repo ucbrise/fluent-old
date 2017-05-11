@@ -38,6 +38,8 @@ fluent.State = function(node_name_addresses, node) {
 // name: string
 // address: string
 fluent.NodeNameAddress = function(name, address) {
+  assert(typeof(name) === "string");
+  assert(typeof(address) === "string");
   this.name = name;
   this.address = address;
 }
@@ -46,10 +48,13 @@ fluent.NodeNameAddress = function(name, address) {
 // address: string,
 // bootstrap_rules: string list,
 // rules: string list,
-// time: int,
+// time: number,
 // collections: Collection list,
 fluent.Node = function(name, address, bootstrap_rules, rules, time,
                        collections) {
+  assert(typeof(name) === "string");
+  assert(typeof(address) === "string");
+  assert(typeof(time) === "number");
   this.name = name;
   this.address = address;
   this.bootstrap_rules = bootstrap_rules;
@@ -63,10 +68,27 @@ fluent.Node = function(name, address, bootstrap_rules, rules, time,
 // column_names: string list,
 // tuples: string list list,
 fluent.Collection = function(name, type, column_names, tuples) {
+  assert(typeof(name) === "string");
+  assert(typeof(type) === "string");
   this.name = name;
   this.type = type;
   this.column_names = column_names;
   this.tuples = tuples;
+}
+
+// node_name: string
+// collection_name: string
+// hash: string
+// time: number
+fluent.TupleId = function(node_name, collection_name, hash, time) {
+  assert(typeof(node_name) === "string");
+  assert(typeof(collection_name) === "string");
+  assert(typeof(hash) === "string");
+  assert(typeof(time) === "number");
+  this.node_name = node_name;
+  this.collection_name = collection_name;
+  this.hash = hash;
+  this.time = time;
 }
 
 // AJAX Endpoints //////////////////////////////////////////////////////////////
@@ -106,6 +128,17 @@ fluent.ajax.node_collection = function(node_name, collection_name, time, callbac
   var url = "/node_collection" +
     "?node_name=" + node_name +
     "&collection_name=" + collection_name +
+    "&time=" + time;
+  fluent.ajax_get(url, callback);
+}
+
+// backwards_lineage: string -> string -> int -> int -> TupleId list
+fluent.ajax.backwards_lineage = function(node_name, collection_name, hash,
+                                         time, callback) {
+  var url = "/backwards_lineage" +
+    "?node_name=" + node_name +
+    "&collection_name=" + collection_name +
+    "&hash=" + hash +
     "&time=" + time;
   fluent.ajax_get(url, callback);
 }
@@ -206,6 +239,20 @@ function main() {
       select_node: fluent.select_node,
       decrement_time: fluent.decrement_time,
       increment_time: fluent.increment_time,
+      get_lineage: function(node_name, collection_name, hash, time) {
+        // TODO(mwhittaker): Move this into a proper function and use it to
+        // populate a lineage graph.
+        console.log("node_name: " + node_name);
+        console.log("collection_name: " + collection_name);
+        console.log("hash: " + hash);
+        console.log("time: " + time);
+        fluent.ajax.backwards_lineage(node_name, collection_name, hash, time,
+                                      function(ts) {
+          for (var i = 0; i < ts.length; ++i) {
+            console.log(ts[i]);
+          }
+        });
+      }
     },
     updated: function() {
       if (this.node !== null) {

@@ -30,9 +30,11 @@ fluent.ajax_get = function(url, on_success) {
 // Types ///////////////////////////////////////////////////////////////////////
 // node_names_addresses: NodeNameAddress list
 // node: Node option
-fluent.State = function(node_name_addresses, node) {
+// cy: cytoscape
+fluent.State = function(node_name_addresses, node, cy) {
   this.node_name_addresses = node_name_addresses;
   this.node = node;
+  this.cy = cy;
 }
 
 // name: string
@@ -83,12 +85,16 @@ fluent.Collection = function(name, type, column_names, tuples) {
 fluent.TupleId = function(node_name, collection_name, hash, time) {
   assert(typeof(node_name) === "string");
   assert(typeof(collection_name) === "string");
-  assert(typeof(hash) === "string");
+  assert(typeof(hash) === "string", hash);
   assert(typeof(time) === "number");
   this.node_name = node_name;
   this.collection_name = collection_name;
   this.hash = hash;
   this.time = time;
+}
+
+fluent.tuple_id_to_string = function(tid) {
+  return [tid.node_name, tid.collection_name, tid.hash, tid.time].join("_");
 }
 
 // AJAX Endpoints //////////////////////////////////////////////////////////////
@@ -229,35 +235,118 @@ fluent.render_current_rule = function(node) {
   }
 }
 
+fluent.add_node = function(tid) {
+  var id = fluent.tuple_id_to_string(tid);
+  if (this.cy.getElementById(id).size() == 0) {
+    this.cy.add({
+      group: "nodes",
+      data: {
+        id: fluent.tuple_id_to_string(tid),
+        node_name: tid.node_name,
+        collection_name: tid.collection_name,
+        hash: tid.hash,
+        time: tid.time,
+      }
+    });
+  } else {
+    // The node already exists, so we do nothing.
+  }
+}
+
+fluent.add_edge = function(source_tid, target_tid) {
+  var source_id = fluent.tuple_id_to_string(source_tid);
+  var target_id = fluent.tuple_id_to_string(target_tid);
+  var selector = "edge[source='" + source_id + "'][target='" + target_id + "']";
+  if (this.cy.edges(selector).size() == 0) {
+    this.cy.add({
+      group: "edges",
+      data: {
+        source: source_id,
+        target: target_id,
+      },
+    });
+  } else {
+    // The edge already exists, so we do nothing.
+  }
+}
+
+fluent.get_lineage = function(node_name, collection_name, hash, time) {
+  var target_tid = new fluent.TupleId(node_name, collection_name, hash, time);
+  fluent.add_node.call(this, target_tid);
+
+  var that = this;
+  var callback = function(lineage_tuples) {
+    for (var i = 0; i < lineage_tuples.length; ++i) {
+      var t = lineage_tuples[i];
+      var source_tid = new fluent.TupleId(t.node_name, t.collection_name,
+                                          t.hash, t.time);
+      fluent.add_node.call(that, source_tid);
+      fluent.add_edge.call(that, source_tid, target_tid);
+    }
+    that.cy.layout({name:"breadthfirst"}).run();
+  }
+  fluent.ajax.backwards_lineage(node_name, collection_name, hash, time, callback);
+}
+
 // Main ////////////////////////////////////////////////////////////////////////
 function main() {
   // Create the Vue!
   var vm = new Vue({
     el: "#container",
-    data: new fluent.State([], null),
+    data: new fluent.State([], null, null),
     methods: {
       select_node: fluent.select_node,
       decrement_time: fluent.decrement_time,
       increment_time: fluent.increment_time,
-      get_lineage: function(node_name, collection_name, hash, time) {
-        // TODO(mwhittaker): Move this into a proper function and use it to
-        // populate a lineage graph.
-        console.log("node_name: " + node_name);
-        console.log("collection_name: " + collection_name);
-        console.log("hash: " + hash);
-        console.log("time: " + time);
-        fluent.ajax.backwards_lineage(node_name, collection_name, hash, time,
-                                      function(ts) {
-          for (var i = 0; i < ts.length; ++i) {
-            console.log(ts[i]);
-          }
-        });
-      }
+      get_lineage: fluent.get_lineage,
     },
     updated: function() {
       if (this.node !== null) {
         fluent.render_current_rule(this.node);
       }
+    }
+  });
+
+  // Create the cytoscape graph.
+  vm.cy = cytoscape({
+    container: document.getElementById("cy"),
+    style: [
+      {
+        selector: 'node',
+        style: {
+          "shape": "rectangle",
+          "font-family": "monospace",
+          "width": "label",
+          "height": "label",
+          "text-wrap": "wrap",
+          "text-halign": "center",
+          "text-valign": "center",
+          "border-color": "black",
+          "border-width": "1",
+          "padding": "5",
+          "background-color": "white",
+          'label': function(e) {
+            return "[" + e.data("node_name") + "]" + e.data("collection_name")
+                   + ":" + e.data("hash") + "@" + e.data("time");
+          }
+        }
+      },
+      {
+        selector: 'edge',
+        style: {
+          "width": 3,
+          "line-color": "#ccc",
+          "target-arrow-color": "#ccc",
+          "target-arrow-shape": "triangle",
+          "target-arrow-fill": 'filled',
+          "curve-style": "bezier",
+          "label": "data(rule)",
+        }
+      }
+    ],
+    layout: {
+      name: 'cose',
+      // rows: 1
     }
   });
 
@@ -277,6 +366,27 @@ function main() {
       address = name_addresses[i][1];
       vm.node_name_addresses.push(new fluent.NodeNameAddress(name, address));
     }
+  });
+
+  // vm.cy.add([
+    // { group: "nodes", data: { id:"a", node_name:"a" } },
+    // { group: "nodes", data: { id:"b", node_name:"b" } },
+    // { group: "nodes", data: { id:"c", node_name:"c" } },
+    // { group: "nodes", data: { id:"d", node_name:"d" } },
+    // { group: "nodes", data: { id:"e", node_name:"e" } },
+    // { group: "nodes", data: { id:"f", node_name:"f" } },
+  // ]);
+  // vm.cy.add([
+    // { group: "edges", data: { source: "a", target:"c" } },
+    // { group: "edges", data: { source: "b", target:"c" } },
+    // { group: "edges", data: { source: "c", target:"d" } },
+    // { group: "edges", data: { source: "c", target:"e" } },
+    // { group: "edges", data: { source: "d", target:"f" } },
+    // { group: "edges", data: { source: "e", target:"f" } },
+  // ]);
+  vm.cy.on('tap', 'node', function(evt){
+      var node = evt.target;
+        console.log( 'tapped ' + node.id() );
   });
 }
 

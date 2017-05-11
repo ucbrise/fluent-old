@@ -116,7 +116,7 @@ def backwards_lineage_(cur, node_name, collection_name, hash, time):
         t = {
             "node_name": row[0],
             "collection_name": row[1],
-            "hash": row[2],
+            "hash": escape(row[2]),
             "time": row[3],
         }
 

@@ -95,3 +95,13 @@ body {
   border: 1.5pt solid gray;
   padding: 1pt;
 }
+
+/* Provenance Graph */
+#provenance_graph {
+  height: 600px;
+}
+
+#cy {
+  width: 100%;
+  height: 100%;
+}

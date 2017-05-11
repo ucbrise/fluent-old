@@ -75,7 +75,8 @@
                 {{column_name}}
               </th>
             </tr>
-            <tr v-for="tuple in collection.tuples">
+            <tr v-for="tuple in collection.tuples"
+                v-bind:class="{clicked_tuple: tuple[0] === node.clicked_hash}">
               <!--
               The first five columns of a relation are hash, logical time
               inserted, logical time deleted, physical time inserted, and

@@ -46,14 +46,15 @@ fluent.NodeNameAddress = function(name, address) {
   this.address = address;
 }
 
-// name: string,
-// address: string,
-// bootstrap_rules: string list,
-// rules: string list,
-// time: number,
-// collections: Collection list,
+// name: string
+// address: string
+// bootstrap_rules: string list
+// rules: string list
+// time: number
+// collections: Collection list
+// clicked_hash: string option
 fluent.Node = function(name, address, bootstrap_rules, rules, time,
-                       collections) {
+                       collections, clicked_hash) {
   assert(typeof(name) === "string");
   assert(typeof(address) === "string");
   assert(typeof(time) === "number");
@@ -63,6 +64,7 @@ fluent.Node = function(name, address, bootstrap_rules, rules, time,
   this.rules = rules;
   this.time = time;
   this.collections = collections;
+  this.clicked_hash = clicked_hash;
 }
 
 // name: string,
@@ -176,16 +178,20 @@ fluent.get_collections = function(node_name, collection_names, time, callback) {
   get_collections_impl();
 }
 
-fluent.select_node = function(name, time) {
+fluent.select_node = function(name, time, callback) {
   var that = this;
   fluent.ajax.node_address(name, function(address) {
   fluent.ajax.node_bootstrap_rules(name, function(bootstrap_rules) {
   fluent.ajax.node_rules(name, function(rules) {
   fluent.ajax.node_collection_names(name, function(collection_names) {
-    var node = new fluent.Node(name, address, bootstrap_rules, rules, time, []);
+    var node = new fluent.Node(name, address, bootstrap_rules, rules, time, [],
+                               null);
     fluent.get_collections(name, collection_names, time, function(collections) {
       node.collections = collections;
       that.node = node;
+      if (callback) {
+        callback();
+      }
     });
   });
   });
@@ -281,6 +287,7 @@ fluent.add_edge = function(source_tid, target_tid) {
 fluent.get_lineage = function(node_name, collection_name, hash, time) {
   var target_tid = new fluent.TupleId(node_name, collection_name, hash, time);
   fluent.add_node.call(this, target_tid);
+  this.node.clicked_hash = hash;
 
   var that = this;
   var callback = function(lineage_tuples) {
@@ -356,7 +363,13 @@ function main() {
 
   vm.cy.on('tap', 'node', function(evt) {
     var node = evt.target;
-    fluent.select_node.call(vm, node.data("node_name"), node.data("time"));
+    var node_name = node.data("node_name");
+    var time = node.data("time");
+    var hash = node.data("hash");
+    fluent.select_node.call(vm, node_name, time, function() {
+      console.log(hash);
+      vm.node.clicked_hash = hash;
+    });
   });
 
   // Bind left and right keys.

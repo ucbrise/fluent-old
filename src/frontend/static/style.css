@@ -96,6 +96,10 @@ body {
   padding: 1pt;
 }
 
+.clicked_tuple {
+  background-color: #fdfd96;
+}
+
 /* Provenance Graph */
 #provenance_graph {
   height: 600px;

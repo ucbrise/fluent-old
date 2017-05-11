@@ -27,7 +27,7 @@ def node_address_(cur, name):
         WHERE N.name = %s;
     """, (name,))
     rows = cur.fetchall()
-    assert len(rows) == 1
+    assert len(rows) == 1, rows
     return rows[0][0]
 
 def node_bootstrap_rules_(cur, name):

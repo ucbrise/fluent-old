@@ -16,7 +16,7 @@
             v-for="name_address in node_name_addresses"
             v-bind:class="{current_node: node !== null &&
                                          node.name === name_address.name}"
-            v-on:click="select_node(name_address.name, name_address.address)">
+            v-on:click="select_node(name_address.name, 0)">
           <span class="name">{{name_address.name}}</span>
           <span class="address">({{name_address.address}})</span>
         </li>
@@ -84,7 +84,7 @@
               <td
                   v-for="x in tuple.slice(5)"
                   v-on:click="get_lineage(node.name, collection.name,
-                                          tuple[0], node.time)">
+                                          tuple[0], tuple[1])">
                 {{x}}
               </td>
             </tr>

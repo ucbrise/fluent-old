@@ -107,6 +107,12 @@ fluent.ajax.nodes = function(callback) {
   });
 }
 
+// node_address: string -> string
+fluent.ajax.node_address = function(node_name, callback) {
+  var url = "/node_address?node_name=" + node_name;
+  fluent.ajax_get(url, callback);
+}
+
 // node_bootstrap_rules: string -> string list
 fluent.ajax.node_bootstrap_rules = function(node_name, callback) {
   var url = "/node_bootstrap_rules?node_name=" + node_name;
@@ -170,16 +176,18 @@ fluent.get_collections = function(node_name, collection_names, time, callback) {
   get_collections_impl();
 }
 
-fluent.select_node = function(name, address) {
+fluent.select_node = function(name, time) {
   var that = this;
+  fluent.ajax.node_address(name, function(address) {
   fluent.ajax.node_bootstrap_rules(name, function(bootstrap_rules) {
   fluent.ajax.node_rules(name, function(rules) {
   fluent.ajax.node_collection_names(name, function(collection_names) {
-    var node = new fluent.Node(name, address, bootstrap_rules, rules, 0, []);
-    fluent.get_collections(name, collection_names, 0, function(collections) {
+    var node = new fluent.Node(name, address, bootstrap_rules, rules, time, []);
+    fluent.get_collections(name, collection_names, time, function(collections) {
       node.collections = collections;
       that.node = node;
     });
+  });
   });
   });
   });
@@ -344,10 +352,11 @@ function main() {
         }
       }
     ],
-    layout: {
-      name: 'cose',
-      // rows: 1
-    }
+  });
+
+  vm.cy.on('tap', 'node', function(evt) {
+    var node = evt.target;
+    fluent.select_node.call(vm, node.data("node_name"), node.data("time"));
   });
 
   // Bind left and right keys.
@@ -366,27 +375,6 @@ function main() {
       address = name_addresses[i][1];
       vm.node_name_addresses.push(new fluent.NodeNameAddress(name, address));
     }
-  });
-
-  // vm.cy.add([
-    // { group: "nodes", data: { id:"a", node_name:"a" } },
-    // { group: "nodes", data: { id:"b", node_name:"b" } },
-    // { group: "nodes", data: { id:"c", node_name:"c" } },
-    // { group: "nodes", data: { id:"d", node_name:"d" } },
-    // { group: "nodes", data: { id:"e", node_name:"e" } },
-    // { group: "nodes", data: { id:"f", node_name:"f" } },
-  // ]);
-  // vm.cy.add([
-    // { group: "edges", data: { source: "a", target:"c" } },
-    // { group: "edges", data: { source: "b", target:"c" } },
-    // { group: "edges", data: { source: "c", target:"d" } },
-    // { group: "edges", data: { source: "c", target:"e" } },
-    // { group: "edges", data: { source: "d", target:"f" } },
-    // { group: "edges", data: { source: "e", target:"f" } },
-  // ]);
-  vm.cy.on('tap', 'node', function(evt){
-      var node = evt.target;
-        console.log( 'tapped ' + node.id() );
   });
 }
 

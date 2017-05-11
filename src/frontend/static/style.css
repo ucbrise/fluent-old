@@ -1,71 +1,45 @@
 body {
-    background-color: #ebeff1;
+  background-color: #ebeff1;
 }
 
 #container {
-    font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
-    line-height: 27px;
-    margin-left: auto;
-    margin-right: auto;
-    padding-bottom: 20px;
-    padding-left: 1em;
-    padding-right: 1em;
-    padding-top: 20px;
-}
-
-#nodes ul {
-    padding: 0;
-    list-style-type: none;
-}
-
-.bolded {
-    font-weight: bold;
-}
-
-#nodes_list button:hover {
-    background-color: #ebeff1;
-}
-
-#nodes_list button {
-    width: 100%;
-    display: flex;
-}
-
-#rules ol, #rules ul {
-    margin: 0;
-}
-
-#collections {
-    min-width: 7in;
-}
-
-#collections tr:hover {
-    background-color: #ebeff1;
+  font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+  line-height: 27px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-bottom: 20px;
+  padding-left: 1em;
+  padding-right: 1em;
+  padding-top: 20px;
 }
 
 .column {
-    background-color: white;
-    border-radius: 2pt;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
-    margin: 0.5em;
-    padding: 10pt;
+  background-color: white;
+  border-radius: 2pt;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+  margin: 0.5em;
+  padding: 10pt;
 }
 
 .column h1 {
-    font-size: 20pt;
-    font-weight: lighter;
-    margin-bottom: 0.5em;
-    margin-top: 0em;
+  font-size: 20pt;
+  font-weight: lighter;
+  margin-bottom: 0.5em;
+  margin-top: 0em;
+}
+
+/* Nodes */
+#nodes ul {
+  padding: 0;
+  list-style-type: none;
+}
+
+#nodes_list li:hover {
+  background-color: #ebeff1;
 }
 
 .node {
-    background: none;
-    border: none;
-    font-family: monospace;
-    font-size: 12pt;
-}
-
-.name {
+  font-family: monospace;
 }
 
 .address {
@@ -73,58 +47,51 @@ body {
     color: gray;
 }
 
-.rule {
-    font-family: monospace;
+.current_node {
+  font-weight: bold;
 }
 
-.collection {
-    font-family: monospace;
-}
-
-#collections_time {
-    font-family: monospace;
-}
-
-.collection_name {
-    font-size: 12pt;
-}
-
-.collection_type {
-    font-size: 12pt;
-    color: gray;
-}
-
-#collections table {
-    font-size: 12pt;
-    margin-bottom: 1.15em;
-    border-collapse: collapse;
-}
-
-#collections td, #collections th {
-    padding: 1pt;
-    border: 1.5pt solid gray;
-}
-
-#rules ul, #rules ol {
-    font-family: monospace;
-    font-size: 12pt;
-}
-
-#bootstrap_rules_list, #rules_list {
+/* Rules */
+#rules ol, #rules ul {
+  margin: 0;
 }
 
 #bootstrap_tick_list, #tick_list, #receive_list {
     list-style-type: none;
 }
 
+.rule {
+  font-family: monospace;
+}
+
 .current_rule {
-    font-weight: bold;
+  font-weight: bold;
 }
 
-.clicked_tuple {
-    font-weight: bold;
+/* Collections */
+.collection {
+  font-family: monospace;
 }
 
-.lineage_tuple {
-    background-color: #fdfd96;
+#collections_time {
+  font-family: monospace;
+}
+
+/* http://stackoverflow.com/a/11902294/3187068 */
+#collections tr:not(:first-child):hover {
+  background-color: #ebeff1;
+}
+
+.collection_type {
+  color: gray;
+}
+
+#collections table {
+  border-collapse: collapse;
+  margin-bottom: 1em;
+}
+
+#collections td, #collections th {
+  border: 1.5pt solid gray;
+  padding: 1pt;
 }

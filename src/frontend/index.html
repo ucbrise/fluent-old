@@ -14,9 +14,11 @@
       <ul id="nodes_list">
         <li class="node"
             v-for="name_address in node_name_addresses"
+            v-bind:class="{current_node: node !== null &&
+                                         node.name === name_address.name}"
             v-on:click="select_node(name_address.name, name_address.address)">
           <span class="name">{{name_address.name}}</span>
-          <span class="address">{{name_address.address}}</span>
+          <span class="address">({{name_address.address}})</span>
         </li>
       </ul>
     </div>
@@ -26,27 +28,27 @@
       <h1>Rules</h1>
 
       <ol id="bootstrap_rules_list" start="0">
-        <li v-for="bootstrap_rule in node.bootstrap_rules">
+        <li class="rule" v-for="bootstrap_rule in node.bootstrap_rules">
           {{bootstrap_rule}}
         </li>
       </ol>
 
       <ul id="bootstrap_tick_list" v-if="node.bootstrap_rules.length > 0">
-        <li>Tick</li>
+        <li class="rule">Tick</li>
       </ul>
 
       <ul id="receive_list">
-        <li>Receive</li>
+        <li class="rule">Receive</li>
       </ul>
 
       <ol id="rules_list" start="0">
-        <li v-for="rule in node.rules">
+        <li class="rule" v-for="rule in node.rules">
           {{rule}}
         </li>
       </ol>
 
       <ul id="tick_list">
-        <li>Tick</li>
+        <li class="rule">Tick</li>
       </ul>
     </div>
 
@@ -63,9 +65,9 @@
       </div>
 
       <div id="collections_container">
-        <div v-for="collection in node.collections">
+        <div class="collection" v-for="collection in node.collections">
           <span class="collection_name">{{collection.name}}</span>
-          <span class="collection_type">{{collection.type}}</span>
+          <span class="collection_type">({{collection.type}})</span>
 
           <table>
             <tr>

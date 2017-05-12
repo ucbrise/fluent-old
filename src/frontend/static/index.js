@@ -298,7 +298,12 @@ fluent.get_lineage = function(node_name, collection_name, hash, time) {
       fluent.add_node.call(that, source_tid);
       fluent.add_edge.call(that, source_tid, target_tid);
     }
-    that.cy.layout({name:"breadthfirst"}).run();
+    that.cy.layout({
+      name: "dagre",
+      rankDir: "LR",
+      animate: true,
+      fit: false,
+    }).run();
   }
   fluent.ajax.backwards_lineage(node_name, collection_name, hash, time, callback);
 }
@@ -367,7 +372,6 @@ function main() {
     var time = node.data("time");
     var hash = node.data("hash");
     fluent.select_node.call(vm, node_name, time, function() {
-      console.log(hash);
       vm.node.clicked_hash = hash;
     });
   });

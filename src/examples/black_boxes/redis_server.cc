@@ -113,7 +113,8 @@ int main(int argc, char* argv[]) {
           UNION
 
           -- All subsequent APPENDs.
-          SELECT CAST('redis_server_append_request' as TEXT),
+          SELECT CAST('redis_server' as TEXT),
+                 CAST('append_request' as TEXT),
                  hash,
                  time_inserted
           FROM redis_server_append_request, max_set_time

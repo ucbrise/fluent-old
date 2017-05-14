@@ -164,20 +164,22 @@ TEST(MockClient, AddDerivedLineage) {
             Tuple("20", 21, 22, true, time_point(seconds(3)), "23", 24, 25));
 }
 
-TEST(MockClient, Exec) {
+TEST(MockClient, RegisterBlackBoxLineage) {
   using Client = MockClient<Hash, MockToSql, MockClock>;
   StatusOr<Client> client_or = Client::Make("", 42, "", ConnectionConfig());
   ASSERT_EQ(Status::OK, client_or.status());
   Client client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, client.Exec("a cat"));
-  ASSERT_EQ(Status::OK, client.Exec("in the hat"));
-  ASSERT_EQ(Status::OK, client.Exec("ate green eggs and ham"));
+  ASSERT_EQ(Status::OK, (client.RegisterBlackBoxLineage("foo", {})));
+  ASSERT_EQ(Status::OK, (client.RegisterBlackBoxLineage("bar", {"1"})));
+  ASSERT_EQ(Status::OK, (client.RegisterBlackBoxLineage("baz", {"1", "2"})));
 
-  using Tuple = MockClient<Hash, MockToSql, MockClock>::ExecTuple;
-  ASSERT_EQ(client.GetExec().size(), static_cast<std::size_t>(3));
-  EXPECT_EQ(client.GetExec()[0], Tuple("a cat"));
-  EXPECT_EQ(client.GetExec()[1], Tuple("in the hat"));
-  EXPECT_EQ(client.GetExec()[2], Tuple("ate green eggs and ham"));
+  using Tuple =
+      MockClient<Hash, MockToSql, MockClock>::RegisterBlackBoxLineageTuple;
+  ASSERT_EQ(client.GetRegisterBlackBoxLineage().size(),
+            static_cast<std::size_t>(3));
+  EXPECT_EQ(client.GetRegisterBlackBoxLineage()[0], Tuple("foo", {}));
+  EXPECT_EQ(client.GetRegisterBlackBoxLineage()[1], Tuple("bar", {"1"}));
+  EXPECT_EQ(client.GetRegisterBlackBoxLineage()[2], Tuple("baz", {"1", "2"}));
 }
 
 }  // namespace lineagedb

@@ -59,9 +59,9 @@ def node_collection_names_(cur, name):
 def node_collection_(cur, node_name, collection_name, time):
     collection = {}
 
-    # Fetch type and column names.
+    # Fetch type, column names, and black box.
     cur.execute("""
-        SELECT C.collection_type, C.column_names
+        SELECT C.collection_type, C.column_names, C.black_box_lineage
         FROM Nodes N, Collections C
         WHERE N.name = %s AND N.id = C.node_id AND collection_name = %s;
     """, (node_name, collection_name))
@@ -69,6 +69,7 @@ def node_collection_(cur, node_name, collection_name, time):
     assert len(rows) == 1, rows
     collection["type"] = rows[0][0]
     collection["column_names"] = rows[0][1]
+    collection["black_box_lineage"] = rows[0][2]
 
     # Fetch tuples.
     cur.execute("""
@@ -82,7 +83,22 @@ def node_collection_(cur, node_name, collection_name, time):
 
     return collection
 
-def backwards_lineage_(cur, node_name, collection_name, hash, time):
+def black_box_backwards_lineage_(cur, node_name, collection_name, id_):
+    print(node_name)
+    print(collection_name)
+    print(id_)
+    cur.execute("""
+        SELECT *
+        FROM {}_{}_lineage(%s);
+    """.format(node_name, collection_name), (id_,))
+    return [{
+                "node_name": node_name,
+                "collection_name": collection_name,
+                "hash": escape(hash),
+                "time": time,
+            } for (node_name, collection_name, hash, time) in cur.fetchall()]
+
+def regular_backwards_lineage_(cur, node_name, collection_name, hash, time):
     # The time of the most recent insertion of the tuple.
     cur.execute("""
         SELECT MAX(time_inserted)
@@ -178,8 +194,19 @@ def node_collection():
     assert time is not None
     return with_cursor(node_collection_, node_name, collection_name, time)
 
-@app.route("/backwards_lineage")
-def backwards_lineage():
+@app.route("/black_box_backwards_lineage")
+def black_box_backwards_lineage():
+    node_name = flask.request.args.get("node_name", "")
+    collection_name = flask.request.args.get("collection_name", "")
+    id_ = flask.request.args.get("id", 0, type=int)
+    assert node_name is not None
+    assert collection_name is not None
+    assert id_ is not None
+    return with_cursor(black_box_backwards_lineage_, node_name,
+                       collection_name, id_)
+
+@app.route("/regular_backwards_lineage")
+def regular_backwards_lineage():
     node_name = flask.request.args.get("node_name", "")
     collection_name = flask.request.args.get("collection_name", "")
     hash = flask.request.args.get("hash", 0, type=int)
@@ -188,5 +215,5 @@ def backwards_lineage():
     assert collection_name is not None
     assert hash is not None
     assert time is not None
-    return with_cursor(backwards_lineage_, node_name, collection_name, hash,
-                       time)
+    return with_cursor(regular_backwards_lineage_, node_name, collection_name,
+                       hash, time)

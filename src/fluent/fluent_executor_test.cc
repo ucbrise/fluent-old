@@ -406,19 +406,23 @@ TEST(FluentExecutor, BlackBoxLineage) {
                               return "hello world";
                             })));
 
-  const ldb::MockClient<Hash, ldb::MockToSql, MockClock>& client =
-      f.GetLineageDbClient();
-  ASSERT_EQ(client.GetExec().size(), static_cast<std::size_t>(2));
-  EXPECT_EQ(CrunchWhitespace(std::get<0>(client.GetExec()[0])),
-            CrunchWhitespace(R"(
+  using Client = ldb::MockClient<Hash, ldb::MockToSql, MockClock>;
+  const Client& client = f.GetLineageDbClient();
+  const std::vector<Client::RegisterBlackBoxLineageTuple>&
+      black_box_lineage_tuples = client.GetRegisterBlackBoxLineage();
+  ASSERT_EQ(black_box_lineage_tuples.size(), static_cast<std::size_t>(1));
+  const Client::RegisterBlackBoxLineageTuple& t = black_box_lineage_tuples[0];
+  EXPECT_EQ(CrunchWhitespace(std::get<0>(t)), CrunchWhitespace("f_response"));
+  EXPECT_EQ(CrunchWhitespace(std::get<1>(t)[0]), CrunchWhitespace(R"(
     CREATE FUNCTION name_f_response_lineage_impl(integer, int, int)
-    RETURNS TABLE(collection_name text, hash bigint, time_inserted integer)
+    RETURNS TABLE(node_name text, collection_name text, hash bigint,
+                  time_inserted integer)
     AS $$hello world$$ LANGUAGE SQL;
   )"));
-  EXPECT_EQ(CrunchWhitespace(std::get<0>(client.GetExec()[1])),
-            CrunchWhitespace(R"(
+  EXPECT_EQ(CrunchWhitespace(std::get<1>(t)[1]), CrunchWhitespace(R"(
     CREATE FUNCTION name_f_response_lineage(bigint)
-    RETURNS TABLE(collection_name text, hash bigint, time_inserted integer)
+    RETURNS TABLE(node_name text, collection_name text, hash bigint,
+                  time_inserted integer)
     AS $$
       SELECT name_f_response_lineage_impl(Req.time_inserted, Req.x, Resp.y)
       FROM name_f_request Req, name_f_response Resp

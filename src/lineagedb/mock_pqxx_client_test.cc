@@ -67,8 +67,8 @@ TEST(MockPqxxClient, AddCollection) {
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(4));
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, R"(
     INSERT INTO Collections (node_id, collection_name, collection_type,
-                             column_names)
-    VALUES (9001, 't', 'Table', ARRAY['x', 'c', 'b']);
+                             column_names, black_box_lineage)
+    VALUES (9001, 't', 'Table', ARRAY['x', 'c', 'b'], false);
   )");
   ExpectStringsEqualIgnoreWhiteSpace(queries[3].second, R"(
     CREATE TABLE name_t (
@@ -201,26 +201,40 @@ TEST(MockPqxxClient, AddDerivedLineage) {
   )"));
 }
 
-TEST(MockPqxxClient, Exec) {
-  using Client = MockPqxxClient<Hash, ToSql, MockClock>;
-
+TEST(MockPqxxClient, RegisterBlackBoxLineage) {
+  using Client = MockPqxxClient<Hash, MockToSql, MockClock>;
   ConnectionConfig c;
   StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
   ASSERT_EQ(Status::OK, client_or.status());
   Client client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, client.Exec("who's on first?"));
-  ASSERT_EQ(Status::OK, client.Exec("Yes."));
-  ASSERT_EQ(Status::OK, client.Exec("the fellow's name."));
-  ASSERT_EQ(Status::OK, client.Exec("Who."));
-  ASSERT_EQ(Status::OK, client.Exec("The guy on first."));
-
+  ASSERT_EQ(Status::OK,
+            client.RegisterBlackBoxLineage("bar", std::vector<std::string>{}));
+  ASSERT_EQ(Status::OK, client.RegisterBlackBoxLineage(
+                            "baz", std::vector<std::string>{"query1"}));
+  ASSERT_EQ(Status::OK,
+            client.RegisterBlackBoxLineage(
+                "zardoz", std::vector<std::string>{"query2", "query3"}));
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
-  ASSERT_EQ(queries.size(), static_cast<std::size_t>(7));
-  ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, "who's on first?");
-  ExpectStringsEqualIgnoreWhiteSpace(queries[3].second, "Yes.");
-  ExpectStringsEqualIgnoreWhiteSpace(queries[4].second, "the fellow's name.");
-  ExpectStringsEqualIgnoreWhiteSpace(queries[5].second, "Who.");
-  ExpectStringsEqualIgnoreWhiteSpace(queries[6].second, "The guy on first.");
+
+  ASSERT_EQ(queries.size(), static_cast<std::size_t>(8));
+  ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, R"(
+    UPDATE Collections
+    SET black_box_lineage = true
+    WHERE node_id = 9001 AND collection_name = bar;
+  )");
+  ExpectStringsEqualIgnoreWhiteSpace(queries[3].second, R"(
+    UPDATE Collections
+    SET black_box_lineage = true
+    WHERE node_id = 9001 AND collection_name = baz;
+  )");
+  ExpectStringsEqualIgnoreWhiteSpace(queries[4].second, "query1");
+  ExpectStringsEqualIgnoreWhiteSpace(queries[5].second, R"(
+    UPDATE Collections
+    SET black_box_lineage = true
+    WHERE node_id = 9001 AND collection_name = zardoz;
+  )");
+  ExpectStringsEqualIgnoreWhiteSpace(queries[6].second, "query2");
+  ExpectStringsEqualIgnoreWhiteSpace(queries[7].second, "query3");
 }
 
 }  // namespace lineagedb

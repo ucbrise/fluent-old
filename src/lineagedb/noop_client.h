@@ -69,7 +69,10 @@ class NoopClient {
     return Status::OK;
   }
 
-  WARN_UNUSED Status Exec(const std::string&) { return Status::OK; }
+  WARN_UNUSED Status RegisterBlackBoxLineage(const std::string&,
+                                             const std::vector<std::string>&) {
+    return Status::OK;
+  }
 
  private:
   NoopClient() = default;

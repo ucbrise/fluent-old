@@ -239,10 +239,17 @@ class FluentExecutor<
   //
   //   -- get_response_lineage_impl(time_inserted, key, value)
   //   CREATE get_response_lineage_impl(integer, text, text)
-  //   RETURNS TABLE(collection_name text, hash integer, time_inserted integer)
+  //   RETURNS TABLE(node_name text,
+  //                 collection_name text,
+  //                 hash integer,
+  //                 time_inserted integer)
   //   AS $$
-  //     SELECT CAST('set_request' AS text), hash, time_inserted
-  //     FROM set_request
+  //     SELECT
+  //       CAST('redis_server' as text),
+  //       CAST('set_request' AS text),
+  //       hash,
+  //       time_inserted
+  //     FROM redis_server_set_request
   //     WHERE time_inserted <= $1 AND key = $2
   //     ORDER BY time_inserted DESC
   //     LIMIT 1
@@ -262,26 +269,49 @@ class FluentExecutor<
   // Most of these two functions are boilerplate. The only creative bit that a
   // user would have to provide is this part:
   //
-  //   SELECT CAST('set_request' AS text), hash, time_inserted
-  //   FROM set_request
+  //   SELECT
+  //     CAST('redis_server' AS text)
+  //     CAST('set_request' AS text),
+  //     hash,
+  //     time_inserted
+  //   FROM redis_server_set_request
   //   WHERE time_inserted <= $1 AND key = $2
   //   ORDER BY time_inserted DESC
   //   LIMIT 1
   //
-  // RegisterBlackBoxLineage(f) takes a function f that returns this lineage
-  // specification. f takes one argument for every argument of the first SQL
-  // function. For example, here's what f would look like to generate the SQL
-  // above:
+  // RegisterBlackBoxLineage<ReqIndex, RespIndex>(f) takes a function f that
+  // returns this lineage specification. f takes one argument for every
+  // argument of the first SQL function. For example, here's what f would look
+  // like to generate the SQL above:
   //
-  // [](const string& time_inserted, const string& key, const string&) {
-  //   return fmt::format(R"(
-  //     SELECT CAST('set_request' AS text), hash, time_inserted
-  //     FROM set_request
-  //     WHERE time_inserted <= {} AND key = {}
-  //     ORDER BY time_inserted DESC
-  //     LIMIT 1
-  //   )", time_inserted, key);
-  // }
+  //   [](const string& time_inserted, const string& key, const string&) {
+  //     return fmt::format(R"(
+  //       SELECT
+  //         CAST('redis_server' AS text),
+  //         CAST('set_request' AS text),
+  //         hash,
+  //         time_inserted
+  //       FROM set_request
+  //       WHERE time_inserted <= {} AND key = {}
+  //       ORDER BY time_inserted DESC
+  //       LIMIT 1
+  //     )", time_inserted, key);
+  //   }
+  //
+  // ReqIndes and RespIndex specify the request and response channel whose
+  // lineage is being specified. For example, given the following fluent
+  // program:
+  //
+  //   auto f = fluent("some_server", ...)
+  //     .channel<...>("foo_request", ...)
+  //     .channel<...>("foo_response", ...)
+  //     .channel<...>("bar_request", ...)
+  //     .channel<...>("bar_response", ...)
+  //     .RegisterRules(...);
+  //
+  // we can specify the lineage of the foo API with
+  // f.RegisterBlackBoxLineage<0, 1>(...) and specify the lineage of the bar
+  // API with f.RegisterBlackBoxLineage<2, 3>(...);
   //
   // [1]: https://goo.gl/yGmr78
   template <std::size_t RequestIndex, std::size_t ResponseIndex, typename F>
@@ -509,53 +539,45 @@ class FluentExecutor<
   }
 
   // See RegisterBlackBoxLineage.
-  // TODO(mwhittaker): Use a Status class.
   template <template <typename> class Pickler_, typename... RequestTs,
             typename... ResponseTs, typename F>
   WARN_UNUSED Status RegisterBlackBoxLineageImpl(
       const Channel<Pickler_, RequestTs...>& request,
       const Channel<Pickler_, ResponseTs...>& response, F f) {
     // Validate request types.
-    const std::string request_columns_err =
-        "The first three columns of a request channel must be a dst_addr, "
-        "src_addr, and id column. The remaining columns are the arguments to "
-        "the request.";
-    CHECK_GE(request.ColumnNames().size(), static_cast<std::size_t>(3))
-        << request_columns_err;
-    CHECK_EQ(request.ColumnNames()[0], "dst_addr") << request_columns_err;
-    CHECK_EQ(request.ColumnNames()[1], "src_addr") << request_columns_err;
-    CHECK_EQ(request.ColumnNames()[2], "id") << request_columns_err;
+    if (request.ColumnNames().size() < static_cast<std::size_t>(3) ||
+        request.ColumnNames()[0] != "dst_addr" ||
+        request.ColumnNames()[1] != "src_addr" ||
+        request.ColumnNames()[2] != "id") {
+      const std::string request_columns_err =
+          "The first three columns of a request channel must be a dst_addr, "
+          "src_addr, and id column. The remaining columns are the arguments to "
+          "the request.";
+      return Status(ErrorCode::INVALID_ARGUMENT, request_columns_err);
+    }
     using RequestTypes = TypeList<RequestTs...>;
-    static_assert(
-        std::is_same<std::string,
-                     typename TypeListGet<RequestTypes, 0>::type>::value,
-        "");
-    static_assert(
-        std::is_same<std::string,
-                     typename TypeListGet<RequestTypes, 1>::type>::value,
-        "");
-    static_assert(
-        std::is_same<std::int64_t,
-                     typename TypeListGet<RequestTypes, 2>::type>::value,
-        "");
+    using RequestType0 = typename TypeListGet<RequestTypes, 0>::type;
+    using RequestType1 = typename TypeListGet<RequestTypes, 1>::type;
+    using RequestType2 = typename TypeListGet<RequestTypes, 2>::type;
+    static_assert(std::is_same<std::string, RequestType0>::value, "");
+    static_assert(std::is_same<std::string, RequestType1>::value, "");
+    static_assert(std::is_same<std::int64_t, RequestType2>::value, "");
 
     // Validate response types.
-    const std::string response_columns_err =
-        "The first two columns of a response channel must be a addr and id "
-        "column. The remaining columns are the return values of the response.";
-    CHECK_GE(response.ColumnNames().size(), static_cast<std::size_t>(2))
-        << response_columns_err;
-    CHECK_EQ(response.ColumnNames()[0], "addr") << response_columns_err;
-    CHECK_EQ(response.ColumnNames()[1], "id") << response_columns_err;
+    if (response.ColumnNames().size() < static_cast<std::size_t>(2) ||
+        response.ColumnNames()[0] != "addr" ||
+        response.ColumnNames()[1] != "id") {
+      const std::string response_columns_err =
+          "The first two columns of a response channel must be a addr and id "
+          "column. The remaining columns are the return values of the "
+          "response.";
+      return Status(ErrorCode::INVALID_ARGUMENT, response_columns_err);
+    }
     using ResponseTypes = TypeList<ResponseTs...>;
-    static_assert(
-        std::is_same<std::string,
-                     typename TypeListGet<ResponseTypes, 0>::type>::value,
-        "");
-    static_assert(
-        std::is_same<std::int64_t,
-                     typename TypeListGet<ResponseTypes, 1>::type>::value,
-        "");
+    using ResponseType0 = typename TypeListGet<ResponseTypes, 0>::type;
+    using ResponseType1 = typename TypeListGet<ResponseTypes, 1>::type;
+    static_assert(std::is_same<std::string, ResponseType0>::value, "");
+    static_assert(std::is_same<std::int64_t, ResponseType1>::value, "");
 
     // Collect argument and return types.
     using ArgTypes = typename TypeListDrop<RequestTypes, 3>::type;
@@ -578,21 +600,28 @@ class FluentExecutor<
     }
 
     // Issue SQL queries.
-    auto seq = std::make_index_sequence<1 + TypeListLen<ArgTypes>::value +
-                                        TypeListLen<RetTypes>::value>();
-    RETURN_IF_ERROR(lineagedb_client_->Exec(fmt::format(
+    constexpr std::size_t num_args = TypeListLen<ArgTypes>::value;
+    constexpr std::size_t num_rets = TypeListLen<RetTypes>::value;
+    auto seq = std::make_index_sequence<1 + num_args + num_rets>();
+    const std::string lineage_impl_command = fmt::format(
         R"(
       CREATE FUNCTION {}_{}_lineage_impl(integer, {})
-      RETURNS TABLE(collection_name text, hash bigint, time_inserted integer)
+      RETURNS TABLE(node_name text,
+                    collection_name text,
+                    hash bigint,
+                    time_inserted integer)
       AS $${}$$ LANGUAGE SQL;
     )",
         name_, response.Name(), Join(types),
-        CallBlackBoxLineageFunction(f, seq))));
+        CallBlackBoxLineageFunction(f, seq));
 
-    RETURN_IF_ERROR(lineagedb_client_->Exec(fmt::format(
+    const std::string lineage_command = fmt::format(
         R"(
       CREATE FUNCTION {}_{}_lineage(bigint)
-      RETURNS TABLE(collection_name text, hash bigint, time_inserted integer)
+      RETURNS TABLE(node_name text,
+                    collection_name text,
+                    hash bigint,
+                    time_inserted integer)
       AS $$
         SELECT {}_{}_lineage_impl(Req.time_inserted, {})
         FROM {}_{} Req, {}_{} Resp
@@ -600,9 +629,11 @@ class FluentExecutor<
       $$ LANGUAGE SQL;
     )",
         name_, response.Name(), name_, response.Name(), Join(column_names),
-        name_, request.Name(), name_, response.Name())));
+        name_, request.Name(), name_, response.Name());
 
-    return Status::OK;
+    return lineagedb_client_->RegisterBlackBoxLineage(
+        response.Name(),
+        {std::move(lineage_impl_command), std::move(lineage_command)});
   }
 
   // TODO(mwhittaker): Document.

@@ -63,8 +63,10 @@ int main(int argc, char* argv[]) {
          const std::string& value) {
         (void)value;
         return fmt::format(R"(
-          SELECT
-            CAST('key_value_server_set_request' as TEXT), hash, time_inserted
+          SELECT CAST('key_value_server' as TEXT),
+                 CAST('set_request' as TEXT),
+                 hash,
+                 time_inserted
           FROM key_value_server_set_request
           WHERE key = {} AND time_inserted <= {}
           ORDER BY time_inserted DESC

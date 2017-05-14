@@ -71,12 +71,14 @@ fluent.Node = function(name, address, bootstrap_rules, rules, time,
 // type: string,
 // column_names: string list,
 // tuples: string list list,
-fluent.Collection = function(name, type, column_names, tuples) {
+fluent.Collection = function(name, type, column_names, black_box_lineage, tuples) {
   assert(typeof(name) === "string");
   assert(typeof(type) === "string");
+  assert(typeof(black_box_lineage) === "boolean");
   this.name = name;
   this.type = type;
   this.column_names = column_names;
+  this.black_box_lineage = black_box_lineage;
   this.tuples = tuples;
 }
 
@@ -85,10 +87,10 @@ fluent.Collection = function(name, type, column_names, tuples) {
 // hash: string
 // time: number
 fluent.TupleId = function(node_name, collection_name, hash, time) {
-  assert(typeof(node_name) === "string");
-  assert(typeof(collection_name) === "string");
+  assert(typeof(node_name) === "string", node_name);
+  assert(typeof(collection_name) === "string", collection_name);
   assert(typeof(hash) === "string", hash);
-  assert(typeof(time) === "number");
+  assert(typeof(time) === "number", time);
   this.node_name = node_name;
   this.collection_name = collection_name;
   this.hash = hash;
@@ -146,10 +148,20 @@ fluent.ajax.node_collection = function(node_name, collection_name, time, callbac
   fluent.ajax_get(url, callback);
 }
 
-// backwards_lineage: string -> string -> int -> int -> TupleId list
-fluent.ajax.backwards_lineage = function(node_name, collection_name, hash,
-                                         time, callback) {
-  var url = "/backwards_lineage" +
+// black_box_backwards_lineage: string -> string -> int -> TupleId list
+fluent.ajax.black_box_backwards_lineage = function(node_name, collection_name,
+                                                   id, callback) {
+  var url = "/black_box_backwards_lineage" +
+    "?node_name=" + node_name +
+    "&collection_name=" + collection_name +
+    "&id=" + id;
+  fluent.ajax_get(url, callback);
+}
+
+// regular_backwards_lineage: string -> string -> int -> int -> TupleId list
+fluent.ajax.regular_backwards_lineage = function(node_name, collection_name,
+                                                 hash, time, callback) {
+  var url = "/regular_backwards_lineage" +
     "?node_name=" + node_name +
     "&collection_name=" + collection_name +
     "&hash=" + hash +
@@ -170,7 +182,7 @@ fluent.get_collections = function(node_name, collection_names, time, callback) {
       fluent.ajax.node_collection(node_name, cname, time, function(collection) {
         collections.push(new fluent.Collection(
             cname, collection.type, collection.column_names,
-            collection.tuples));
+            collection.black_box_lineage, collection.tuples));
         get_collections_impl();
       });
     }
@@ -284,8 +296,11 @@ fluent.add_edge = function(source_tid, target_tid) {
   }
 }
 
-fluent.get_lineage = function(node_name, collection_name, hash, time) {
-  var target_tid = new fluent.TupleId(node_name, collection_name, hash, time);
+fluent.backwards_lineage = function(node, collection, tuple) {
+
+  var hash = tuple[0];
+  var time = tuple[1];
+  var target_tid = new fluent.TupleId(node.name, collection.name, hash, time);
   fluent.add_node.call(this, target_tid);
   this.node.clicked_hash = hash;
 
@@ -305,7 +320,23 @@ fluent.get_lineage = function(node_name, collection_name, hash, time) {
       fit: false,
     }).run();
   }
-  fluent.ajax.backwards_lineage(node_name, collection_name, hash, time, callback);
+
+  if (collection.black_box_lineage) {
+    // The tuple looks like this:
+    //   0. hash
+    //   1. logical time inserted
+    //   2. logical time deleted
+    //   3. physical time inserted
+    //   4. physical time deleted
+    //   5. address
+    //   6. id
+    console.log("Backwards!");
+    fluent.ajax.black_box_backwards_lineage(node.name, collection.name,
+                                            tuple[6], callback);
+  } else {
+    fluent.ajax.regular_backwards_lineage(node.name, collection.name, hash,
+                                          time, callback);
+  }
 }
 
 // Main ////////////////////////////////////////////////////////////////////////
@@ -318,7 +349,7 @@ function main() {
       select_node: fluent.select_node,
       decrement_time: fluent.decrement_time,
       increment_time: fluent.increment_time,
-      get_lineage: fluent.get_lineage,
+      backwards_lineage: fluent.backwards_lineage,
     },
     updated: function() {
       if (this.node !== null) {

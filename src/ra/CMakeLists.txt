@@ -6,6 +6,7 @@ MACRO(CREATE_RA_TEST NAME)
 ENDMACRO(CREATE_RA_TEST)
 
 CREATE_RA_TEST(all_test)
+CREATE_RA_TEST(const_test)
 CREATE_RA_TEST(count_test)
 CREATE_RA_TEST(cross_test)
 CREATE_RA_TEST(filter_test)

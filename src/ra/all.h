@@ -2,6 +2,7 @@
 #define RA_ALL_H_
 
 #include "aggregates.h"
+#include "const.h"
 #include "count.h"
 #include "cross.h"
 #include "filter.h"

@@ -44,7 +44,7 @@ int PingClientMain(const PingClientArgs& args,
           .RegisterBootstrapRules([&](auto& connect, auto&, auto&) {
             using namespace fluent::infix;
             return std::make_tuple(
-                connect <= ra::make_iterable("connect_tuple", &connect_tuple));
+                connect <= ra::make_const("connect_tuple", &connect_tuple));
           })
           .RegisterRules([&](auto&, auto& mcast, auto& p) {
             using namespace fluent::infix;

@@ -74,6 +74,7 @@ ranges::for_each(rng, [](const tuple<int>& t) {
 ## Relational Operators
 We implement the following relational operators.
 
+- [`const`](const.h)
 - [`count`](count.h)
 - [`cross`](cross.h)
 - [`filter`](filter.h)

@@ -12,6 +12,17 @@ function assert(condition, message) {
   }
 }
 
+// The first five columns of a tuple stored in the lineage database are:
+//   0. hash,
+//   1. logical time inserted,
+//   2. logical time deleted,
+//   3. physical time inserted, and
+//   4. physical time deleted.
+// This function will take a tuple and strip off these header columns.
+fluent.strip_header = function(tuple) {
+  return tuple.slice(5);
+}
+
 // https://plainjs.com/javascript/ajax/send-ajax-get-and-post-requests-47/
 fluent.ajax_get = function(url, on_success) {
   var xhr = window.XMLHttpRequest ? new XMLHttpRequest()
@@ -261,7 +272,7 @@ fluent.render_current_rule = function(node) {
   }
 }
 
-fluent.add_node = function(tid) {
+fluent.add_node = function(tid, tuple) {
   var id = fluent.tuple_id_to_string(tid);
   if (this.cy.getElementById(id).size() == 0) {
     this.cy.add({
@@ -272,6 +283,7 @@ fluent.add_node = function(tid) {
         collection_name: tid.collection_name,
         hash: tid.hash,
         time: tid.time,
+        tuple: "(" + fluent.strip_header(tuple).join(",") + ")",
       }
     });
   } else {
@@ -297,20 +309,19 @@ fluent.add_edge = function(source_tid, target_tid) {
 }
 
 fluent.backwards_lineage = function(node, collection, tuple) {
-
   var hash = tuple[0];
   var time = tuple[1];
   var target_tid = new fluent.TupleId(node.name, collection.name, hash, time);
-  fluent.add_node.call(this, target_tid);
+  fluent.add_node.call(this, target_tid, tuple);
   this.node.clicked_hash = hash;
 
   var that = this;
   var callback = function(lineage_tuples) {
     for (var i = 0; i < lineage_tuples.length; ++i) {
       var t = lineage_tuples[i];
-      var source_tid = new fluent.TupleId(t.node_name, t.collection_name,
-                                          t.hash, t.time);
-      fluent.add_node.call(that, source_tid);
+      var source_tid = new fluent.TupleId(
+          t.node_name, t.collection_name, t.hash, t.time);
+      fluent.add_node.call(that, source_tid, t.tuple);
       fluent.add_edge.call(that, source_tid, target_tid);
     }
     that.cy.layout({
@@ -330,7 +341,6 @@ fluent.backwards_lineage = function(node, collection, tuple) {
     //   4. physical time deleted
     //   5. address
     //   6. id
-    console.log("Backwards!");
     fluent.ajax.black_box_backwards_lineage(node.name, collection.name,
                                             tuple[6], callback);
   } else {
@@ -377,8 +387,8 @@ function main() {
           "padding": "5",
           "background-color": "white",
           'label': function(e) {
-            return "[" + e.data("node_name") + "]" + e.data("collection_name")
-                   + ":" + e.data("hash") + "@" + e.data("time");
+            return e.data("node_name") + ":" + e.data("collection_name")
+                   + "@" + e.data("time") + "\n" + e.data("tuple");
           }
         }
       },

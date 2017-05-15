@@ -91,12 +91,28 @@ def black_box_backwards_lineage_(cur, node_name, collection_name, id_):
         SELECT *
         FROM {}_{}_lineage(%s);
     """.format(node_name, collection_name), (id_,))
-    return [{
-                "node_name": node_name,
-                "collection_name": collection_name,
-                "hash": escape(hash),
-                "time": time,
-            } for (node_name, collection_name, hash, time) in cur.fetchall()]
+    lineage_tuples = []
+    rows = cur.fetchall()
+    for row in rows:
+        t = {
+            "node_name": row[0],
+            "collection_name": row[1],
+            "hash": escape(row[2]),
+            "time": row[3],
+        }
+
+        cur.execute("""
+            SELECT *
+            FROM {}_{}
+            WHERE hash = %s AND time_inserted = %s
+        """.format(t["node_name"], t["collection_name"]),
+        (t["hash"], t["time"]))
+        tuple_rows = cur.fetchall()
+        assert len(tuple_rows) == 1, tuple_rows
+        t["tuple"] = tuple_rows[0]
+
+        lineage_tuples.append(t)
+    return lineage_tuples
 
 def regular_backwards_lineage_(cur, node_name, collection_name, hash, time):
     # The time of the most recent insertion of the tuple.
@@ -147,6 +163,16 @@ def regular_backwards_lineage_(cur, node_name, collection_name, hash, time):
             time_rows = cur.fetchall()
             assert len(time_rows) == 1, time_rows
             t["time"] = time_rows[0][0]
+
+        cur.execute("""
+            SELECT *
+            FROM {}_{}
+            WHERE hash = %s AND time_inserted = %s
+        """.format(t["node_name"], t["collection_name"]),
+        (t["hash"], t["time"]))
+        tuple_rows = cur.fetchall()
+        assert len(tuple_rows) == 1, tuple_rows
+        t["tuple"] = tuple_rows[0]
 
         lineage_tuples.append(t)
     return lineage_tuples

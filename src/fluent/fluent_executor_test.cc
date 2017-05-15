@@ -424,9 +424,19 @@ TEST(FluentExecutor, BlackBoxLineage) {
     RETURNS TABLE(node_name text, collection_name text, hash bigint,
                   time_inserted integer)
     AS $$
-      SELECT name_f_response_lineage_impl(Req.time_inserted, Req.x, Resp.y)
-      FROM name_f_request Req, name_f_response Resp
+      SELECT L.*
+      FROM name_f_request Req,
+           name_f_response Resp,
+           name_f_response_lineage_impl(Req.time_inserted, Req.x, Resp.y) AS L
       WHERE Req.id = $1 AND Resp.id = $1
+      UNION
+      SELECT
+        CAST('name' AS TEXT),
+        CAST('f_request' AS TEXT),
+        hash,
+        time_inserted
+      FROM name_f_request
+      WHERE id = $1
     $$ LANGUAGE SQL;
   )"));
 }

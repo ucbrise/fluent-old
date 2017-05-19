@@ -1,5 +1,5 @@
-#ifndef EXAMPLES_BLACK_BOXES_PRIMALITY_H_
-#define EXAMPLES_BLACK_BOXES_PRIMALITY_H_
+#ifndef EXAMPLES_TWITTER_TWITTER_H_
+#define EXAMPLES_TWITTER_TWITTER_H_
 
 #include <string>
 
@@ -18,4 +18,4 @@ auto AddTwitterApi(FluentBuilder f) {
           "update", {{"addr", "tweet_id", "tweet"}});
 }
 
-#endif  // EXAMPLES_BLACK_BOXES_PRIMALITY_H_
+#endif  // EXAMPLES_TWITTER_TWITTER_H_

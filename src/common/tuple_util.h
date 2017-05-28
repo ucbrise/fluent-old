@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "common/macros.h"
+#include "common/sizet_list.h"
 #include "common/status.h"
 #include "common/status_macros.h"
 #include "common/type_list.h"
@@ -219,6 +220,38 @@ std::vector<T> TupleToVector(const std::tuple<T, Ts...>& t) {
 template <std::size_t... Is, typename... Ts>
 auto TupleProject(const std::tuple<Ts...>& t) {
   return std::tuple_cat(std::make_tuple(std::get<Is>(t))...);
+}
+
+// TupleProject<SizetList<I1, ..., In>>(t) = (t[I1], ..., t[In])
+template <typename SizetList, typename... Ts>
+struct TupleProjectBySizetListImpl;
+
+template <std::size_t... Is, typename... Ts>
+struct TupleProjectBySizetListImpl<SizetList<Is...>, Ts...> {
+  auto operator()(const std::tuple<Ts...>& t) { return TupleProject<Is...>(t); }
+};
+
+template <typename SizetList, typename... Ts>
+auto TupleProjectBySizetList(const std::tuple<Ts...>& t) {
+  return TupleProjectBySizetListImpl<SizetList, Ts...>()(t);
+}
+
+// TupleTake
+template <std::size_t N, typename... Ts>
+auto TupleTake(const std::tuple<Ts...>& t) {
+  using ind_sequence = std::make_index_sequence<sizeof...(Ts)>;
+  using sizet_list = typename SizetListFromIndexSequence<ind_sequence>::type;
+  using project_ids = typename SizetListTake<sizet_list, N>::type;
+  return TupleProjectBySizetList<project_ids>(t);
+}
+
+// `TupleDrop<I>()`
+template <std::size_t N, typename... Ts>
+auto TupleDrop(const std::tuple<Ts...>& t) {
+  using ind_sequence = std::make_index_sequence<sizeof...(Ts)>;
+  using sizet_list = typename SizetListFromIndexSequence<ind_sequence>::type;
+  using project_ids = typename SizetListDrop<sizet_list, N>::type;
+  return TupleProjectBySizetList<project_ids>(t);
 }
 
 // << operator

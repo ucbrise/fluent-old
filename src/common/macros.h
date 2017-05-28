@@ -36,6 +36,63 @@ namespace fluent {
   TypeName(const TypeName&) = delete;      \
   void operator=(const TypeName&) = delete;
 
+// DEFAULT_MOVE_AND_ASSIGN is a macro you can use to add a default move
+// constructor and default move assignment operator to a class. Now, you might
+// be thinking to yourself, doesn't a class have a *default* move constructor
+// and *default* move assignment operator, well, by *default*! Yes, it does. In
+// some circumstances. For example, the following code works just fine:
+//
+//   struct Foo {
+//     Foo() {}
+//   }
+//
+//   Foo f1;
+//   Foo f2(f1);            // default copy constructor
+//   Foo f3(std::move(f1)); // default move constructor
+//
+// However, in other circumstances, it does not. For example, imagine we
+// explicitly delete the copy constructor of Foo.
+//
+//   struct Foo {
+//     Foo() {}
+//     DISALLOW_COPY_AND_ASSIGN(Foo);
+//   }
+//
+// As expected, this removes the copy constructor. But, it also removes the
+// move constructor:
+//
+//   Foo f1;
+//   Foo f2(f1);            // does not compile!
+//   Foo f3(std::move(f1)); // does not compile!
+//
+// We can use the DEFAULT_MOVE_AND_ASSIGN macro to make Foo movable again.
+//
+//   struct Foo {
+//     Foo() {}
+//     DISALLOW_COPY_AND_ASSIGN(Foo);
+//     DEFAULT_MOVE_AND_ASSIGN(Foo);
+//   }
+//
+//   Foo f1;
+//   Foo f2(f1);            // does not compile!
+//   Foo f3(std::move(f1)); // default move constructor
+#define DEFAULT_MOVE_AND_ASSIGN(TypeName) \
+  TypeName(TypeName&&) = default;         \
+  TypeName& operator=(TypeName&&) = default;
+
+// The following code produces an unused variable warning:
+//
+//   int x = 0;
+//
+// Wrapping x with the UNUSED macros silences this warning:
+//
+//   int x = 0;
+//   UNUSED(x);
+#define UNUSED(x) \
+  do {            \
+    (void)(x);    \
+  } while (0)
+
 // Prepending a function declaration with the WARN_UNUSED macro will cause the
 // compiler to emit a warning if the return value is not used. For example, the
 // following code will emit a warning because the return of f is not used.

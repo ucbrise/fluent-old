@@ -11,9 +11,9 @@
 #include "fluent/infix.h"
 #include "lineagedb/connection_config.h"
 #include "lineagedb/pqxx_client.h"
-#include "ra/all.h"
+#include "ra/logical/all.h"
 
-namespace ra = fluent::ra;
+namespace lra = fluent::ra::logical;
 namespace ldb = fluent::lineagedb;
 
 namespace {
@@ -56,7 +56,8 @@ int main(int argc, char* argv[]) {
                                 .ConsumeValueOrDie())
                 .RegisterRules([&](auto& req, auto& resp) {
                   using namespace fluent::infix;
-                  auto rule = resp <= (req.Iterable() | ra::map(f));
+                  auto rule =
+                      resp <= (lra::make_collection(&req) | lra::map(f));
                   return std::make_tuple(rule);
                 })
                 .ConsumeValueOrDie();

@@ -1,6 +1,12 @@
 #ifndef FLUENT_NETWORK_STATE_H_
 #define FLUENT_NETWORK_STATE_H_
 
+#include <string>
+
+#include "zmq.hpp"
+
+#include "zmq_util/socket_cache.h"
+
 namespace fluent {
 
 // NetworkState is a simple struct holding all of the networking junk a
@@ -19,7 +25,7 @@ struct NetworkState {
 
   zmq::context_t* const context;
   zmq::socket_t socket;
-  SocketCache socket_cache;
+  zmq_util::SocketCache socket_cache;
 };
 
 }  // namespace fluent

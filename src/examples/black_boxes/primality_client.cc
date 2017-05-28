@@ -13,9 +13,9 @@
 #include "fluent/infix.h"
 #include "lineagedb/connection_config.h"
 #include "lineagedb/pqxx_client.h"
-#include "ra/all.h"
+#include "ra/logical/all.h"
 
-namespace ra = fluent::ra;
+namespace lra = fluent::ra::logical;
 namespace ldb = fluent::lineagedb;
 
 int main(int argc, char* argv[]) {
@@ -48,8 +48,8 @@ int main(int argc, char* argv[]) {
             using namespace fluent::infix;
 
             auto in_to_req =
-                req <= (stdin.Iterable() |
-                        ra::map([&](const std::tuple<std::string>& t) {
+                req <= (lra::make_collection(&stdin) |
+                        lra::map([&](const std::tuple<std::string>& t) {
                           return std::tuple<std::string, std::string,
                                             std::int64_t, int>(
                               server_address, client_address, id_gen.Generate(),
@@ -57,8 +57,8 @@ int main(int argc, char* argv[]) {
                         }));
 
             auto resp_to_out =
-                stdout <= (resp.Iterable() | ra::project<2>() |
-                           ra::map([](const std::tuple<bool>& t) {
+                stdout <= (lra::make_collection(&resp) | lra::project<2>() |
+                           lra::map([](const std::tuple<bool>& t) {
                              return std::tuple<std::string>(
                                  std::get<0>(t) ? "prime" : "not prime");
                            }));

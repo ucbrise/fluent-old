@@ -88,6 +88,24 @@ struct TypeListConcat<TypeList<Ls...>, TypeList<Rs...>> {
   using type = TypeList<Ls..., Rs...>;
 };
 
+// Cons
+template <typename T, typename TypeList>
+struct TypeListCons;
+
+template <typename T, typename... Ts>
+struct TypeListCons<T, TypeList<Ts...>> {
+  using type = TypeList<T, Ts...>;
+};
+
+// Append
+template <typename TypeList, typename T>
+struct TypeListAppend;
+
+template <typename... Ts, typename T>
+struct TypeListAppend<TypeList<Ts...>, T> {
+  using type = TypeList<Ts..., T>;
+};
+
 // Project
 template <typename TypeList, std::size_t... Is>
 struct TypeListProject;

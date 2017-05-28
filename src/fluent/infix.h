@@ -1,12 +1,12 @@
 #ifndef FLUENT_INFIX_H_
 #define FLUENT_INFIX_H_
 
-#include "fluent/channel.h"
+#include "collections/channel.h"
+#include "collections/scratch.h"
+#include "collections/stdout.h"
+#include "collections/table.h"
 #include "fluent/rule.h"
 #include "fluent/rule_tags.h"
-#include "fluent/scratch.h"
-#include "fluent/stdout.h"
-#include "fluent/table.h"
 
 namespace fluent {
 namespace infix {
@@ -50,52 +50,52 @@ namespace infix {
 //   fluent::infix` before using the functions.
 
 // Table <=
-template <typename... Ts, typename Rhs>
-Rule<Table<Ts...>*, MergeTag, typename std::decay<Rhs>::type> operator<=(
-    Table<Ts...>& t, Rhs&& rhs) {
-  return {&t, MergeTag(), std::forward<Rhs>(rhs)};
+template <typename... Ts, typename LogicalRa>
+Rule<Table<Ts...>, MergeTag, typename std::decay<LogicalRa>::type> operator<=(
+    Table<Ts...>& t, LogicalRa&& rhs) {
+  return {&t, MergeTag(), std::forward<LogicalRa>(rhs)};
 }
 
 // Table +=
-template <typename... Ts, typename Rhs>
-Rule<Table<Ts...>*, DeferredMergeTag, typename std::decay<Rhs>::type>
-operator+=(Table<Ts...>& t, Rhs&& rhs) {
-  return {&t, DeferredMergeTag(), std::forward<Rhs>(rhs)};
+template <typename... Ts, typename LogicalRa>
+Rule<Table<Ts...>, DeferredMergeTag, typename std::decay<LogicalRa>::type>
+operator+=(Table<Ts...>& t, LogicalRa&& rhs) {
+  return {&t, DeferredMergeTag(), std::forward<LogicalRa>(rhs)};
 }
 
 // Table -=
-template <typename... Ts, typename Rhs>
-Rule<Table<Ts...>*, DeferredDeleteTag, typename std::decay<Rhs>::type>
-operator-=(Table<Ts...>& t, Rhs&& rhs) {
-  return {&t, DeferredDeleteTag(), std::forward<Rhs>(rhs)};
+template <typename... Ts, typename LogicalRa>
+Rule<Table<Ts...>, DeferredDeleteTag, typename std::decay<LogicalRa>::type>
+operator-=(Table<Ts...>& t, LogicalRa&& rhs) {
+  return {&t, DeferredDeleteTag(), std::forward<LogicalRa>(rhs)};
 }
 
 // Channel <=
-template <template <typename> class Pickler, typename... Ts, typename Rhs>
-Rule<Channel<Pickler, Ts...>*, MergeTag, typename std::decay<Rhs>::type>
-operator<=(Channel<Pickler, Ts...>& c, Rhs&& rhs) {
-  return {&c, MergeTag(), std::forward<Rhs>(rhs)};
+template <template <typename> class Pickler, typename... Ts, typename LogicalRa>
+Rule<Channel<Pickler, Ts...>, MergeTag, typename std::decay<LogicalRa>::type>
+operator<=(Channel<Pickler, Ts...>& c, LogicalRa&& rhs) {
+  return {&c, MergeTag(), std::forward<LogicalRa>(rhs)};
 }
 
 // Scratch <=
-template <typename... Ts, typename Rhs>
-Rule<Scratch<Ts...>*, MergeTag, typename std::decay<Rhs>::type> operator<=(
-    Scratch<Ts...>& s, Rhs&& rhs) {
-  return {&s, MergeTag(), std::forward<Rhs>(rhs)};
+template <typename... Ts, typename LogicalRa>
+Rule<Scratch<Ts...>, MergeTag, typename std::decay<LogicalRa>::type> operator<=(
+    Scratch<Ts...>& s, LogicalRa&& rhs) {
+  return {&s, MergeTag(), std::forward<LogicalRa>(rhs)};
 }
 
 // Stdout <=
-template <typename... Ts, typename Rhs>
-Rule<Stdout*, MergeTag, typename std::decay<Rhs>::type> operator<=(Stdout& o,
-                                                                   Rhs&& rhs) {
-  return {&o, MergeTag(), std::forward<Rhs>(rhs)};
+template <typename... Ts, typename LogicalRa>
+Rule<Stdout, MergeTag, typename std::decay<LogicalRa>::type> operator<=(
+    Stdout& o, LogicalRa&& rhs) {
+  return {&o, MergeTag(), std::forward<LogicalRa>(rhs)};
 }
 
 // Stdout +=
-template <typename Rhs>
-Rule<Stdout*, DeferredMergeTag, typename std::decay<Rhs>::type> operator+=(
-    Stdout& o, Rhs&& rhs) {
-  return {&o, DeferredMergeTag(), std::forward<Rhs>(rhs)};
+template <typename LogicalRa>
+Rule<Stdout, DeferredMergeTag, typename std::decay<LogicalRa>::type> operator+=(
+    Stdout& o, LogicalRa&& rhs) {
+  return {&o, DeferredMergeTag(), std::forward<LogicalRa>(rhs)};
 }
 
 }  // namespace infix

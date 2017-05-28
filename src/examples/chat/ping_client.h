@@ -11,10 +11,10 @@
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"
 #include "lineagedb/connection_config.h"
-#include "ra/all.h"
+#include "ra/logical/all.h"
 
 namespace lineagedb = fluent::lineagedb;
-namespace ra = fluent::ra;
+namespace lra = fluent::ra::logical;
 
 struct PingClientArgs {
   std::string server_address;
@@ -43,16 +43,16 @@ int PingClientMain(const PingClientArgs& args,
           .periodic("p", std::chrono::milliseconds(1000))
           .RegisterBootstrapRules([&](auto& connect, auto&, auto&) {
             using namespace fluent::infix;
-            return std::make_tuple(
-                connect <= ra::make_const("connect_tuple", &connect_tuple));
+            return std::make_tuple(connect <=
+                                   lra::make_iterable(&connect_tuple));
           })
           .RegisterRules([&](auto&, auto& mcast, auto& p) {
             using namespace fluent::infix;
-            return std::make_tuple(mcast <=
-                                   (p.Iterable() | ra::map([&](const auto&) {
-                                      return std::make_tuple(
-                                          args.server_address, args.msg);
-                                    })));
+            return std::make_tuple(
+                mcast <= (lra::make_collection(&p) | lra::map([&](const auto&) {
+                            return std::make_tuple(args.server_address,
+                                                   args.msg);
+                          })));
           })
           .ConsumeValueOrDie()
           .Run();

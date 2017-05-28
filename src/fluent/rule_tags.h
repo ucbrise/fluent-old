@@ -53,13 +53,19 @@ namespace fluent {
 //
 // [1]: http://db.cs.berkeley.edu/papers/cidr11-bloom.pdf
 // [2]: http://en.cppreference.com/w/cpp/iterator/iterator_tags
-struct MergeTag {
+struct RuleTag {
+  virtual ~RuleTag() {}
+};
+
+struct MergeTag : public RuleTag {
   std::string ToDebugString() const { return "<="; }
 };
-struct DeferredMergeTag {
+
+struct DeferredMergeTag : public RuleTag {
   std::string ToDebugString() const { return "+="; }
 };
-struct DeferredDeleteTag {
+
+struct DeferredDeleteTag : public RuleTag {
   std::string ToDebugString() const { return "-="; }
 };
 

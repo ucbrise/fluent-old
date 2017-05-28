@@ -16,9 +16,9 @@
 #include "fluent/infix.h"
 #include "lineagedb/connection_config.h"
 #include "lineagedb/pqxx_client.h"
-#include "ra/all.h"
+#include "ra/logical/all.h"
 
-namespace ra = fluent::ra;
+namespace lra = fluent::ra::logical;
 namespace ldb = fluent::lineagedb;
 
 int main(int argc, char* argv[]) {
@@ -54,21 +54,21 @@ int main(int argc, char* argv[]) {
         (void)set_resp;
 
         auto buffer_stdin =
-            split <= (stdin.Iterable() |
-                      ra::map([](const std::tuple<std::string>& s)
-                                  -> std::tuple<std::vector<std::string>> {
+            split <= (lra::make_collection(&stdin) |
+                      lra::map([](const std::tuple<std::string>& s)
+                                   -> std::tuple<std::vector<std::string>> {
                         return {fluent::Split(std::get<0>(s))};
                       }));
 
         auto get_request =
             get_req <=
-            (split.Iterable() |
-             ra::filter([](
+            (lra::make_collection(&split) |
+             lra::filter([](
                  const std::tuple<std::vector<std::string>>& parts_tuple) {
                const std::vector<std::string>& parts = std::get<0>(parts_tuple);
                return parts.size() == 2 && parts[0] == "GET";
              }) |
-             ra::map(
+             lra::map(
                  [&](const std::tuple<std::vector<std::string>>& parts_tuple)
                      -> std::tuple<std::string, std::string, std::int64_t,
                                    std::string> {
@@ -80,13 +80,13 @@ int main(int argc, char* argv[]) {
 
         auto set_request =
             set_req <=
-            (split.Iterable() |
-             ra::filter([](
+            (lra::make_collection(&split) |
+             lra::filter([](
                  const std::tuple<std::vector<std::string>>& parts_tuple) {
                const std::vector<std::string>& parts = std::get<0>(parts_tuple);
                return parts.size() == 3 && parts[0] == "SET";
              }) |
-             ra::map(
+             lra::map(
                  [&](const std::tuple<std::vector<std::string>>& parts_tuple)
                      -> std::tuple<std::string, std::string, std::int64_t,
                                    std::string, std::string> {
@@ -96,7 +96,8 @@ int main(int argc, char* argv[]) {
                            parts[1], parts[2]};
                  }));
 
-        auto get_response = stdout <= (get_resp.Iterable() | ra::project<2>());
+        auto get_response =
+            stdout <= (lra::make_collection(&get_resp) | lra::project<2>());
 
         return std::make_tuple(buffer_stdin, get_request, set_request,
                                get_response);

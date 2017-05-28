@@ -2,17 +2,13 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
 MACRO(CREATE_RA_TEST NAME)
     CREATE_NAMED_TEST(ra_${NAME} ${NAME})
-    TARGET_LINK_LIBRARIES(ra_${NAME} common glog ${FMT_LINK_DIRS}/libfmt.a)
+    TARGET_LINK_LIBRARIES(ra_${NAME}
+        ${FMT_LINK_DIRS}/libfmt.a
+        common
+        glog)
 ENDMACRO(CREATE_RA_TEST)
 
-CREATE_RA_TEST(all_test)
-CREATE_RA_TEST(const_test)
-CREATE_RA_TEST(count_test)
-CREATE_RA_TEST(cross_test)
-CREATE_RA_TEST(filter_test)
-CREATE_RA_TEST(group_by_test)
-CREATE_RA_TEST(hash_join_test)
-CREATE_RA_TEST(id_test)
-CREATE_RA_TEST(iterable_test)
-CREATE_RA_TEST(map_test)
-CREATE_RA_TEST(project_test)
+CREATE_RA_TEST(logical_to_physical_test)
+
+ADD_SUBDIRECTORY(logical)
+ADD_SUBDIRECTORY(physical)

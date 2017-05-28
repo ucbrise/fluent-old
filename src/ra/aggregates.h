@@ -3,12 +3,16 @@
 
 #include <cstddef>
 
+#include <set>
+
 #include "fmt/format.h"
 
 #include "common/sizet_list.h"
+#include "common/static_assert.h"
 #include "common/string_util.h"
 #include "common/tuple_util.h"
 #include "common/type_list.h"
+#include "common/type_traits.h"
 
 namespace fluent {
 namespace ra {
@@ -54,13 +58,21 @@ namespace agg {
 // The aggregate implementation (e.g. SumImpl, AvgImpl) has a method Update
 // which takes in values of the column, and a method `Get` which returns the
 // final aggregate. The return type of Get is arbitrary.
+struct Aggregate {
+  virtual ~Aggregate() {}
+};
 
+struct AggregateImpl {
+  virtual ~AggregateImpl() {}
+};
+
+// Sum /////////////////////////////////////////////////////////////////////////
 template <typename SizetList, typename TypeList>
 class SumImpl;
 
 template <std::size_t... Is, typename T, typename... Ts>
-class SumImpl<SizetList<Is...>, TypeList<T, Ts...>> {
-  static_assert(TypeListAllSame<TypeList<T, Ts...>>::value, "");
+class SumImpl<SizetList<Is...>, TypeList<T, Ts...>> : public AggregateImpl {
+  static_assert(StaticAssert<TypeListAllSame<TypeList<T, Ts...>>>::value, "");
 
  public:
   SumImpl() : sum_() {}
@@ -74,7 +86,7 @@ class SumImpl<SizetList<Is...>, TypeList<T, Ts...>> {
 };
 
 template <std::size_t... Is>
-struct Sum {
+struct Sum : public Aggregate {
   template <typename TypeList>
   using type = SumImpl<SizetList<Is...>, TypeList>;
 
@@ -83,11 +95,12 @@ struct Sum {
   }
 };
 
+// Count ///////////////////////////////////////////////////////////////////////
 template <typename SizetList, typename TypeList>
 class CountImpl;
 
 template <std::size_t... Is, typename... Ts>
-class CountImpl<SizetList<Is...>, TypeList<Ts...>> {
+class CountImpl<SizetList<Is...>, TypeList<Ts...>> : public AggregateImpl {
  public:
   void Update(const std::tuple<Ts...>&) { count_++; }
   std::size_t Get() const { return count_; }
@@ -97,7 +110,7 @@ class CountImpl<SizetList<Is...>, TypeList<Ts...>> {
 };
 
 template <std::size_t... Is>
-struct Count {
+struct Count : public Aggregate {
   template <typename TypeList>
   using type = CountImpl<SizetList<Is...>, TypeList>;
 
@@ -106,12 +119,13 @@ struct Count {
   }
 };
 
+// Avg /////////////////////////////////////////////////////////////////////////
 template <typename SizetList, typename TypeList>
 class AvgImpl;
 
 template <std::size_t... Is, typename T, typename... Ts>
-class AvgImpl<SizetList<Is...>, TypeList<T, Ts...>> {
-  static_assert(TypeListAllSame<TypeList<T, Ts...>>::value, "");
+class AvgImpl<SizetList<Is...>, TypeList<T, Ts...>> : public AggregateImpl {
+  static_assert(StaticAssert<TypeListAllSame<TypeList<T, Ts...>>>::value, "");
 
  public:
   void Update(const std::tuple<T, Ts...>& t) {
@@ -129,12 +143,43 @@ class AvgImpl<SizetList<Is...>, TypeList<T, Ts...>> {
 };
 
 template <std::size_t... Is>
-struct Avg {
+struct Avg : public Aggregate {
   template <typename TypeList>
   using type = AvgImpl<SizetList<Is...>, TypeList>;
 
   static std::string ToDebugString() {
     return fmt::format("Avg<{}>", Join(Is...));
+  }
+};
+
+// Union ///////////////////////////////////////////////////////////////////////
+template <typename SizetList, typename TypeList>
+class UnionImpl;
+
+template <std::size_t... Is, typename T, typename... Ts>
+class UnionImpl<SizetList<Is...>, TypeList<std::set<T>, std::set<Ts>...>>
+    : public AggregateImpl {
+  static_assert(StaticAssert<TypeListAllSame<TypeList<T, Ts...>>>::value, "");
+
+ public:
+  UnionImpl() {}
+  void Update(const std::tuple<std::set<T>, std::set<Ts>...>& t) {
+    TupleIter(t,
+              [this](const std::set<T>& x) { xs_.insert(x.begin(), x.end()); });
+  }
+  std::set<T> Get() const { return xs_; }
+
+ private:
+  std::set<T> xs_;
+};
+
+template <std::size_t... Is>
+struct Union : public Aggregate {
+  template <typename TypeList>
+  using type = UnionImpl<SizetList<Is...>, TypeList>;
+
+  static std::string ToDebugString() {
+    return fmt::format("Union<{}>", Join(Is...));
   }
 };
 

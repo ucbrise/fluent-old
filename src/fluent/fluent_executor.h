@@ -18,6 +18,8 @@
 #include "gtest/gtest.h"
 #include "zmq.hpp"
 
+#include "collections/all.h"
+#include "collections/collection_util.h"
 #include "common/macros.h"
 #include "common/status.h"
 #include "common/status_macros.h"
@@ -25,100 +27,118 @@
 #include "common/string_util.h"
 #include "common/tuple_util.h"
 #include "common/type_list.h"
-#include "fluent/channel.h"
-#include "fluent/collection_util.h"
 #include "fluent/network_state.h"
-#include "fluent/periodic.h"
-#include "fluent/periodic.h"
 #include "fluent/rule.h"
 #include "fluent/rule_tags.h"
-#include "fluent/scratch.h"
-#include "fluent/socket_cache.h"
-#include "fluent/stdin.h"
-#include "fluent/stdout.h"
-#include "fluent/table.h"
 #include "lineagedb/connection_config.h"
 #include "lineagedb/to_sql.h"
-#include "ra/lineage_tuple.h"
-#include "ra/lineaged_tuple.h"
+#include "ra/logical_to_physical.h"
+#include "zmq_util/socket_cache.h"
 
 namespace fluent {
+namespace detail {
+
+// IsRuleTagInsert
+template <typename RuleTag>
+struct IsRuleTagInsert;
+
+template <>
+struct IsRuleTagInsert<MergeTag> : public std::true_type {};
+
+template <>
+struct IsRuleTagInsert<DeferredMergeTag> : public std::true_type {};
+
+template <>
+struct IsRuleTagInsert<DeferredDeleteTag> : public std::false_type {};
+
+// UpdateCollection
+template <typename Collection, typename... Ts>
+void UpdateCollection(Collection* collection, const std::tuple<Ts...>& t,
+                      std::size_t hash, int logical_time_inserted, MergeTag) {
+  collection->Merge(t, hash, logical_time_inserted);
+}
+
+template <typename Collection, typename... Ts>
+void UpdateCollection(Collection* collection, const std::tuple<Ts...>& t,
+                      std::size_t hash, int logical_time_inserted,
+                      DeferredMergeTag) {
+  collection->DeferredMerge(t, hash, logical_time_inserted);
+}
+
+template <typename Collection, typename... Ts>
+void UpdateCollection(Collection* collection, const std::tuple<Ts...>& t,
+                      std::size_t hash, int logical_time_inserted,
+                      DeferredDeleteTag) {
+  collection->DeferredDelete(t, hash, logical_time_inserted);
+}
+
+// ProcessChannel
+template <typename Collection>
+struct ProcessChannelImpl {
+  template <typename F>
+  Status operator()(Collection* c, F f) {
+    UNUSED(f);
+    UNUSED(c);
+    return Status::OK;
+  }
+};
+
+template <template <typename> class Pickler, typename... Ts>
+struct ProcessChannelImpl<Channel<Pickler, Ts...>> {
+  template <typename F>
+  Status operator()(Channel<Pickler, Ts...>* c, F f) {
+    return f(c);
+  }
+};
+
+template <typename Collection, typename F>
+Status ProcessChannel(Collection* c, F f) {
+  return ProcessChannelImpl<Collection>()(c, f);
+}
+
+}  // namespace detail
 
 // See below.
 template <typename Collections, typename BootstrapRules, typename Rules,
-          template <template <typename> class, template <typename> class,
-                    typename> class LineageDbClient,
+          template <template <typename> class Hash,
+                    template <typename> class ToSql, typename Clock>
+          class LineageDbClient,
           template <typename> class Hash, template <typename> class ToSql,
           template <typename> class Pickler, typename Clock>
 class FluentExecutor;
 
-// # Overview
-// A FluentExecutor runs a Fluent program. You build up a Fluent program using
-// a FluentBuilder and then use it to execute the program. See the README for
-// an example.
-//
-// # Implementation
-// - Every C in Cs is one of the following forms:
-//     - Table<Us...>  - Scratch<Us...>  - Channel<Us...>
-//     - Stdin         - Stdout          - Periodic
-// - A FluentExecutor stores pointers to the collections in `collections_`.
-// - A FluentExecutor stores bootstrap rules in `boostrap_rules_`.
-// - A FluentExecutor stores rules in `rules_`.
-// - sizeof...(Lhss) == sizeof...(RuleTags) == sizeof...(Rhss) and
-//   - Lhss are pointers to collections,
-//   - Every type in RuleTags is one of the rule tags in `rule_tags.h`, and
-//   - Rhss are relational algebra expressions.
-// - Bootstrap{Lhss,RuleTags,Rhss} work exactly like their non-Bootstrap
-//   counterparts.
-// - A FluentExecutor steals most of its guts from a FluentBuilder.
-// - A FluentExecutor uses a LineageDbClient<Hash, Sql> object to record history
-//   and lineage. If you don't want to record history or lineage, then use a
-//   NoopClient. Otherwise use a PqxxClient.
-template <typename... Cs, typename... BootstrapLhss,
-          typename... BootstrapRuleTags, typename... BootstrapRhss,
-          typename... Lhss, typename... RuleTags, typename... Rhss,
-          template <template <typename> class, template <typename> class,
-                    typename> class LineageDbClient,
+template <typename... Collections, typename... BootstrapCollections,
+          typename... BootstrapRuleTags, typename... BootstrapRas,
+          typename... RuleCollections, typename... RuleTags, typename... Ras,
+          template <template <typename> class Hash,
+                    template <typename> class ToSql, typename Clock>
+          class LineageDbClient,
           template <typename> class Hash, template <typename> class ToSql,
           template <typename> class Pickler, typename Clock>
 class FluentExecutor<
-    TypeList<Cs...>,
-    std::tuple<Rule<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>,
-    std::tuple<Rule<Lhss, RuleTags, Rhss>...>, LineageDbClient, Hash, ToSql,
-    Pickler, Clock> {
-  static_assert(sizeof...(BootstrapLhss) == sizeof...(BootstrapRuleTags) &&
-                    sizeof...(BootstrapRuleTags) == sizeof...(BootstrapRhss),
-                "The ith entry of BootstrapLhss corresponds to the left-hand "
-                "side of the ith bootstrap rule. The ith entry of "
-                "BootstrapRuleTags corresponds to the type of the bootstrap "
-                "rule. The ith entry of BootstrapRhss corresponds to the "
-                "right-hand side of the ith bootstrap rule. Thus, the sizes of "
-                "BootstrapLhss, BootstrapRuleTags, and BootstrapRhss must be "
-                "equal");
-
-  static_assert(sizeof...(Lhss) == sizeof...(RuleTags) &&
-                    sizeof...(RuleTags) == sizeof...(Rhss),
-                "The ith entry of Lhss corresponds to the left-hand side of "
-                "the ith rule. The ith entry of RuleTags corresponds to the "
-                "type of the rule. The ith entry of Rhss corresponds to the "
-                "right-hand side of the ith rule. Thus, the sizes of Lhss, "
-                "RuleTags, and Rhss must be equal");
-
+    TypeList<Collections...>,
+    TypeList<Rule<BootstrapCollections, BootstrapRuleTags, BootstrapRas>...>,
+    TypeList<Rule<RuleCollections, RuleTags, Ras>...>, LineageDbClient, Hash,
+    ToSql, Pickler, Clock> {
  public:
   using BootstrapRules =
-      std::tuple<Rule<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>;
-  using Rules = std::tuple<Rule<Lhss, RuleTags, Rhss>...>;
+      TypeList<Rule<BootstrapCollections, BootstrapRuleTags, BootstrapRas>...>;
+  using Rules = TypeList<Rule<RuleCollections, RuleTags, Ras>...>;
+  using BootstrapRulesTuple = typename TypeListToTuple<BootstrapRules>::type;
+  using RulesTuple = typename TypeListToTuple<Rules>::type;
 
   static WARN_UNUSED StatusOr<FluentExecutor> Make(
       std::string name, std::size_t id,
-      std::tuple<std::unique_ptr<Cs>...> collections,
-      BootstrapRules bootstrap_rules, std::map<std::string, Parser> parsers,
+      std::tuple<std::unique_ptr<Collections>...> collections,
+      BootstrapRulesTuple bootstrap_rules,
+      // std::map<std::string, Parser> parsers,
       std::unique_ptr<NetworkState> network_state, Stdin* stdin,
       std::vector<Periodic*> periodics,
       std::unique_ptr<LineageDbClient<Hash, ToSql, Clock>> lineagedb_client,
-      Rules rules) {
+      RulesTuple rules) {
     FluentExecutor f(std::move(name), id, std::move(collections),
-                     std::move(bootstrap_rules), std::move(parsers),
+                     std::move(bootstrap_rules),
+                     // std::move(parsers),
                      std::move(network_state), stdin, std::move(periodics),
                      std::move(lineagedb_client), std::move(rules));
     RETURN_IF_ERROR(f.InitLineageDbClient());
@@ -127,17 +147,18 @@ class FluentExecutor<
 
   FluentExecutor(
       std::string name, std::size_t id,
-      std::tuple<std::unique_ptr<Cs>...> collections,
-      BootstrapRules bootstrap_rules, std::map<std::string, Parser> parsers,
+      std::tuple<std::unique_ptr<Collections>...> collections,
+      BootstrapRulesTuple bootstrap_rules,
+      // std::map<std::string, Parser> parsers,
       std::unique_ptr<NetworkState> network_state, Stdin* stdin,
       std::vector<Periodic*> periodics,
       std::unique_ptr<LineageDbClient<Hash, ToSql, Clock>> lineagedb_client,
-      Rules rules)
+      RulesTuple rules)
       : name_(std::move(name)),
         id_(id),
         collections_(std::move(collections)),
         bootstrap_rules_(std::move(bootstrap_rules)),
-        parsers_(std::move(parsers)),
+        // parsers_(std::move(parsers)),
         network_state_(std::move(network_state)),
         stdin_(stdin),
         periodics_(std::move(periodics)),
@@ -150,9 +171,8 @@ class FluentExecutor<
       timeout_queue_.push(PeriodicTimeout{now + p->Period(), p});
     }
   }
-  FluentExecutor(FluentExecutor&&) = default;
-  FluentExecutor& operator=(FluentExecutor&&) = default;
   DISALLOW_COPY_AND_ASSIGN(FluentExecutor);
+  DEFAULT_MOVE_AND_ASSIGN(FluentExecutor);
 
   // Get<I>() returns a const reference to the Ith collection.
   template <std::size_t I>
@@ -326,8 +346,9 @@ class FluentExecutor<
   // [1]: https://goo.gl/yGmr78
   template <std::size_t RequestIndex, std::size_t ResponseIndex, typename F>
   WARN_UNUSED Status RegisterBlackBoxLineage(F f) {
-    static_assert(RequestIndex < sizeof...(Cs), "RequestIndex out of bounds.");
-    static_assert(ResponseIndex < sizeof...(Cs),
+    static_assert(RequestIndex < sizeof...(Collections),
+                  "RequestIndex out of bounds.");
+    static_assert(ResponseIndex < sizeof...(Collections),
                   "ResponseIndex out of bounds.");
     using RequestType =
         typename std::decay<decltype(Get<RequestIndex>())>::type;
@@ -349,7 +370,7 @@ class FluentExecutor<
   // Sequentially execute each registered bootstrap query and then invoke the
   // `Tick` method of every collection.
   WARN_UNUSED Status BootstrapTick() {
-    if (sizeof...(BootstrapLhss) == 0) {
+    if (TypeListLen<BootstrapRules>::value == 0) {
       return Status::OK;
     }
 
@@ -379,13 +400,13 @@ class FluentExecutor<
   WARN_UNUSED Status Receive() {
     time_++;
 
-    std::vector<zmq::pollitem_t> pollitems = {
-        {network_state_->socket, 0, ZMQ_POLLIN, 0}};
+    zmq::pollitem_t sock_pollitem = {network_state_->socket, 0, ZMQ_POLLIN, 0};
+    std::vector<zmq::pollitem_t> pollitems = {sock_pollitem};
     if (stdin_ != nullptr) {
       pollitems.push_back(stdin_->Pollitem());
     }
 
-    long timeout = GetPollTimoutInMicros();
+    long timeout = GetPollTimeoutInMicros();
     zmq_util::poll(timeout, &pollitems);
 
     // Read from the network.
@@ -404,26 +425,40 @@ class FluentExecutor<
         strings.push_back(zmq_util::message_to_string(msgs[i]));
       }
 
+      const std::string dep_node_id_str = zmq_util::message_to_string(msgs[0]);
+      const std::string channel_name_str = zmq_util::message_to_string(msgs[1]);
+      const std::string dep_time_str = zmq_util::message_to_string(msgs[2]);
       const std::size_t dep_node_id =
-          Pickler<std::size_t>().Load(zmq_util::message_to_string(msgs[0]));
-      const std::string channel_name = zmq_util::message_to_string(msgs[1]);
-      const int dep_time =
-          Pickler<int>().Load(zmq_util::message_to_string(msgs[2]));
+          Pickler<std::size_t>().Load(dep_node_id_str);
+      const std::string channel_name =
+          Pickler<std::string>().Load(channel_name_str);
+      const int dep_time = Pickler<int>().Load(dep_time_str);
 
-      if (parsers_.find(channel_name) != std::end(parsers_)) {
-        RETURN_IF_ERROR(parsers_[channel_name](dep_node_id, dep_time,
-                                               channel_name, strings, time_));
-      } else {
-        LOG(WARNING) << "A message was received for a channel named "
-                     << channel_name
-                     << " but a parser for the channel was never registered.";
-      }
+      RETURN_IF_ERROR(TupleIterStatus(collections_, [&](auto& collection_ptr) {
+        return detail::ProcessChannel(collection_ptr.get(), [&](auto* channel) {
+          if (channel->Name() != channel_name) {
+            return Status::OK;
+          }
+
+          const auto t = channel->Parse(strings);
+          Hash<typename std::decay<decltype(t)>::type> hash;
+          channel->Receive(t, hash(t), time_);
+          RETURN_IF_ERROR(lineagedb_client_->InsertTuple(channel->Name(), time_,
+                                                         Clock::now(), t));
+          RETURN_IF_ERROR(lineagedb_client_->AddNetworkedLineage(
+              dep_node_id, dep_time, channel->Name(), hash(t), time_));
+          return Status::OK;
+
+        });
+      }));
     }
 
     // Read from stdin.
     if (stdin_ != nullptr && pollitems[1].revents & ZMQ_POLLIN) {
-      RETURN_IF_ERROR(lineagedb_client_->InsertTuple(
-          stdin_->Name(), time_, Clock::now(), stdin_->GetLine()));
+      const std::tuple<std::string> line = stdin_->ReadLine();
+      stdin_->Merge(line, Hash<std::tuple<std::string>>()(line), time_);
+      RETURN_IF_ERROR(lineagedb_client_->InsertTuple(stdin_->Name(), time_,
+                                                     Clock::now(), line));
     }
 
     // Trigger periodics.
@@ -433,8 +468,6 @@ class FluentExecutor<
   }
 
   // Runs a fluent program.
-  // TODO(mwhittaker): Figure out if it should be Receive() then Tick() or
-  // Tick() then Receive()?
   Status Run() {
     RETURN_IF_ERROR(BootstrapTick());
     while (true) {
@@ -492,18 +525,19 @@ class FluentExecutor<
   template <typename Collection>
   WARN_UNUSED Status TickCollection(Collection* c) {
     auto deleted = c->Tick();
-    for (const auto& t : deleted) {
+    for (const auto& pair : deleted) {
+      const auto& t = pair.first;
       RETURN_IF_ERROR(
           lineagedb_client_->DeleteTuple(c->Name(), time_, Clock::now(), t));
     }
     return Status::OK;
   }
 
-  // `GetPollTimoutInMicros` returns the minimum time (in microseconds) that we
+  // `GetPollTimeoutInMicros` returns the minimum time (in microseconds) that we
   // need to wait before a PeriodicTimeout in `timeout_queue_` is ready. If
   // `timeout_queue_` is empty, then we return -1, which indicates that we
   // should wait forever.
-  long GetPollTimoutInMicros() {
+  long GetPollTimeoutInMicros() {
     if (timeout_queue_.size() == 0) {
       return -1;
     }
@@ -515,7 +549,6 @@ class FluentExecutor<
     // experimentation, it definitely takes milliseconds.
     //
     // [1]: http://bit.ly/2n3SqEx
-    CHECK(timeout_queue_.size() > 0);
     std::chrono::milliseconds timeout =
         std::chrono::duration_cast<std::chrono::milliseconds>(
             timeout_queue_.top().timeout - Periodic::clock::now());
@@ -529,9 +562,15 @@ class FluentExecutor<
     while (timeout_queue_.size() != 0 && timeout_queue_.top().timeout <= now) {
       PeriodicTimeout timeout = timeout_queue_.top();
       timeout_queue_.pop();
+
+      // TODO(mwhittaker): Make Periodic templated on Clock.
+      Periodic::id id = timeout.periodic->GetAndIncrementId();
+      std::chrono::time_point<Periodic::clock> now = Periodic::clock::now();
+      std::tuple<Periodic::id, Periodic::time> t(id, now);
+      Hash<std::tuple<Periodic::id, Periodic::time>> hash;
+      timeout.periodic->Merge(t, hash(t), time_);
       RETURN_IF_ERROR(lineagedb_client_->InsertTuple(timeout.periodic->Name(),
-                                                     time_, Clock::now(),
-                                                     timeout.periodic->Tock()));
+                                                     time_, Clock::now(), t));
       timeout.timeout = now + timeout.periodic->Period();
       timeout_queue_.push(timeout);
     }
@@ -656,40 +695,44 @@ class FluentExecutor<
   }
 
   // TODO(mwhittaker): Document.
-  template <typename Lhs, typename Rhs, typename UpdateCollection>
-  WARN_UNUSED Status ExecuteRule(int rule_number, Lhs* collection,
-                                 const Rhs& ra, bool inserted,
-                                 UpdateCollection update_collection) {
-    using column_types = typename Rhs::column_types;
+  template <typename Collection, typename RuleTag, typename Ra>
+  WARN_UNUSED Status ExecuteRule(int rule_number,
+                                 Rule<Collection, RuleTag, Ra>* rule) {
+    time_++;
+    using column_types = typename Ra::column_types;
     using tuple_type = typename TypeListToTuple<column_types>::type;
     Hash<tuple_type> hash;
+    const bool is_insert = detail::IsRuleTagInsert<RuleTag>::value;
 
-    auto phy = ra.ToPhysical();
+    auto phy = ra::LogicalToPhysical(rule->ra);
     auto rng = phy.ToRange();
+    std::set<tuple_type> ts;
     std::chrono::time_point<Clock> physical_time = Clock::now();
+
     for (auto iter = ranges::begin(rng); iter != ranges::end(rng); iter++) {
-      const auto& lt = *iter;
+      const auto tuple_and_ids = *iter;
+      const auto& tuple = std::get<0>(tuple_and_ids);
+      const std::set<LocalTupleId>& ids = std::get<1>(tuple_and_ids);
 
-      std::size_t tuple_hash = hash(lt.tuple);
+      // Imagine a rule like t <= make_collection(t) which feeds t back into
+      // itself. We have to be careful not to insert something into t while
+      // we're iterating over it. If we do, we'll invaidate our iterators.
+      // Instead, we buffer the tuples and insert them down below.
+      ts.insert(tuple);
 
-      for (const ra::LineageTuple& l : lt.lineage) {
-        RETURN_IF_ERROR(lineagedb_client_->AddDerivedLineage(
-            l.collection, l.hash, rule_number, inserted, physical_time,
-            collection->Name(), tuple_hash, time_));
-      }
-
-      if (inserted) {
+      if (is_insert) {
         RETURN_IF_ERROR(lineagedb_client_->InsertTuple(
-            collection->Name(), time_, Clock::now(), lt.tuple));
-        switch (GetCollectionType<Lhs>::value) {
+            rule->collection->Name(), time_, Clock::now(), tuple));
+
+        switch (GetCollectionType<Collection>::value) {
           case CollectionType::CHANNEL:
           case CollectionType::STDOUT: {
-            // When a tuple is inserted into a channel or stdout, it isn't
-            // really inserted at all. Channels send their tuples away and
+            // When a tuple is is_insert into a channel or stdout, it isn't
+            // really is_insert at all. Channels send their tuples away and
             // stdout just prints the message to the screen. Thus, we insert
             // and then immediately delete the tuple.
             RETURN_IF_ERROR(lineagedb_client_->DeleteTuple(
-                collection->Name(), time_, Clock::now(), lt.tuple));
+                rule->collection->Name(), time_, Clock::now(), tuple));
           }
           case CollectionType::TABLE:
           case CollectionType::SCRATCH:
@@ -700,54 +743,66 @@ class FluentExecutor<
         }
       } else {
         RETURN_IF_ERROR(lineagedb_client_->DeleteTuple(
-            collection->Name(), time_, Clock::now(), lt.tuple));
+            rule->collection->Name(), time_, Clock::now(), tuple));
       }
 
-      update_collection(*collection, std::set<tuple_type>{lt.tuple});
+      for (const LocalTupleId& id : ids) {
+        RETURN_IF_ERROR(lineagedb_client_->AddDerivedLineage(
+            id.collection_name, id.hash, rule_number, is_insert, physical_time,
+            rule->collection->Name(), hash(tuple), time_));
+      }
+
       physical_time = Clock::now();
     };
+
+    for (const auto& t : ts) {
+      detail::UpdateCollection(rule->collection, t, hash(t), time_, RuleTag());
+    }
+
     return Status::OK;
   }
 
-  template <template <typename> class Pickler_, typename... Ts, typename Rhs>
+#if 0
+  template <template <typename> class Pickler_, typename... Ts, typename Ra>
   WARN_UNUSED Status ExecuteRule(int rule_number,
                                  Channel<Pickler_, Ts...>* collection, MergeTag,
-                                 const Rhs& ra) {
+                                 const Ra& ra) {
     return ExecuteRule(
         rule_number, collection, ra, true,
         [this](Channel<Pickler_, Ts...>& c,
                const std::set<std::tuple<Ts...>>& ts) { c.Merge(ts, time_); });
   }
 
-  template <typename Lhs, typename Rhs>
-  WARN_UNUSED Status ExecuteRule(int rule_number, Lhs* collection, MergeTag,
-                                 const Rhs& ra) {
+  template <typename Collection, typename Ra>
+  WARN_UNUSED Status ExecuteRule(int rule_number, Collection* collection,
+                                 MergeTag, const Ra& ra) {
     return ExecuteRule(rule_number, collection, ra, true,
-                       std::mem_fn(&Lhs::Merge));
+                       std::mem_fn(&Collection::Merge));
   }
 
-  template <typename Lhs, typename Rhs>
-  WARN_UNUSED Status ExecuteRule(int rule_number, Lhs* collection,
-                                 DeferredMergeTag, const Rhs& ra) {
+  template <typename Collection, typename Ra>
+  WARN_UNUSED Status ExecuteRule(int rule_number, Collection* collection,
+                                 DeferredMergeTag, const Ra& ra) {
     return ExecuteRule(rule_number, collection, ra, true,
-                       std::mem_fn(&Lhs::DeferredMerge));
+                       std::mem_fn(&Collection::DeferredMerge));
   }
 
-  template <typename Lhs, typename Rhs>
-  WARN_UNUSED Status ExecuteRule(int rule_number, Lhs* collection,
-                                 DeferredDeleteTag, const Rhs& ra) {
+  template <typename Collection, typename Ra>
+  WARN_UNUSED Status ExecuteRule(int rule_number, Collection* collection,
+                                 DeferredDeleteTag, const Ra& ra) {
     return ExecuteRule(rule_number, collection, ra, false,
-                       std::mem_fn(&Lhs::DeferredDelete));
+                       std::mem_fn(&Collection::DeferredDelete));
   }
 
-  template <typename Lhs, typename RuleTag, typename Rhs>
+  template <typename Collection, typename RuleTag, typename Ra>
   WARN_UNUSED Status ExecuteRule(std::size_t rule_number,
-                                 Rule<Lhs, RuleTag, Rhs>* rule) {
+                                 Rule<Collection, RuleTag, Ra>* rule) {
     time_++;
     return ExecuteRule(static_cast<int>(rule_number),
                        CHECK_NOTNULL(rule->collection), rule->rule_tag,
                        rule->ra);
   }
+#endif
 
   // The logical time of the fluent program. The logical time begins at 0 and
   // is ticked before every rule execution and before every round of receiving
@@ -757,9 +812,9 @@ class FluentExecutor<
   // See `FluentBuilder`.
   const std::string name_;
   const std::size_t id_;
-  std::tuple<std::unique_ptr<Cs>...> collections_;
-  BootstrapRules bootstrap_rules_;
-  std::map<std::string, Parser> parsers_;
+  std::tuple<std::unique_ptr<Collections>...> collections_;
+  BootstrapRulesTuple bootstrap_rules_;
+  // std::map<std::string, Parser> parsers_;
   std::unique_ptr<NetworkState> network_state_;
   Stdin* const stdin_;
   std::vector<Periodic*> periodics_;
@@ -773,7 +828,7 @@ class FluentExecutor<
   //
   // See the class comment at the top of the file or see rule_tags.h for more
   // information.
-  Rules rules_;
+  RulesTuple rules_;
 
   // When a FluentExecutor runs its Receive method, it has to worry about three
   // types of events triggering:

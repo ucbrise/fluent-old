@@ -14,9 +14,9 @@
 #include "fluent/infix.h"
 #include "lineagedb/connection_config.h"
 #include "lineagedb/pqxx_client.h"
-#include "ra/all.h"
+#include "ra/logical/all.h"
 
-namespace ra = fluent::ra;
+namespace lra = fluent::ra::logical;
 namespace ldb = fluent::lineagedb;
 
 int main(int argc, char* argv[]) {
@@ -58,7 +58,8 @@ int main(int argc, char* argv[]) {
 
             auto set =
                 set_resp <=
-                (set_req.Iterable() | ra::map([&rdx](const auto& t) {
+                (lra::make_collection(&set_req) |
+                 lra::map([&rdx](const auto& t) {
                    const std::string& src_addr = std::get<1>(t);
                    const std::int64_t id = std::get<2>(t);
                    const std::string& key = std::get<3>(t);
@@ -66,25 +67,26 @@ int main(int argc, char* argv[]) {
                    return std::make_tuple(src_addr, id, rdx.set(key, value));
                  }));
 
-            auto append =
-                append_resp <=
-                (append_req.Iterable() | ra::map([&rdx](const auto& t) {
-                   const std::string& src_addr = std::get<1>(t);
-                   const std::int64_t id = std::get<2>(t);
-                   const std::string& key = std::get<3>(t);
-                   const std::string& value = std::get<4>(t);
-                   redox::Command<int>& c =
-                       rdx.commandSync<int>({"APPEND", key, value});
-                   CHECK(c.ok()) << "APPEND " << key << " " << value
-                                 << " failed.";
-                   int reply = c.reply();
-                   c.free();
-                   return std::make_tuple(src_addr, id, reply);
+            auto append = append_resp <=
+                          (lra::make_collection(&append_req) |
+                           lra::map([&rdx](const auto& t) {
+                             const std::string& src_addr = std::get<1>(t);
+                             const std::int64_t id = std::get<2>(t);
+                             const std::string& key = std::get<3>(t);
+                             const std::string& value = std::get<4>(t);
+                             redox::Command<int>& c =
+                                 rdx.commandSync<int>({"APPEND", key, value});
+                             CHECK(c.ok()) << "APPEND " << key << " " << value
+                                           << " failed.";
+                             int reply = c.reply();
+                             c.free();
+                             return std::make_tuple(src_addr, id, reply);
 
-                 }));
+                           }));
 
             auto get = get_resp <=
-                       (get_req.Iterable() | ra::map([&rdx](const auto& t) {
+                       (lra::make_collection(&get_req) |
+                        lra::map([&rdx](const auto& t) {
                           const std::string& src_addr = std::get<1>(t);
                           const std::int64_t id = std::get<2>(t);
                           const std::string& key = std::get<3>(t);

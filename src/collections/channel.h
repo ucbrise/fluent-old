@@ -42,17 +42,6 @@ std::tuple<Ts...> parse_tuple(const std::vector<std::string>& columns) {
 
 }  // namespace detail
 
-#if 0
-// Fluent nodes send tuples to one another. A parser is responsible for parsing
-// serialized tuples and processing them. More specifically, a parser is given
-// the node id of the sending node, the time at which the tuple was sent, the
-// channel to which the tuple was sent, the stringified columns of the tuple,
-// and the local time.
-using Parser = std::function<Status(
-    std::size_t dep_node_id, int dep_time, const std::string& channel_name,
-    const std::vector<std::string>& columns, int time)>;
-#endif
-
 // A channel is a pseudo-relation. The first column of the channel is a string
 // specifying the ZeroMQ to which the tuple should be sent. For example, if
 // adding the tuple ("inproc://a", 1, 2, 3) will send the tuple ("inproc://a",
@@ -118,22 +107,6 @@ class Channel : public Collection {
     std::swap(ts, ts_);
     return ts;
   }
-
-#if 0
-  // `GetParser(f)` returns a parser (see Parser above) which parses a tuple
-  // destined for this channel and then invokes `f`.
-  template <typename F>
-  Parser GetParser(F f) {
-    return [this, f](std::size_t dep_node_id, int dep_time,
-                     const std::string& channel_name,
-                     const std::vector<std::string>& columns, int time) {
-      const auto t = detail::parse_tuple<Pickler, T, Ts...>(columns);
-      RETURN_IF_ERROR(f(dep_node_id, dep_time, channel_name, t, time));
-      ts_.insert(t);
-      return Status::OK;
-    };
-  }
-#endif
 
  private:
   template <typename U>

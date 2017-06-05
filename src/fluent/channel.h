@@ -14,6 +14,7 @@
 #include "range/v3/all.hpp"
 
 #include "common/macros.h"
+#include "common/status.h"
 #include "common/type_traits.h"
 #include "fluent/rule_tags.h"
 #include "fluent/serialization.h"
@@ -45,7 +46,7 @@ std::tuple<Ts...> parse_tuple(const std::vector<std::string>& columns) {
 // the node id of the sending node, the time at which the tuple was sent, the
 // channel to which the tuple was sent, the stringified columns of the tuple,
 // and the local time.
-using Parser = std::function<void(
+using Parser = std::function<Status(
     std::size_t dep_node_id, int dep_time, const std::string& channel_name,
     const std::vector<std::string>& columns, int time)>;
 
@@ -122,8 +123,9 @@ class Channel {
                      const std::string& channel_name,
                      const std::vector<std::string>& columns, int time) {
       const auto t = detail::parse_tuple<T, Ts...>(columns);
-      f(dep_node_id, dep_time, channel_name, t, time);
+      RETURN_IF_ERROR(f(dep_node_id, dep_time, channel_name, t, time));
       ts_.insert(t);
+      return Status::OK;
     };
   }
 

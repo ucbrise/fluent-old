@@ -10,6 +10,7 @@
 #include "gtest/gtest.h"
 #include "zmq.hpp"
 
+#include "common/status.h"
 #include "fluent/infix.h"
 #include "lineagedb/connection_config.h"
 #include "lineagedb/noop_client.h"
@@ -22,6 +23,7 @@ TEST(FluentBuilder, SimpleBuildCheck) {
   lineagedb::ConnectionConfig conf;
   auto f =
       fluent<lineagedb::NoopClient>("name", "inproc://yolo", &context, conf)
+          .ConsumeValueOrDie()
           .table<std::string, int>("t", {{"x", "y"}})
           .scratch<std::string, int>("s", {{"x", "y"}})
           .channel<std::string, int>("c", {{"addr", "x"}})
@@ -43,6 +45,7 @@ TEST(FluentBuilder, SimpleBuildCheck) {
                 return std::make_tuple(rule_a, rule_b, rule_c, rule_d, rule_e,
                                        rule_f, rule_g);
               });
+  EXPECT_EQ(Status::OK, f.status());
 }
 
 }  // namespace fluent

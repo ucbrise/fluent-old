@@ -6,6 +6,7 @@
 #include "glog/logging.h"
 #include "zmq.hpp"
 
+#include "common/status.h"
 #include "examples/black_boxes/key_value.h"
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
@@ -33,30 +34,33 @@ int main(int argc, char* argv[]) {
 
   zmq::context_t context(1);
   ldb::ConnectionConfig config{"localhost", 5432, argv[1], argv[2], argv[3]};
-  AddKeyValueApi(fluent::fluent<ldb::PqxxClient>("key_value_server", argv[4],
-                                                 &context, config))
-      .RegisterRules([&](auto& set_req, auto& set_resp, auto& get_req,
-                         auto& get_resp) {
-        using namespace fluent::infix;
-        auto set =
-            set_resp <= (set_req.Iterable() |
-                         ra::map([&kvs](const auto& t)
-                                     -> std::tuple<std::string, std::int64_t> {
-                           kvs[std::get<3>(t)] = std::get<4>(t);
-                           return {std::get<1>(t), std::get<2>(t)};
-                         }));
-        auto get =
-            get_resp <=
-            (get_req.Iterable() |
-             ra::map([&kvs](const auto& t)
-                         -> std::tuple<std::string, std::int64_t, std::string> {
-               return {std::get<1>(t), std::get<2>(t), kvs[std::get<3>(t)]};
-             }));
-        return std::make_tuple(set, get);
-      })
-      .RegisterBlackBoxLineage<2, 3>([](const std::string& time_inserted,
-                                        const std::string& key,
-                                        const std::string& value) {
+  auto f =
+      AddKeyValueApi(fluent::fluent<ldb::PqxxClient>("key_value_server",
+                                                     argv[4], &context, config)
+                         .ConsumeValueOrDie())
+          .RegisterRules([&](auto& set_req, auto& set_resp, auto& get_req,
+                             auto& get_resp) {
+            using namespace fluent::infix;
+            auto set = set_resp <=
+                       (set_req.Iterable() |
+                        ra::map([&kvs](const auto& t)
+                                    -> std::tuple<std::string, std::int64_t> {
+                          kvs[std::get<3>(t)] = std::get<4>(t);
+                          return {std::get<1>(t), std::get<2>(t)};
+                        }));
+            auto get =
+                get_resp <=
+                (get_req.Iterable() |
+                 ra::map([&kvs](const auto& t) -> std::tuple<
+                             std::string, std::int64_t, std::string> {
+                   return {std::get<1>(t), std::get<2>(t), kvs[std::get<3>(t)]};
+                 }));
+            return std::make_tuple(set, get);
+          })
+          .ConsumeValueOrDie();
+  fluent::Status status = f.RegisterBlackBoxLineage<2, 3>(
+      [](const std::string& time_inserted, const std::string& key,
+         const std::string& value) {
         (void)value;
         return fmt::format(R"(
           SELECT
@@ -67,6 +71,7 @@ int main(int argc, char* argv[]) {
           LIMIT 1;
         )",
                            key, time_inserted, time_inserted);
-      })
-      .Run();
+      });
+  CHECK_EQ(fluent::Status::OK, status);
+  CHECK_EQ(fluent::Status::OK, f.Run());
 }

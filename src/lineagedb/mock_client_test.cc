@@ -10,6 +10,8 @@
 #include "gtest/gtest.h"
 
 #include "common/hash_util.h"
+#include "common/status.h"
+#include "common/status_or.h"
 #include "lineagedb/connection_config.h"
 #include "lineagedb/mock_to_sql.h"
 #include "lineagedb/to_sql.h"
@@ -18,19 +20,17 @@
 namespace fluent {
 namespace lineagedb {
 
-TEST(MockClient, Init) {
-  MockClient<Hash, MockToSql> client("", 42, "", ConnectionConfig());
-  EXPECT_EQ(client.GetInit(), false);
-  client.Init();
-  EXPECT_EQ(client.GetInit(), true);
-}
-
 TEST(MockClient, AddCollection) {
-  MockClient<Hash, MockToSql> client("", 42, "", ConnectionConfig());
-  client.AddCollection<>("fee", "Fee", {{}});
-  client.AddCollection<int>("fi", "Fi", {{"x"}});
-  client.AddCollection<int, bool>("fo", "Fo", {{"x", "y"}});
-  client.AddCollection<int, bool, char>("fum", "Fum", {{"x", "y", "z"}});
+  using Client = MockClient<Hash, MockToSql>;
+  StatusOr<Client> client_or = Client::Make("", 42, "", ConnectionConfig());
+  ASSERT_EQ(Status::OK, client_or.status());
+  Client client = client_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK, client.AddCollection<>("fee", "Fee", {{}}));
+  ASSERT_EQ(Status::OK, client.AddCollection<int>("fi", "Fi", {{"x"}}));
+  ASSERT_EQ(Status::OK,
+            (client.AddCollection<int, bool>("fo", "Fo", {{"x", "y"}})));
+  ASSERT_EQ(Status::OK, (client.AddCollection<int, bool, char>(
+                            "fum", "Fum", {{"x", "y", "z"}})));
 
   using Tuple = MockClient<Hash, MockToSql>::AddCollectionTuple;
   ASSERT_EQ(client.GetAddCollection().size(), static_cast<std::size_t>(4));
@@ -43,13 +43,16 @@ TEST(MockClient, AddCollection) {
 }
 
 TEST(MockClient, AddRule) {
-  MockClient<Hash, MockToSql> client("", 42, "", ConnectionConfig());
-  client.AddRule(0, true, "foo");
-  client.AddRule(1, true, "bar");
-  client.AddRule(2, true, "baz");
-  client.AddRule(0, false, "foo");
-  client.AddRule(1, false, "bar");
-  client.AddRule(2, false, "baz");
+  using Client = MockClient<Hash, MockToSql>;
+  StatusOr<Client> client_or = Client::Make("", 42, "", ConnectionConfig());
+  ASSERT_EQ(Status::OK, client_or.status());
+  Client client = client_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK, client.AddRule(0, true, "foo"));
+  ASSERT_EQ(Status::OK, client.AddRule(1, true, "bar"));
+  ASSERT_EQ(Status::OK, client.AddRule(2, true, "baz"));
+  ASSERT_EQ(Status::OK, client.AddRule(0, false, "foo"));
+  ASSERT_EQ(Status::OK, client.AddRule(1, false, "bar"));
+  ASSERT_EQ(Status::OK, client.AddRule(2, false, "baz"));
 
   using Tuple = MockClient<Hash, MockToSql>::AddRuleTuple;
   ASSERT_EQ(client.GetAddRule().size(), static_cast<std::size_t>(6));
@@ -62,10 +65,14 @@ TEST(MockClient, AddRule) {
 }
 
 TEST(MockClient, InsertTuple) {
-  MockClient<Hash, MockToSql> client("", 42, "", ConnectionConfig());
-  client.InsertTuple("a", 0, std::tuple<>{});
-  client.InsertTuple("b", 1, std::tuple<int>{10});
-  client.InsertTuple("c", 2, std::tuple<int, char, bool>{42, 'x', false});
+  using Client = MockClient<Hash, MockToSql>;
+  StatusOr<Client> client_or = Client::Make("", 42, "", ConnectionConfig());
+  ASSERT_EQ(Status::OK, client_or.status());
+  Client client = client_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK, (client.InsertTuple("a", 0, std::tuple<>{})));
+  ASSERT_EQ(Status::OK, (client.InsertTuple("b", 1, std::tuple<int>{10})));
+  ASSERT_EQ(Status::OK, (client.InsertTuple("c", 2, std::tuple<int, char, bool>{
+                                                        42, 'x', false})));
 
   using Tuple = MockClient<Hash, MockToSql>::InsertTupleTuple;
   ASSERT_EQ(client.GetInsertTuple().size(), static_cast<std::size_t>(3));
@@ -75,10 +82,14 @@ TEST(MockClient, InsertTuple) {
 }
 
 TEST(MockClient, DeleteTuple) {
-  MockClient<Hash, MockToSql> client("", 42, "", ConnectionConfig());
-  client.DeleteTuple("a", 0, std::tuple<>{});
-  client.DeleteTuple("b", 1, std::tuple<int>{10});
-  client.DeleteTuple("c", 2, std::tuple<int, char, bool>{42, 'x', false});
+  using Client = MockClient<Hash, MockToSql>;
+  StatusOr<Client> client_or = Client::Make("", 42, "", ConnectionConfig());
+  ASSERT_EQ(Status::OK, client_or.status());
+  Client client = client_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK, (client.DeleteTuple("a", 0, std::tuple<>{})));
+  ASSERT_EQ(Status::OK, (client.DeleteTuple("b", 1, std::tuple<int>{10})));
+  ASSERT_EQ(Status::OK, (client.DeleteTuple("c", 2, std::tuple<int, char, bool>{
+                                                        42, 'x', false})));
 
   using Tuple = MockClient<Hash, MockToSql>::DeleteTupleTuple;
   ASSERT_EQ(client.GetDeleteTuple().size(), static_cast<std::size_t>(3));
@@ -88,10 +99,13 @@ TEST(MockClient, DeleteTuple) {
 }
 
 TEST(MockClient, AddNetworkedLineage) {
-  MockClient<Hash, MockToSql> client("", 42, "", ConnectionConfig());
-  client.AddNetworkedLineage(0, 1, "2", 3, 4);
-  client.AddNetworkedLineage(10, 11, "12", 13, 14);
-  client.AddNetworkedLineage(20, 21, "22", 23, 24);
+  using Client = MockClient<Hash, MockToSql>;
+  StatusOr<Client> client_or = Client::Make("", 42, "", ConnectionConfig());
+  ASSERT_EQ(Status::OK, client_or.status());
+  Client client = client_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK, (client.AddNetworkedLineage(0, 1, "2", 3, 4)));
+  ASSERT_EQ(Status::OK, (client.AddNetworkedLineage(10, 11, "12", 13, 14)));
+  ASSERT_EQ(Status::OK, (client.AddNetworkedLineage(20, 21, "22", 23, 24)));
 
   using Tuple = MockClient<Hash, MockToSql>::AddNetworkedLineageTuple;
   ASSERT_EQ(client.GetAddNetworkedLineage().size(),
@@ -102,10 +116,15 @@ TEST(MockClient, AddNetworkedLineage) {
 }
 
 TEST(MockClient, AddDerivedLineage) {
-  MockClient<Hash, MockToSql> client("", 42, "", ConnectionConfig());
-  client.AddDerivedLineage("0", 1, 2, true, "3", 4, 5);
-  client.AddDerivedLineage("10", 11, 12, true, "13", 14, 15);
-  client.AddDerivedLineage("20", 21, 22, true, "23", 24, 25);
+  using Client = MockClient<Hash, MockToSql>;
+  StatusOr<Client> client_or = Client::Make("", 42, "", ConnectionConfig());
+  ASSERT_EQ(Status::OK, client_or.status());
+  Client client = client_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK, (client.AddDerivedLineage("0", 1, 2, true, "3", 4, 5)));
+  ASSERT_EQ(Status::OK,
+            (client.AddDerivedLineage("10", 11, 12, true, "13", 14, 15)));
+  ASSERT_EQ(Status::OK,
+            (client.AddDerivedLineage("20", 21, 22, true, "23", 24, 25)));
 
   using Tuple = MockClient<Hash, MockToSql>::AddDerivedLineageTuple;
   ASSERT_EQ(client.GetAddDerivedLineage().size(), static_cast<std::size_t>(3));
@@ -118,10 +137,13 @@ TEST(MockClient, AddDerivedLineage) {
 }
 
 TEST(MockClient, Exec) {
-  MockClient<Hash, MockToSql> client("", 42, "", ConnectionConfig());
-  client.Exec("a cat");
-  client.Exec("in the hat");
-  client.Exec("ate green eggs and ham");
+  using Client = MockClient<Hash, MockToSql>;
+  StatusOr<Client> client_or = Client::Make("", 42, "", ConnectionConfig());
+  ASSERT_EQ(Status::OK, client_or.status());
+  Client client = client_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK, client.Exec("a cat"));
+  ASSERT_EQ(Status::OK, client.Exec("in the hat"));
+  ASSERT_EQ(Status::OK, client.Exec("ate green eggs and ham"));
 
   using Tuple = MockClient<Hash, MockToSql>::ExecTuple;
   ASSERT_EQ(client.GetExec().size(), static_cast<std::size_t>(3));

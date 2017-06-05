@@ -6,6 +6,9 @@
 #include "glog/logging.h"
 #include "gtest/gtest.h"
 
+#include "common/status.h"
+#include "common/status_macros.h"
+
 namespace fluent {
 namespace detail {
 
@@ -133,6 +136,266 @@ TEST(TupleUtil, TupleFold) {
         });
     std::string expected = "123";
     EXPECT_EQ(actual, expected);
+  }
+}
+
+TEST(TupleUtil, TupleIteriStatusConst) {
+  int count = 0;
+  auto f = [&count](std::size_t i, const auto& x) -> Status {
+    Status s;
+    if (x % 2 == 0) {
+      s = Status::OK;
+    } else {
+      s = Status(ErrorCode::INVALID_ARGUMENT, std::to_string(i));
+    }
+    count += i;
+    return s;
+  };
+
+  count = 0;
+  EXPECT_EQ(TupleIteriStatus(std::tuple<>(), f), Status::OK);
+  EXPECT_EQ(count, 0);
+
+  count = 0;
+  EXPECT_EQ(TupleIteriStatus(std::tuple<int>(0), f), Status::OK);
+  EXPECT_EQ(count, 0);
+
+  count = 0;
+  EXPECT_EQ((TupleIteriStatus(std::tuple<int, int>(0, 2), f)), Status::OK);
+  EXPECT_EQ(count, 1);
+
+  count = 0;
+  EXPECT_EQ((TupleIteriStatus(std::tuple<int, int, int>(0, 2, 4), f)),
+            Status::OK);
+  EXPECT_EQ(count, 3);
+
+  count = 0;
+  EXPECT_EQ((TupleIteriStatus(std::tuple<int, int, int>(0, 2, 5), f)),
+            Status(ErrorCode::INVALID_ARGUMENT, "2"));
+  EXPECT_EQ(count, 3);
+
+  count = 0;
+  EXPECT_EQ((TupleIteriStatus(std::tuple<int, int, int>(0, 3, 5), f)),
+            Status(ErrorCode::INVALID_ARGUMENT, "1"));
+  EXPECT_EQ(count, 1);
+
+  count = 0;
+  EXPECT_EQ((TupleIteriStatus(std::tuple<int, int, int>(1, 3, 5), f)),
+            Status(ErrorCode::INVALID_ARGUMENT, "0"));
+  EXPECT_EQ(count, 0);
+
+  count = 0;
+  EXPECT_EQ((TupleIteriStatus(std::tuple<int, int, int>(0, 3, 4), f)),
+            Status(ErrorCode::INVALID_ARGUMENT, "1"));
+  EXPECT_EQ(count, 1);
+}
+
+TEST(TupleUtil, TupleIteriStatusNonConst) {
+  int count = 0;
+  auto f = [&count](std::size_t i, auto& x) -> Status {
+    Status s;
+    if (x % 2 == 0) {
+      s = Status::OK;
+    } else {
+      s = Status(ErrorCode::INVALID_ARGUMENT, std::to_string(i));
+    }
+    x++;
+    count += i;
+    return s;
+  };
+
+  {
+    count = 0;
+    std::tuple<> x;
+    EXPECT_EQ(TupleIteriStatus(x, f), Status::OK);
+    EXPECT_EQ(x, std::tuple<>());
+    EXPECT_EQ(count, 0);
+  }
+
+  {
+    count = 0;
+    std::tuple<int> x(0);
+    EXPECT_EQ(TupleIteriStatus(x, f), Status::OK);
+    EXPECT_EQ(x, std::tuple<int>(1));
+    EXPECT_EQ(count, 0);
+  }
+
+  {
+    count = 0;
+    std::tuple<int, int> x(0, 2);
+    EXPECT_EQ(TupleIteriStatus(x, f), Status::OK);
+    EXPECT_EQ(x, (std::tuple<int, int>(1, 3)));
+    EXPECT_EQ(count, 1);
+  }
+
+  {
+    count = 0;
+    std::tuple<int, int, int> x(0, 2, 4);
+    EXPECT_EQ(TupleIteriStatus(x, f), Status::OK);
+    EXPECT_EQ(x, (std::tuple<int, int, int>(1, 3, 5)));
+    EXPECT_EQ(count, 3);
+  }
+
+  {
+    count = 0;
+    std::tuple<int, int, int> x(0, 2, 5);
+    EXPECT_EQ(TupleIteriStatus(x, f), Status(ErrorCode::INVALID_ARGUMENT, "2"));
+    EXPECT_EQ(x, (std::tuple<int, int, int>(1, 3, 6)));
+    EXPECT_EQ(count, 3);
+  }
+
+  {
+    count = 0;
+    std::tuple<int, int, int> x(0, 3, 5);
+    EXPECT_EQ(TupleIteriStatus(x, f), Status(ErrorCode::INVALID_ARGUMENT, "1"));
+    EXPECT_EQ(x, (std::tuple<int, int, int>(1, 4, 5)));
+    EXPECT_EQ(count, 1);
+  }
+
+  {
+    count = 0;
+    std::tuple<int, int, int> x(1, 3, 5);
+    EXPECT_EQ(TupleIteriStatus(x, f), Status(ErrorCode::INVALID_ARGUMENT, "0"));
+    EXPECT_EQ(x, (std::tuple<int, int, int>(2, 3, 5)));
+    EXPECT_EQ(count, 0);
+  }
+
+  {
+    count = 0;
+    std::tuple<int, int, int> x(0, 3, 4);
+    EXPECT_EQ(TupleIteriStatus(x, f), Status(ErrorCode::INVALID_ARGUMENT, "1"));
+    EXPECT_EQ(x, (std::tuple<int, int, int>(1, 4, 4)));
+    EXPECT_EQ(count, 1);
+  }
+}
+
+TEST(TupleUtil, TupleIterStatusConst) {
+  int i = 0;
+  auto f = [&i](const auto& x) -> Status {
+    Status s;
+    if (x % 2 == 0) {
+      s = Status::OK;
+    } else {
+      s = Status(ErrorCode::INVALID_ARGUMENT, std::to_string(i));
+    }
+    i++;
+    return s;
+  };
+
+  i = 0;
+  EXPECT_EQ(TupleIterStatus(std::tuple<>(), f), Status::OK);
+  EXPECT_EQ(i, 0);
+
+  i = 0;
+  EXPECT_EQ(TupleIterStatus(std::tuple<int>(0), f), Status::OK);
+  EXPECT_EQ(i, 1);
+
+  i = 0;
+  EXPECT_EQ((TupleIterStatus(std::tuple<int, int>(0, 2), f)), Status::OK);
+  EXPECT_EQ(i, 2);
+
+  i = 0;
+  EXPECT_EQ((TupleIterStatus(std::tuple<int, int, int>(0, 2, 4), f)),
+            Status::OK);
+  EXPECT_EQ(i, 3);
+
+  i = 0;
+  EXPECT_EQ((TupleIterStatus(std::tuple<int, int, int>(0, 2, 5), f)),
+            Status(ErrorCode::INVALID_ARGUMENT, "2"));
+  EXPECT_EQ(i, 3);
+
+  i = 0;
+  EXPECT_EQ((TupleIterStatus(std::tuple<int, int, int>(0, 3, 5), f)),
+            Status(ErrorCode::INVALID_ARGUMENT, "1"));
+  EXPECT_EQ(i, 2);
+
+  i = 0;
+  EXPECT_EQ((TupleIterStatus(std::tuple<int, int, int>(1, 3, 5), f)),
+            Status(ErrorCode::INVALID_ARGUMENT, "0"));
+  EXPECT_EQ(i, 1);
+
+  i = 0;
+  EXPECT_EQ((TupleIterStatus(std::tuple<int, int, int>(0, 3, 4), f)),
+            Status(ErrorCode::INVALID_ARGUMENT, "1"));
+  EXPECT_EQ(i, 2);
+}
+
+TEST(TupleUtil, TupleIterStatusNonConst) {
+  int i = 0;
+  auto f = [&i](auto& x) -> Status {
+    Status s;
+    if (x % 2 == 0) {
+      s = Status::OK;
+    } else {
+      s = Status(ErrorCode::INVALID_ARGUMENT, std::to_string(i));
+    }
+    x++;
+    i++;
+    return s;
+  };
+
+  {
+    i = 0;
+    std::tuple<> x;
+    EXPECT_EQ(TupleIterStatus(x, f), Status::OK);
+    EXPECT_EQ(x, std::tuple<>());
+    EXPECT_EQ(i, 0);
+  }
+
+  {
+    i = 0;
+    std::tuple<int> x(0);
+    EXPECT_EQ(TupleIterStatus(x, f), Status::OK);
+    EXPECT_EQ(x, std::tuple<int>(1));
+    EXPECT_EQ(i, 1);
+  }
+
+  {
+    i = 0;
+    std::tuple<int, int> x(0, 2);
+    EXPECT_EQ(TupleIterStatus(x, f), Status::OK);
+    EXPECT_EQ(x, (std::tuple<int, int>(1, 3)));
+    EXPECT_EQ(i, 2);
+  }
+
+  {
+    i = 0;
+    std::tuple<int, int, int> x(0, 2, 4);
+    EXPECT_EQ(TupleIterStatus(x, f), Status::OK);
+    EXPECT_EQ(x, (std::tuple<int, int, int>(1, 3, 5)));
+    EXPECT_EQ(i, 3);
+  }
+
+  {
+    i = 0;
+    std::tuple<int, int, int> x(0, 2, 5);
+    EXPECT_EQ(TupleIterStatus(x, f), Status(ErrorCode::INVALID_ARGUMENT, "2"));
+    EXPECT_EQ(x, (std::tuple<int, int, int>(1, 3, 6)));
+    EXPECT_EQ(i, 3);
+  }
+
+  {
+    i = 0;
+    std::tuple<int, int, int> x(0, 3, 5);
+    EXPECT_EQ(TupleIterStatus(x, f), Status(ErrorCode::INVALID_ARGUMENT, "1"));
+    EXPECT_EQ(x, (std::tuple<int, int, int>(1, 4, 5)));
+    EXPECT_EQ(i, 2);
+  }
+
+  {
+    i = 0;
+    std::tuple<int, int, int> x(1, 3, 5);
+    EXPECT_EQ(TupleIterStatus(x, f), Status(ErrorCode::INVALID_ARGUMENT, "0"));
+    EXPECT_EQ(x, (std::tuple<int, int, int>(2, 3, 5)));
+    EXPECT_EQ(i, 1);
+  }
+
+  {
+    i = 0;
+    std::tuple<int, int, int> x(0, 3, 4);
+    EXPECT_EQ(TupleIterStatus(x, f), Status(ErrorCode::INVALID_ARGUMENT, "1"));
+    EXPECT_EQ(x, (std::tuple<int, int, int>(1, 4, 4)));
+    EXPECT_EQ(i, 2);
   }
 }
 

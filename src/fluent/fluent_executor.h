@@ -19,6 +19,9 @@
 #include "zmq.hpp"
 
 #include "common/macros.h"
+#include "common/status.h"
+#include "common/status_macros.h"
+#include "common/status_or.h"
 #include "common/string_util.h"
 #include "common/tuple_util.h"
 #include "common/type_list.h"
@@ -103,6 +106,22 @@ class FluentExecutor<
       std::tuple<Rule<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>;
   using Rules = std::tuple<Rule<Lhss, RuleTags, Rhss>...>;
 
+  static WARN_UNUSED StatusOr<FluentExecutor> Make(
+      std::string name, std::size_t id,
+      std::tuple<std::unique_ptr<Cs>...> collections,
+      BootstrapRules bootstrap_rules, std::map<std::string, Parser> parsers,
+      std::unique_ptr<NetworkState> network_state, Stdin* stdin,
+      std::vector<Periodic*> periodics,
+      std::unique_ptr<LineageDbClient<Hash, ToSql>> lineagedb_client,
+      Rules rules) {
+    FluentExecutor f(std::move(name), id, std::move(collections),
+                     std::move(bootstrap_rules), std::move(parsers),
+                     std::move(network_state), stdin, std::move(periodics),
+                     std::move(lineagedb_client), std::move(rules));
+    RETURN_IF_ERROR(f.InitLineageDbClient());
+    return f;
+  }
+
   FluentExecutor(std::string name, std::size_t id,
                  std::tuple<std::unique_ptr<Cs>...> collections,
                  BootstrapRules bootstrap_rules,
@@ -118,7 +137,7 @@ class FluentExecutor<
         parsers_(std::move(parsers)),
         network_state_(std::move(network_state)),
         stdin_(stdin),
-        periodics_(periodics),
+        periodics_(std::move(periodics)),
         lineagedb_client_(std::move(lineagedb_client)),
         rules_(rules) {
     // Initialize periodic timeouts. See the comment above `PeriodicTimeout`
@@ -127,8 +146,6 @@ class FluentExecutor<
     for (Periodic* p : periodics_) {
       timeout_queue_.push(PeriodicTimeout{now + p->Period(), p});
     }
-
-    InitLineageDbClient();
   }
   FluentExecutor(FluentExecutor&&) = default;
   FluentExecutor& operator=(FluentExecutor&&) = default;
@@ -265,9 +282,7 @@ class FluentExecutor<
   //
   // [1]: https://goo.gl/yGmr78
   template <std::size_t RequestIndex, std::size_t ResponseIndex, typename F>
-  FluentExecutor<TypeList<Cs...>, BootstrapRules, Rules, LineageDbClient, Hash,
-                 ToSql>&
-  RegisterBlackBoxLineage(F f) {
+  WARN_UNUSED Status RegisterBlackBoxLineage(F f) {
     static_assert(RequestIndex < sizeof...(Cs), "RequestIndex out of bounds.");
     static_assert(ResponseIndex < sizeof...(Cs),
                   "ResponseIndex out of bounds.");
@@ -284,37 +299,41 @@ class FluentExecutor<
     static_assert(RequestIndex != ResponseIndex,
                   "The same channel cannot be simultaneously a request and a "
                   "response channel.");
-    RegisterBlackBoxLineageImpl(Get<RequestIndex>(), Get<ResponseIndex>(), f);
-    return *this;
+    return RegisterBlackBoxLineageImpl(Get<RequestIndex>(),
+                                       Get<ResponseIndex>(), f);
   }
 
   // Sequentially execute each registered bootstrap query and then invoke the
   // `Tick` method of every collection.
-  void BootstrapTick() {
+  WARN_UNUSED Status BootstrapTick() {
     if (sizeof...(BootstrapLhss) == 0) {
-      return;
+      return Status::OK;
     }
 
-    TupleIteri(bootstrap_rules_, [this](std::size_t rule_number, auto& rule) {
-      ExecuteRule(rule_number, &rule);
-    });
+    RETURN_IF_ERROR(TupleIteriStatus(
+        bootstrap_rules_, [this](std::size_t rule_number, auto& rule) {
+          return ExecuteRule(rule_number, &rule);
+        }));
     time_++;
-    TupleIter(collections_, [this](auto& c) { TickCollection(c.get()); });
+    return TupleIterStatus(collections_,
+                           [this](auto& c) { return TickCollection(c.get()); });
   }
 
   // Sequentially execute each registered query and then invoke the `Tick`
   // method of every collection.
-  void Tick() {
-    TupleIteri(rules_, [this](std::size_t rule_number, auto& rule) {
-      ExecuteRule(rule_number, &rule);
-    });
+  WARN_UNUSED Status Tick() {
+    RETURN_IF_ERROR(
+        TupleIteriStatus(rules_, [this](std::size_t rule_number, auto& rule) {
+          return ExecuteRule(rule_number, &rule);
+        }));
     time_++;
-    TupleIter(collections_, [this](auto& c) { TickCollection(c.get()); });
+    return TupleIterStatus(collections_,
+                           [this](auto& c) { return TickCollection(c.get()); });
   }
 
   // (Potentially) block and receive messages sent by other Fluent nodes.
   // Receiving a message will insert it into the appropriate channel.
-  void Receive() {
+  WARN_UNUSED Status Receive() {
     time_++;
 
     std::vector<zmq::pollitem_t> pollitems = {
@@ -349,8 +368,8 @@ class FluentExecutor<
           FromString<int>(zmq_util::message_to_string(msgs[2]));
 
       if (parsers_.find(channel_name) != std::end(parsers_)) {
-        parsers_[channel_name](dep_node_id, dep_time, channel_name, strings,
-                               time_);
+        RETURN_IF_ERROR(parsers_[channel_name](dep_node_id, dep_time,
+                                               channel_name, strings, time_));
       } else {
         LOG(WARNING) << "A message was received for a channel named "
                      << channel_name
@@ -360,21 +379,24 @@ class FluentExecutor<
 
     // Read from stdin.
     if (stdin_ != nullptr && pollitems[1].revents & ZMQ_POLLIN) {
-      lineagedb_client_->InsertTuple(stdin_->Name(), time_, stdin_->GetLine());
+      RETURN_IF_ERROR(lineagedb_client_->InsertTuple(stdin_->Name(), time_,
+                                                     stdin_->GetLine()));
     }
 
     // Trigger periodics.
-    TockPeriodics();
+    RETURN_IF_ERROR(TockPeriodics());
+
+    return Status::OK;
   }
 
   // Runs a fluent program.
   // TODO(mwhittaker): Figure out if it should be Receive() then Tick() or
   // Tick() then Receive()?
-  void Run() {
-    BootstrapTick();
+  Status Run() {
+    RETURN_IF_ERROR(BootstrapTick());
     while (true) {
-      Receive();
-      Tick();
+      RETURN_IF_ERROR(Receive());
+      RETURN_IF_ERROR(Tick());
     }
   }
 
@@ -388,33 +410,36 @@ class FluentExecutor<
 
  private:
   // Initialize a node with the lineagedb database.
-  void InitLineageDbClient() {
-    // Nodes.
-    lineagedb_client_->Init();
-
+  WARN_UNUSED Status InitLineageDbClient() {
     // Collections.
-    TupleIter(collections_, [this](const auto& collection) {
-      // collection is of type `const unique_ptr<collection_type>&`.
-      using collection_type = typename Unwrap<
-          typename std::decay<decltype(collection)>::type>::type;
-      AddCollection(collection,
-                    typename CollectionTypes<collection_type>::type{});
-    });
+    RETURN_IF_ERROR(
+        TupleIterStatus(collections_, [this](const auto& collection) {
+          // collection is of type `const unique_ptr<collection_type>&`.
+          using collection_type = typename Unwrap<
+              typename std::decay<decltype(collection)>::type>::type;
+          return AddCollection(
+              collection, typename CollectionTypes<collection_type>::type{});
+        }));
 
     // Rules.
-    TupleIteri(
+    RETURN_IF_ERROR(TupleIteriStatus(
         bootstrap_rules_, [this](std::size_t i, const auto& bootstrap_rule) {
-          lineagedb_client_->AddRule(i, true, bootstrap_rule.ToDebugString());
-        });
-    TupleIteri(rules_, [this](std::size_t i, const auto& rule) {
-      lineagedb_client_->AddRule(i, false, rule.ToDebugString());
-    });
+          return lineagedb_client_->AddRule(i, true,
+                                            bootstrap_rule.ToDebugString());
+        }));
+    RETURN_IF_ERROR(
+        TupleIteriStatus(rules_, [this](std::size_t i, const auto& rule) {
+          return lineagedb_client_->AddRule(i, false, rule.ToDebugString());
+        }));
+
+    return Status::OK;
   }
 
   // Register a collection with the lineagedb database.
   template <typename Collection, typename... Ts>
-  void AddCollection(const std::unique_ptr<Collection>& c, TypeList<Ts...>) {
-    lineagedb_client_->template AddCollection<Ts...>(
+  WARN_UNUSED Status AddCollection(const std::unique_ptr<Collection>& c,
+                                   TypeList<Ts...>) {
+    return lineagedb_client_->template AddCollection<Ts...>(
         c->Name(), CollectionTypeToString(GetCollectionType<Collection>::value),
         c->ColumnNames());
   }
@@ -422,11 +447,12 @@ class FluentExecutor<
   // Tick a collection and insert the deleted tuples into the lineagedb
   // database.
   template <typename Collection>
-  void TickCollection(Collection* c) {
+  WARN_UNUSED Status TickCollection(Collection* c) {
     auto deleted = c->Tick();
     for (const auto& t : deleted) {
-      lineagedb_client_->DeleteTuple(c->Name(), time_, t);
+      RETURN_IF_ERROR(lineagedb_client_->DeleteTuple(c->Name(), time_, t));
     }
+    return Status::OK;
   }
 
   // `GetPollTimoutInMicros` returns the minimum time (in microseconds) that we
@@ -454,16 +480,17 @@ class FluentExecutor<
 
   // Call `Tock` on every Periodic that's ready to be tocked. See the comment
   // on `PeriodicTimeout` down below for more information.
-  void TockPeriodics() {
+  WARN_UNUSED Status TockPeriodics() {
     Periodic::time now = Periodic::clock::now();
     while (timeout_queue_.size() != 0 && timeout_queue_.top().timeout <= now) {
       PeriodicTimeout timeout = timeout_queue_.top();
       timeout_queue_.pop();
-      lineagedb_client_->InsertTuple(timeout.periodic->Name(), time_,
-                                     timeout.periodic->Tock());
+      RETURN_IF_ERROR(lineagedb_client_->InsertTuple(
+          timeout.periodic->Name(), time_, timeout.periodic->Tock()));
       timeout.timeout = now + timeout.periodic->Period();
       timeout_queue_.push(timeout);
     }
+    return Status::OK;
   }
 
   // See RegisterBlackBoxLineage.
@@ -479,9 +506,9 @@ class FluentExecutor<
   // See RegisterBlackBoxLineage.
   // TODO(mwhittaker): Use a Status class.
   template <typename... RequestTs, typename... ResponseTs, typename F>
-  void RegisterBlackBoxLineageImpl(const Channel<RequestTs...>& request,
-                                   const Channel<ResponseTs...>& response,
-                                   F f) {
+  WARN_UNUSED Status
+  RegisterBlackBoxLineageImpl(const Channel<RequestTs...>& request,
+                              const Channel<ResponseTs...>& response, F f) {
     // Validate request types.
     const std::string request_columns_err =
         "The first three columns of a request channel must be a dst_addr, "
@@ -547,16 +574,16 @@ class FluentExecutor<
     // Issue SQL queries.
     auto seq = std::make_index_sequence<1 + TypeListLen<ArgTypes>::value +
                                         TypeListLen<RetTypes>::value>();
-    lineagedb_client_->Exec(fmt::format(
+    RETURN_IF_ERROR(lineagedb_client_->Exec(fmt::format(
         R"(
       CREATE FUNCTION {}_{}_lineage_impl(integer, {})
       RETURNS TABLE(collection_name text, hash bigint, time_inserted integer)
       AS $${}$$ LANGUAGE SQL;
     )",
         name_, response.Name(), Join(types),
-        CallBlackBoxLineageFunction(f, seq)));
+        CallBlackBoxLineageFunction(f, seq))));
 
-    lineagedb_client_->Exec(fmt::format(
+    RETURN_IF_ERROR(lineagedb_client_->Exec(fmt::format(
         R"(
       CREATE FUNCTION {}_{}_lineage(bigint)
       RETURNS TABLE(collection_name text, hash bigint, time_inserted integer)
@@ -567,27 +594,36 @@ class FluentExecutor<
       $$ LANGUAGE SQL;
     )",
         name_, response.Name(), name_, response.Name(), Join(column_names),
-        name_, request.Name(), name_, response.Name()));
+        name_, request.Name(), name_, response.Name())));
+
+    return Status::OK;
   }
 
   // TODO(mwhittaker): Document.
   template <typename Lhs, typename Rhs, typename UpdateCollection>
-  void ExecuteRule(int rule_number, Lhs* collection, const Rhs& ra,
-                   bool inserted, UpdateCollection update_collection) {
+  WARN_UNUSED Status ExecuteRule(int rule_number, Lhs* collection,
+                                 const Rhs& ra, bool inserted,
+                                 UpdateCollection update_collection) {
     using column_types = typename Rhs::column_types;
     using tuple_type = typename TypeListToTuple<column_types>::type;
     Hash<tuple_type> hash;
 
-    ranges::for_each(ra.ToPhysical().ToRange(), [&](const auto& lt) {
+    auto phy = ra.ToPhysical();
+    auto rng = phy.ToRange();
+    for (auto iter = ranges::begin(rng); iter != ranges::end(rng); iter++) {
+      const auto& lt = *iter;
+
       std::size_t tuple_hash = hash(lt.tuple);
+
       for (const ra::LineageTuple& l : lt.lineage) {
-        lineagedb_client_->AddDerivedLineage(l.collection, l.hash, rule_number,
-                                             inserted, collection->Name(),
-                                             tuple_hash, time_);
+        RETURN_IF_ERROR(lineagedb_client_->AddDerivedLineage(
+            l.collection, l.hash, rule_number, inserted, collection->Name(),
+            tuple_hash, time_));
       }
 
       if (inserted) {
-        lineagedb_client_->InsertTuple(collection->Name(), time_, lt.tuple);
+        RETURN_IF_ERROR(lineagedb_client_->InsertTuple(collection->Name(),
+                                                       time_, lt.tuple));
         switch (GetCollectionType<Lhs>::value) {
           case CollectionType::CHANNEL:
           case CollectionType::STDOUT: {
@@ -595,7 +631,8 @@ class FluentExecutor<
             // really inserted at all. Channels send their tuples away and
             // stdout just prints the message to the screen. Thus, we insert
             // and then immediately delete the tuple.
-            lineagedb_client_->DeleteTuple(collection->Name(), time_, lt.tuple);
+            RETURN_IF_ERROR(lineagedb_client_->DeleteTuple(collection->Name(),
+                                                           time_, lt.tuple));
           }
           case CollectionType::TABLE:
           case CollectionType::SCRATCH:
@@ -605,17 +642,19 @@ class FluentExecutor<
           }
         }
       } else {
-        lineagedb_client_->DeleteTuple(collection->Name(), time_, lt.tuple);
+        RETURN_IF_ERROR(lineagedb_client_->DeleteTuple(collection->Name(),
+                                                       time_, lt.tuple));
       }
 
       update_collection(*collection, std::set<tuple_type>{lt.tuple});
-    });
+    };
+    return Status::OK;
   }
 
   template <typename... Ts, typename Rhs>
-  void ExecuteRule(int rule_number, Channel<Ts...>* collection, MergeTag,
-                   const Rhs& ra) {
-    ExecuteRule(
+  WARN_UNUSED Status ExecuteRule(int rule_number, Channel<Ts...>* collection,
+                                 MergeTag, const Rhs& ra) {
+    return ExecuteRule(
         rule_number, collection, ra, true,
         [this](Channel<Ts...>& c, const std::set<std::tuple<Ts...>>& ts) {
           c.Merge(ts, time_);
@@ -623,29 +662,33 @@ class FluentExecutor<
   }
 
   template <typename Lhs, typename Rhs>
-  void ExecuteRule(int rule_number, Lhs* collection, MergeTag, const Rhs& ra) {
-    ExecuteRule(rule_number, collection, ra, true, std::mem_fn(&Lhs::Merge));
+  WARN_UNUSED Status ExecuteRule(int rule_number, Lhs* collection, MergeTag,
+                                 const Rhs& ra) {
+    return ExecuteRule(rule_number, collection, ra, true,
+                       std::mem_fn(&Lhs::Merge));
   }
 
   template <typename Lhs, typename Rhs>
-  void ExecuteRule(int rule_number, Lhs* collection, DeferredMergeTag,
-                   const Rhs& ra) {
-    ExecuteRule(rule_number, collection, ra, true,
-                std::mem_fn(&Lhs::DeferredMerge));
+  WARN_UNUSED Status ExecuteRule(int rule_number, Lhs* collection,
+                                 DeferredMergeTag, const Rhs& ra) {
+    return ExecuteRule(rule_number, collection, ra, true,
+                       std::mem_fn(&Lhs::DeferredMerge));
   }
 
   template <typename Lhs, typename Rhs>
-  void ExecuteRule(int rule_number, Lhs* collection, DeferredDeleteTag,
-                   const Rhs& ra) {
-    ExecuteRule(rule_number, collection, ra, false,
-                std::mem_fn(&Lhs::DeferredDelete));
+  WARN_UNUSED Status ExecuteRule(int rule_number, Lhs* collection,
+                                 DeferredDeleteTag, const Rhs& ra) {
+    return ExecuteRule(rule_number, collection, ra, false,
+                       std::mem_fn(&Lhs::DeferredDelete));
   }
 
   template <typename Lhs, typename RuleTag, typename Rhs>
-  void ExecuteRule(std::size_t rule_number, Rule<Lhs, RuleTag, Rhs>* rule) {
+  WARN_UNUSED Status ExecuteRule(std::size_t rule_number,
+                                 Rule<Lhs, RuleTag, Rhs>* rule) {
     time_++;
-    ExecuteRule(static_cast<int>(rule_number), CHECK_NOTNULL(rule->collection),
-                rule->rule_tag, rule->ra);
+    return ExecuteRule(static_cast<int>(rule_number),
+                       CHECK_NOTNULL(rule->collection), rule->rule_tag,
+                       rule->ra);
   }
 
   // The logical time of the fluent program. The logical time begins at 0 and

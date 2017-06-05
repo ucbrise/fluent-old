@@ -6,6 +6,9 @@
 #include <array>
 #include <string>
 
+#include "common/macros.h"
+#include "common/status.h"
+#include "common/status_or.h"
 #include "lineagedb/connection_config.h"
 
 namespace fluent {
@@ -18,29 +21,53 @@ namespace lineagedb {
 template <template <typename> class Hash, template <typename> class ToSql>
 class NoopClient {
  public:
-  NoopClient(std::string, std::size_t, std::string, const ConnectionConfig&) {}
+  DISALLOW_COPY_AND_ASSIGN(NoopClient);
+  NoopClient(NoopClient&&) = default;
+  NoopClient& operator=(NoopClient&&) = default;
 
-  void Init() {}
-
-  template <typename... Ts>
-  void AddCollection(const std::string&, const std::string&,
-                     const std::array<std::string, sizeof...(Ts)>&) {}
-
-  void AddRule(std::size_t, bool, const std::string&) {}
-
-  template <typename... Ts>
-  void InsertTuple(const std::string&, int, const std::tuple<Ts...>&) {}
+  static WARN_UNUSED StatusOr<NoopClient> WARN_UNUSED
+  Make(std::string, std::size_t, std::string, const ConnectionConfig&) {
+    return NoopClient();
+  }
 
   template <typename... Ts>
-  void DeleteTuple(const std::string&, int, const std::tuple<Ts...>&) {}
+  WARN_UNUSED Status
+  AddCollection(const std::string&, const std::string&,
+                const std::array<std::string, sizeof...(Ts)>&) {
+    return Status::OK;
+  }
 
-  void AddNetworkedLineage(std::size_t, int, const std::string&, std::size_t,
-                           int) {}
+  WARN_UNUSED Status AddRule(std::size_t, bool, const std::string&) {
+    return Status::OK;
+  }
 
-  void AddDerivedLineage(const std::string&, std::size_t, int, bool,
-                         const std::string&, std::size_t, int) {}
+  template <typename... Ts>
+  WARN_UNUSED Status InsertTuple(const std::string&, int,
+                                 const std::tuple<Ts...>&) {
+    return Status::OK;
+  }
 
-  void Exec(const std::string&) {}
+  template <typename... Ts>
+  WARN_UNUSED Status DeleteTuple(const std::string&, int,
+                                 const std::tuple<Ts...>&) {
+    return Status::OK;
+  }
+
+  WARN_UNUSED Status AddNetworkedLineage(std::size_t, int, const std::string&,
+                                         std::size_t, int) {
+    return Status::OK;
+  }
+
+  WARN_UNUSED Status AddDerivedLineage(const std::string&, std::size_t, int,
+                                       bool, const std::string&, std::size_t,
+                                       int) {
+    return Status::OK;
+  }
+
+  WARN_UNUSED Status Exec(const std::string&) { return Status::OK; }
+
+ private:
+  NoopClient() = default;
 };
 
 }  // namespace lineagedb

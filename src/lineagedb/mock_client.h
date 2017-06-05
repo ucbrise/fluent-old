@@ -7,8 +7,9 @@
 #include <string>
 #include <utility>
 
-#include "fmt/format.h"
-
+#include "common/macros.h"
+#include "common/status.h"
+#include "common/status_or.h"
 #include "common/tuple_util.h"
 #include "common/type_list.h"
 #include "lineagedb/connection_config.h"
@@ -31,18 +32,19 @@ struct ToSqlType {
 template <template <typename> class Hash, template <typename> class ToSql>
 class MockClient {
  public:
-  // Client Mocks //////////////////////////////////////////////////////////////
-  MockClient(std::string name, std::size_t id, std::string address,
-             const ConnectionConfig& config)
-      : name_(std::move(name)),
-        id_(id),
-        address_(std::move(address)),
-        config_(config) {}
+  DISALLOW_COPY_AND_ASSIGN(MockClient);
+  MockClient(MockClient&&) = default;
+  MockClient& operator=(MockClient&&) = default;
 
-  void Init() { init_called_ = true; }
+  // Client Mocks //////////////////////////////////////////////////////////////
+  static WARN_UNUSED StatusOr<MockClient> Make(std::string name, std::size_t id,
+                                               std::string address,
+                                               const ConnectionConfig& config) {
+    return MockClient(std::move(name), id, std::move(address), config);
+  }
 
   template <typename... Ts>
-  void AddCollection(
+  WARN_UNUSED Status AddCollection(
       const std::string& collection_name, const std::string& collection_type,
       const std::array<std::string, sizeof...(Ts)>& column_names) {
     std::vector<std::string> columns;
@@ -56,17 +58,21 @@ class MockClient {
 
     add_collection_.push_back(
         std::make_tuple(collection_name, collection_type, columns, types));
+
+    return Status::OK;
   }
 
-  void AddRule(std::size_t rule_number, bool is_bootstrap,
-               const std::string& rule_string) {
+  WARN_UNUSED Status AddRule(std::size_t rule_number, bool is_bootstrap,
+                             const std::string& rule_string) {
     add_rule_.push_back(
         std::make_tuple(rule_number, is_bootstrap, rule_string));
+    return Status::OK;
   }
 
   template <typename... Ts>
-  void InsertTuple(const std::string& collection_name, int time_inserted,
-                   const std::tuple<Ts...>& t) {
+  WARN_UNUSED Status InsertTuple(const std::string& collection_name,
+                                 int time_inserted,
+                                 const std::tuple<Ts...>& t) {
     auto strings_tuple = TupleMap(t, [](const auto& x) {
       return ToSql<typename std::decay<decltype(x)>::type>().Value(x);
     });
@@ -75,11 +81,12 @@ class MockClient {
               [&strings_vec](const auto& s) { strings_vec.push_back(s); });
     insert_tuple_.push_back(
         std::make_tuple(collection_name, time_inserted, strings_vec));
+    return Status::OK;
   }
 
   template <typename... Ts>
-  void DeleteTuple(const std::string& collection_name, int time_deleted,
-                   const std::tuple<Ts...>& t) {
+  WARN_UNUSED Status DeleteTuple(const std::string& collection_name,
+                                 int time_deleted, const std::tuple<Ts...>& t) {
     auto strings_tuple = TupleMap(t, [](const auto& x) {
       return ToSql<typename std::decay<decltype(x)>::type>().Value(x);
     });
@@ -88,25 +95,32 @@ class MockClient {
               [&strings_vec](const auto& s) { strings_vec.push_back(s); });
     delete_tuple_.push_back(
         std::make_tuple(collection_name, time_deleted, strings_vec));
+    return Status::OK;
   }
 
-  void AddNetworkedLineage(std::size_t dep_node_id, int dep_time,
-                           const std::string& collection_name,
-                           std::size_t tuple_hash, int time) {
+  WARN_UNUSED Status AddNetworkedLineage(std::size_t dep_node_id, int dep_time,
+                                         const std::string& collection_name,
+                                         std::size_t tuple_hash, int time) {
     add_networked_lineage_.push_back(std::make_tuple(
         dep_node_id, dep_time, collection_name, tuple_hash, time));
+    return Status::OK;
   }
 
-  void AddDerivedLineage(const std::string& dep_collection_name,
-                         std::size_t dep_tuple_hash, int rule_number,
-                         bool inserted, const std::string& collection_name,
-                         std::size_t tuple_hash, int time) {
+  WARN_UNUSED Status AddDerivedLineage(const std::string& dep_collection_name,
+                                       std::size_t dep_tuple_hash,
+                                       int rule_number, bool inserted,
+                                       const std::string& collection_name,
+                                       std::size_t tuple_hash, int time) {
     add_derived_lineage_.push_back(
         std::make_tuple(dep_collection_name, dep_tuple_hash, rule_number,
                         inserted, collection_name, tuple_hash, time));
+    return Status::OK;
   }
 
-  void Exec(const std::string& query) { exec_.push_back(query); }
+  WARN_UNUSED Status Exec(const std::string& query) {
+    exec_.push_back(query);
+    return Status::OK;
+  }
 
   // Getters ///////////////////////////////////////////////////////////////////
   // name, collection type, column names, column types
@@ -131,7 +145,6 @@ class MockClient {
   // query
   using ExecTuple = std::tuple<std::string>;
 
-  bool GetInit() const { return init_called_; }
   const std::vector<AddCollectionTuple>& GetAddCollection() const {
     return add_collection_;
   }
@@ -154,12 +167,18 @@ class MockClient {
   template <typename T>
   using ToSqlType = detail::ToSqlType<ToSql, T>;
 
+  MockClient(std::string name, std::size_t id, std::string address,
+             const ConnectionConfig& config)
+      : name_(std::move(name)),
+        id_(id),
+        address_(std::move(address)),
+        config_(config) {}
+
   const std::string name_;
   const std::size_t id_;
   const std::string address_;
   const ConnectionConfig config_;
 
-  bool init_called_ = false;
   std::vector<AddCollectionTuple> add_collection_;
   std::vector<AddRuleTuple> add_rule_;
   std::vector<InsertTupleTuple> insert_tuple_;

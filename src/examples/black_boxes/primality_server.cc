@@ -4,6 +4,7 @@
 #include "glog/logging.h"
 #include "zmq.hpp"
 
+#include "common/status.h"
 #include "examples/black_boxes/primality.h"
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
@@ -50,16 +51,18 @@ int main(int argc, char* argv[]) {
 
   zmq::context_t context(1);
   ldb::ConnectionConfig config{"localhost", 5432, argv[1], argv[2], argv[3]};
-  AddPrimalityApi(fluent::fluent<ldb::PqxxClient>("primality_server", argv[4],
-                                                  &context, config))
-      .RegisterRules([&](auto& req, auto& resp) {
-        using namespace fluent::infix;
-        auto rule = resp <= (req.Iterable() | ra::map(f));
-        return std::make_tuple(rule);
-      })
-      .RegisterBlackBoxLineage<0, 1>([](const std::string& time_inserted,
-                                        const std::string& x,
-                                        const std::string& is_prime) {
+  auto fe = AddPrimalityApi(fluent::fluent<ldb::PqxxClient>(
+                                "primality_server", argv[4], &context, config)
+                                .ConsumeValueOrDie())
+                .RegisterRules([&](auto& req, auto& resp) {
+                  using namespace fluent::infix;
+                  auto rule = resp <= (req.Iterable() | ra::map(f));
+                  return std::make_tuple(rule);
+                })
+                .ConsumeValueOrDie();
+  fluent::Status status = fe.RegisterBlackBoxLineage<0, 1>(
+      [](const std::string& time_inserted, const std::string& x,
+         const std::string& is_prime) {
         (void)time_inserted;
         (void)x;
         (void)is_prime;
@@ -70,6 +73,7 @@ int main(int argc, char* argv[]) {
                         CAST(NULL as integer))) AS T
           WHERE false;
         )";
-      })
-      .Run();
+      });
+  CHECK_EQ(fluent::Status::OK, status);
+  CHECK_EQ(fluent::Status::OK, fe.Run());
 }

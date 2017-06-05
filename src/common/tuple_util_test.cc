@@ -1,5 +1,6 @@
 #include "common/tuple_util.h"
 
+#include <sstream>
 #include <tuple>
 
 #include "glog/logging.h"
@@ -156,6 +157,39 @@ TEST(TupleUtil, TupleFromTypes) {
     tuple_t expected = {nullptr, nullptr, nullptr};
     EXPECT_EQ(actual, expected);
   }
+}
+
+TEST(TupleUtil, TupleProject) {
+  std::tuple<int, char, float> t{0, '1', 2.0};
+
+  EXPECT_EQ(TupleProject<>(t), std::tuple<>{});
+
+  EXPECT_EQ(TupleProject<0>(t), std::tuple<int>{0});
+  EXPECT_EQ(TupleProject<1>(t), std::tuple<char>{'1'});
+  EXPECT_EQ(TupleProject<2>(t), std::tuple<char>{2.0});
+
+  // Arguments are parenthesized so that the EXPECT_EQ macro doesn't get
+  // confused about all the commas.
+  EXPECT_EQ((TupleProject<0, 0>(t)), (std::tuple<int, int>{0, 0}));
+  EXPECT_EQ((TupleProject<0, 1>(t)), (std::tuple<int, char>{0, '1'}));
+  EXPECT_EQ((TupleProject<0, 2>(t)), (std::tuple<int, float>{0, 2.0}));
+  EXPECT_EQ((TupleProject<1, 0>(t)), (std::tuple<char, int>{'1', 0}));
+  EXPECT_EQ((TupleProject<1, 1>(t)), (std::tuple<char, char>{'1', '1'}));
+  EXPECT_EQ((TupleProject<1, 2>(t)), (std::tuple<char, float>{'1', 2.0}));
+  EXPECT_EQ((TupleProject<2, 0>(t)), (std::tuple<float, int>{2.0, 0}));
+  EXPECT_EQ((TupleProject<2, 1>(t)), (std::tuple<float, char>{2.0, '1'}));
+  EXPECT_EQ((TupleProject<2, 2>(t)), (std::tuple<float, float>{2.0, 2.0}));
+
+  auto actual = TupleProject<0, 1, 0, 2, 1>(t);
+  auto expected = std::tuple<int, char, int, float, char>{0, '1', 0, 2.0, '1'};
+  EXPECT_EQ(actual, expected);
+}
+
+TEST(TupleUtil, OstreamOperator) {
+  std::tuple<int, char, float> t{1, '2', 3.0};
+  std::ostringstream os;
+  os << t;
+  EXPECT_EQ(os.str(), "(1, 2, 3)");
 }
 
 }  // namespace fluent

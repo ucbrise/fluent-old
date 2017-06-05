@@ -11,6 +11,7 @@
 #include "range/v3/all.hpp"
 
 #include "common/type_list.h"
+#include "ra/lineaged_tuple.h"
 
 namespace fluent {
 namespace ra {
@@ -18,18 +19,30 @@ namespace ra {
 template <typename PhysicalChild>
 class PhysicalCount {
  public:
-  explicit PhysicalCount(PhysicalChild child) : child_(std::move(child)) {}
+  explicit PhysicalCount(PhysicalChild child)
+      : child_(std::move(child)), initialized_(false) {}
 
   auto ToRange() {
-    if (count_.size() == 0) {
-      count_.insert(std::tuple<std::size_t>(ranges::size(child_.ToRange())));
+    if (!initialized_) {
+      initialized_ = true;
+      std::size_t count = 0;
+      std::set<LineageTuple> lineage;
+
+      ranges::for_each(child_.ToRange(), [&count, &lineage](const auto& lt) {
+        count++;
+        lineage.insert(lt.lineage.begin(), lt.lineage.end());
+      });
+
+      count_.insert(LineagedTuple<std::size_t>{std::move(lineage), count});
     }
+
     return ranges::view::all(count_);
   }
 
  private:
   PhysicalChild child_;
-  std::set<std::tuple<std::size_t>> count_;
+  bool initialized_;
+  std::set<LineagedTuple<std::size_t>> count_;
 };
 
 template <typename Physical>

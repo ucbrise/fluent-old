@@ -1,12 +1,12 @@
-#ifndef POSTGRES_CONNECTION_CONFIG_H_
-#define POSTGRES_CONNECTION_CONFIG_H_
+#ifndef LINEAGEDB_CONNECTION_CONFIG_H_
+#define LINEAGEDB_CONNECTION_CONFIG_H_
 
 #include <cstdint>
 
 #include <string>
 
 namespace fluent {
-namespace postgres {
+namespace lineagedb {
 
 // PostgreSQL's libpq library and the libpqxx library use connection parameters
 // to configure a connection to postgres [1]. This struct includes some of the
@@ -27,7 +27,7 @@ struct ConnectionConfig {
   std::string ToString() const;
 };
 
-}  // namespace postgres
+}  // namespace lineagedb
 }  // namespace fluent
 
-#endif  // POSTGRES_CONNECTION_CONFIG_H_
+#endif  // LINEAGEDB_CONNECTION_CONFIG_H_

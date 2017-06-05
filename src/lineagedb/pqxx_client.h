@@ -1,5 +1,5 @@
-#ifndef POSTGRES_PQXX_CLIENT_H_
-#define POSTGRES_PQXX_CLIENT_H_
+#ifndef LINEAGEDB_PQXX_CLIENT_H_
+#define LINEAGEDB_PQXX_CLIENT_H_
 
 #include <cstdint>
 
@@ -9,10 +9,10 @@
 
 #include "common/string_util.h"
 #include "common/tuple_util.h"
-#include "postgres/connection_config.h"
+#include "lineagedb/connection_config.h"
 
 namespace fluent {
-namespace postgres {
+namespace lineagedb {
 namespace detail {
 
 inline std::int64_t size_t_to_int64(std::size_t hash) {
@@ -35,10 +35,10 @@ struct ToSqlType {
 //   class PqxxClient { ... }
 //
 // A `PqxxClient<Hash, ToSql>` object can be used to shuttle tuples and lineage
-// information from a fluent node to a postgres database. It's best explained
+// information from a fluent node to a lineagedb database. It's best explained
 // through an example:
 //
-//   // Construct a `ConnectionConfig` which tells our client to which postgres
+//   // Construct a `ConnectionConfig` which tells our client to which lineagedb
 //   // database it should connect and which credentials it should use to do
 //   // so.
 //   ConnectionConfig config {
@@ -49,11 +49,11 @@ struct ToSqlType {
 //     "sailors",   // the database
 //   }
 //
-//   // Construct a client which will connect to the postgres database.
+//   // Construct a client which will connect to the lineagedb database.
 //   PqxxClient<Hash, ToSql> client(config);
 //
-//   // Initialize the postgres client with the name of our fluent node. A
-//   // postgres client should be used by exactly one fluent node. Also, the
+//   // Initialize the lineagedb client with the name of our fluent node. A
+//   // lineagedb client should be used by exactly one fluent node. Also, the
 //   // name "lineage" is reserved; sorry about that.
 //   client.Init("my_fluent_node");
 //
@@ -75,7 +75,7 @@ struct ToSqlType {
 // dependency injected version of PqxxClient.
 //
 // The PqxxClient struct template we used above uses `pqxx::connection` and
-// `pqxx::work` for `Connection` and `Work` to actually connect to a postgres
+// `pqxx::work` for `Connection` and `Work` to actually connect to a lineagedb
 // database. If we don't want to actually connect to a database (say for unit
 // tests), we can substitute a mock connection and work class in for
 // `Connection` and `Work`. In fact, we do exactly that in
@@ -89,39 +89,41 @@ template <typename Connection, typename Work, template <typename> class Hash,
           template <typename> class ToSql>
 class InjectablePqxxClient {
  public:
-  InjectablePqxxClient(const ConnectionConfig& connection_config)
-      : connection_(connection_config.ToString()), id_(0) {
+  InjectablePqxxClient(std::string name, std::size_t id,
+                       const ConnectionConfig& connection_config)
+      : connection_(connection_config.ToString()),
+        name_(std::move(name)),
+        id_(id) {
     LOG(INFO)
-        << "Established a postgres connection with the following parameters: "
+        << "Established a lineagedb connection with the following parameters: "
         << connection_config.ToString();
   }
 
   // TODO(mwhittaker): Handle hash collisions.
-  void Init(const std::string& name) {
+  void Init() {
     initialized_ = true;
-    id_ = detail::size_t_to_int64(Hash<std::string>()(name));
-    name_ = name;
 
     ExecuteQuery("Init",
                  fmt::format(R"(
       INSERT INTO Nodes (id, name)
       VALUES ({});
     )",
-                             Join(SqlValues(std::make_tuple(id_, name)))));
+                             Join(SqlValues(std::make_tuple(id_, name_)))));
 
     ExecuteQuery("CreateLineageTable", fmt::format(R"(
       CREATE TABLE {}_lineage (
         dep_node_id          bigint   NOT NULL,
         dep_collection_name  text     NOT NULL,
         dep_tuple_hash       bigint   NOT NULL,
-        rule_number          integer  NOT NULL,
+        dep_time             bigint,
+        rule_number          integer,
         inserted             boolean  NOT NULL,
         collection_name      text     NOT NULL,
         tuple_hash           bigint   NOT NULL,
         time                 integer  NOT NULL
       );
     )",
-                                                   name));
+                                                   name_));
   }
 
   template <typename... Ts>
@@ -129,7 +131,7 @@ class InjectablePqxxClient {
     static_assert(sizeof...(Ts) > 0, "Collections should have >= 1 column.");
     CHECK(initialized_) << "Call Init first.";
 
-    // For a fluent node `n` and collection `c`, we create a postgres relation
+    // For a fluent node `n` and collection `c`, we create a lineagedb relation
     // `n_c`. We also make a relation for the lineage of `n` called
     // `n_lineage`. Thus, we have a naming conflict if `c == lineage`.
     CHECK_NE(collection_name, std::string("lineage"))
@@ -161,10 +163,8 @@ class InjectablePqxxClient {
                              name_, collection_name, Join(columns)));
   }
 
-  template <typename RA>
-  void AddRule(std::size_t rule_number, const RA& rule) {
+  void AddRule(std::size_t rule_number, const std::string& rule_string) {
     CHECK(initialized_) << "Call Init first.";
-    auto rule_string = std::get<2>(rule).ToDebugString();
     ExecuteQuery("AddRule", fmt::format(R"(
       INSERT INTO Rules (node_id, rule_number, rule)
       VALUES ({});
@@ -177,6 +177,7 @@ class InjectablePqxxClient {
   void InsertTuple(const std::string& collection_name, int time_inserted,
                    const std::tuple<Ts...>& t) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >=1 column.");
+    CHECK(initialized_) << "Call Init first.";
     std::int64_t hash = detail::size_t_to_int64(Hash<std::tuple<Ts...>>()(t));
     ExecuteQuery("InsertTuple", fmt::format(R"(
       INSERT INTO {}_{}
@@ -190,6 +191,7 @@ class InjectablePqxxClient {
   void DeleteTuple(const std::string& collection_name, int time_deleted,
                    const std::tuple<Ts...>& t) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >=1 column.");
+    CHECK(initialized_) << "Call Init first.";
     std::int64_t hash = detail::size_t_to_int64(Hash<std::tuple<Ts...>>()(t));
     ExecuteQuery("DeleteTuple",
                  fmt::format(R"(
@@ -198,6 +200,49 @@ class InjectablePqxxClient {
       WHERE hash={} AND time_deleted IS NULL;
     )",
                              name_, collection_name, time_deleted, hash));
+  }
+
+  void AddNetworkedLineage(std::size_t dep_node_id, int dep_time,
+                           const std::string& collection_name,
+                           std::size_t tuple_hash, int time) {
+    CHECK(initialized_) << "Call Init first.";
+    ExecuteQuery(
+        "AddLineage",
+        fmt::format(
+            R"(
+      INSERT INTO {}_lineage (dep_node_id, dep_collection_name, dep_tuple_hash,
+                              dep_time, rule_number, inserted, collection_name,
+                              tuple_hash, time)
+      VALUES ({}, NULL, {});
+    )",
+            name_, Join(SqlValues(std::make_tuple(
+                       detail::size_t_to_int64(dep_node_id), collection_name,
+                       detail::size_t_to_int64(tuple_hash), dep_time))),
+            Join(SqlValues(std::make_tuple(true /*inserted*/, collection_name,
+                                           detail::size_t_to_int64(tuple_hash),
+                                           time)))));
+  }
+
+  void AddDerivedLineage(const std::string& dep_collection_name,
+                         std::size_t dep_tuple_hash, int rule_number,
+                         bool inserted, const std::string& collection_name,
+                         std::size_t tuple_hash, int time) {
+    CHECK(initialized_) << "Call Init first.";
+    ExecuteQuery(
+        "AddLineage",
+        fmt::format(
+            R"(
+      INSERT INTO {}_lineage (dep_node_id, dep_collection_name, dep_tuple_hash,
+                              dep_time, rule_number, inserted, collection_name,
+                              tuple_hash, time)
+      VALUES ({}, NULL, {});
+    )",
+            name_, Join(SqlValues(std::make_tuple(
+                       detail::size_t_to_int64(id_), dep_collection_name,
+                       detail::size_t_to_int64(dep_tuple_hash)))),
+            Join(SqlValues(
+                std::make_tuple(rule_number, inserted, collection_name,
+                                detail::size_t_to_int64(tuple_hash), time)))));
   }
 
  protected:
@@ -230,17 +275,17 @@ class InjectablePqxxClient {
     }));
   }
 
-  // A connection to postgres database.
+  // A connection to lineagedb database.
   Connection connection_;
 
   // True after `Init()` is called;
   bool initialized_ = false;
 
-  // Each fluent node named `n` has a unique id `hash(n)`.
-  std::int64_t id_;
-
   // The name of fluent node using this client.
   std::string name_;
+
+  // Each fluent node named `n` has a unique id `hash(n)`.
+  std::int64_t id_;
 };
 
 // See InjectablePqxxClient documentation above.
@@ -248,7 +293,7 @@ template <template <typename> class Hash, template <typename> class ToSql>
 using PqxxClient =
     InjectablePqxxClient<pqxx::connection, pqxx::work, Hash, ToSql>;
 
-}  // namespace postgres
+}  // namespace lineagedb
 }  // namespace fluent
 
-#endif  // POSTGRES_PQXX_CLIENT_H_
+#endif  // LINEAGEDB_PQXX_CLIENT_H_

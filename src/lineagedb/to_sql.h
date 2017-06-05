@@ -1,5 +1,5 @@
-#ifndef POSTGRES_TO_SQL_H_
-#define POSTGRES_TO_SQL_H_
+#ifndef LINEAGEDB_TO_SQL_H_
+#define LINEAGEDB_TO_SQL_H_
 
 #include <cstdint>
 
@@ -10,18 +10,18 @@
 #include "fmt/format.h"
 
 namespace fluent {
-namespace postgres {
+namespace lineagedb {
 
 // C++ code has a certain set of types and a certain set of values of each
 // type. For example, the value `42` is a C++ `int`. Postgres has a certain
 // set of types and a certain set of values of each type. For example, the
-// value `42` is a postgres `integer`.
+// value `42` is a lineagedb `integer`.
 //
 // The `ToSql` struct template provides a mechanism to convert C++ types to
-// postgres types and C++ values to postgres values. More specifically,
-// `ToSql<T>.Type()` will return the name of the postgres type corresponding to
+// lineagedb types and C++ values to lineagedb values. More specifically,
+// `ToSql<T>.Type()` will return the name of the lineagedb type corresponding to
 // the C++ type `T`, and `ToSql<T>.Value(x)` will convert the C++ value `x`
-// into a string which can be used to insert the value into postgres.
+// into a string which can be used to insert the value into lineagedb.
 //
 // For example, `ToSql<std::string>.Type()` is `"text"` and
 // `ToSql<std::string>.Value("hello")` is `'hello'`.
@@ -116,7 +116,7 @@ template <typename Clock>
 struct ToSql<std::chrono::time_point<Clock>> {
   std::string Type() { return "timestamp with time zone"; }
 
-  // See https://www.postgresql.org/docs/current/static/functions-datetime.html
+  // See https://www.lineagedbql.org/docs/current/static/functions-datetime.html
   // for more information.
   std::string Value(const std::chrono::time_point<Clock>& t) {
     return fmt::format(
@@ -127,7 +127,7 @@ struct ToSql<std::chrono::time_point<Clock>> {
   }
 };
 
-}  // namespace postgres
+}  // namespace lineagedb
 }  // namespace fluent
 
-#endif  // POSTGRES_TO_SQL_H_
+#endif  // LINEAGEDB_TO_SQL_H_

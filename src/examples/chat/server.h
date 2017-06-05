@@ -1,14 +1,14 @@
 #ifndef EXAMPLES_CHAT_SERVER_H_
 #define EXAMPLES_CHAT_SERVER_H_
 
-#include "postgres/connection_config.h"
+#include "lineagedb/connection_config.h"
 
 #include "zmq.hpp"
 
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"
-#include "postgres/connection_config.h"
+#include "lineagedb/connection_config.h"
 #include "ra/all.h"
 
 namespace ra = fluent::ra;
@@ -24,13 +24,13 @@ struct ServerArgs {
 };
 
 template <template <template <typename> class, template <typename> class>
-          class PostgresClient>
+          class LineageDbClient>
 int ServerMain(const ServerArgs& args,
-               const fluent::postgres::ConnectionConfig& connection_config) {
+               const fluent::lineagedb::ConnectionConfig& connection_config) {
   zmq::context_t context(1);
   auto f =
-      fluent::fluent<PostgresClient>("chat_server", args.server_address,
-                                     &context, connection_config)
+      fluent::fluent<LineageDbClient>("chat_server", args.server_address,
+                                      &context, connection_config)
           .template channel<server_address_t, client_address_t, nickname_t>(
               "connect")
           .template channel<address_t, message_t>("mcast")

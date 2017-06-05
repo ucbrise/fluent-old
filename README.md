@@ -1,4 +1,4 @@
-# Fluent: An Asynchronous Dataflow Framework
+# Fluent
 Fluent = [Bloom][bloom_paper] + C++.
 
 ## Getting Started
@@ -16,30 +16,34 @@ install and build the rest of the dependencies for you!
 
 ```bash
 # Building
-./scripts/build_debug.sh   # build the code in debug mode
-./scripts/build_release.sh # build the code in release mode
+./scripts/build.sh Debug     # build the code in debug mode
+./scripts/build.sh Release   # build the code in release mode
+./scripts/build.sh Debug 4   # build the code in debug mode with 4 cores
+./scripts/build.sh Release 4 # build the code in release mode with 4 cores
 
 # Testing
-./build/ra/ra_all_test     # run a test
-(cd build && make test)    # run all the tests
+./build/ra/ra_cross_test          # run a test
+./build/common/common_macros_test # run another test
+(cd build && make test)           # run all the tests
 
 # Run a chat server listening on port 8000.
-./build/examples/chat/example_chat_server 'tcp://*:8000'
+./build/examples/chat/examples_chat_noop_server 'tcp://*:8000'
 
-# Run a chat client on port 8001 with nickname 'zardoz'
-./build/examples/chat/example_chat_client \
-    'tcp://0.0.0.0:8000' 'tcp://0.0.0.0:8001' 'zardoz'
+# Run a chat client on port 8001 with nickname "zardoz"
+./build/examples/chat/examples_chat_noop_client \
+    tcp://0.0.0.0:8000 tcp://0.0.0.0:8001 zardoz
 ```
 
 ## Tour
-| Directory                  | Description                             |
-| -------------------------- | --------------------------------------- |
-| [`common`](src/common)     | Helpful functions, macros, and whatnot. |
-| [`testing`](src/testing)   | Testing utilities.                      |
-| [`zmq_util`](src/zmq_util) | ZeroMQ utilities.                       |
-| [`ra`](src/ra)             | Relational algebra implementation.      |
-| [`fluent`](src/fluent)     | Main fluent code.                       |
-| [`examples`](src/examples) | Example fluent programs.                |
+| Directory                    | Description                             |
+| ---------------------------- | --------------------------------------- |
+| [`common`](src/common)       | Helpful functions, macros, and whatnot. |
+| [`testing`](src/testing)     | Testing utilities.                      |
+| [`zmq_util`](src/zmq_util)   | ZeroMQ utilities.                       |
+| [`ra`](src/ra)               | Relational algebra implementation.      |
+| [`lineagedb`](src/lineagedb) | Lineage database clients.               |
+| [`fluent`](src/fluent)       | Main fluent code.                       |
+| [`examples`](src/examples)   | Example fluent programs.                |
 
 [bloom_paper]: https://scholar.google.com/scholar?cluster=9165311711752272482
 [gpp_tutorial]: http://scholtyssek.org/blog/2015/06/11/install-gcc-with-c14-support-on-ubuntumint

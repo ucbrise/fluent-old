@@ -1,4 +1,4 @@
-#include "postgres/to_sql.h"
+#include "lineagedb/to_sql.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -9,7 +9,7 @@
 #include "gtest/gtest.h"
 
 namespace fluent {
-namespace postgres {
+namespace lineagedb {
 
 TEST(ToSql, ToSqlType) {
   EXPECT_EQ(ToSql<bool>().Type(), "boolean");
@@ -40,7 +40,7 @@ TEST(ToSql, ToSqlValue) {
   // TODO(mwhittaker): Test ToSql<std::chrono::time_point<Clock>>.
 }
 
-}  // namespace postgres
+}  // namespace lineagedb
 }  // namespace fluent
 
 int main(int argc, char** argv) {

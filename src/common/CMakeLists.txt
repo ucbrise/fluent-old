@@ -7,6 +7,7 @@ MACRO(CREATE_COMMON_TEST NAME)
     TARGET_LINK_LIBRARIES(common_${NAME} common glog)
 ENDMACRO(CREATE_COMMON_TEST)
 
+CREATE_COMMON_TEST(collection_util_test)
 CREATE_COMMON_TEST(hash_util_test)
 CREATE_COMMON_TEST(macros_test)
 CREATE_COMMON_TEST(string_util_test)

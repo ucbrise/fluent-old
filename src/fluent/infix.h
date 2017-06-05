@@ -1,9 +1,11 @@
 #ifndef FLUENT_INFIX_H_
 #define FLUENT_INFIX_H_
 
-#include <tuple>
-
+#include "fluent/channel.h"
+#include "fluent/rule.h"
 #include "fluent/rule_tags.h"
+#include "fluent/scratch.h"
+#include "fluent/stdout.h"
 #include "fluent/table.h"
 
 namespace fluent {
@@ -49,50 +51,50 @@ namespace infix {
 
 // Table <=
 template <typename... Ts, typename Rhs>
-std::tuple<Table<Ts...>*, MergeTag, typename std::decay<Rhs>::type> operator<=(
+Rule<Table<Ts...>*, MergeTag, typename std::decay<Rhs>::type> operator<=(
     Table<Ts...>& t, Rhs&& rhs) {
   return {&t, MergeTag(), std::forward<Rhs>(rhs)};
 }
 
 // Table +=
 template <typename... Ts, typename Rhs>
-std::tuple<Table<Ts...>*, DeferredMergeTag, typename std::decay<Rhs>::type>
+Rule<Table<Ts...>*, DeferredMergeTag, typename std::decay<Rhs>::type>
 operator+=(Table<Ts...>& t, Rhs&& rhs) {
   return {&t, DeferredMergeTag(), std::forward<Rhs>(rhs)};
 }
 
 // Table -=
 template <typename... Ts, typename Rhs>
-std::tuple<Table<Ts...>*, DeferredDeleteTag, typename std::decay<Rhs>::type>
+Rule<Table<Ts...>*, DeferredDeleteTag, typename std::decay<Rhs>::type>
 operator-=(Table<Ts...>& t, Rhs&& rhs) {
   return {&t, DeferredDeleteTag(), std::forward<Rhs>(rhs)};
 }
 
 // Channel <=
 template <typename... Ts, typename Rhs>
-std::tuple<Channel<Ts...>*, MergeTag, typename std::decay<Rhs>::type>
-operator<=(Channel<Ts...>& c, Rhs&& rhs) {
+Rule<Channel<Ts...>*, MergeTag, typename std::decay<Rhs>::type> operator<=(
+    Channel<Ts...>& c, Rhs&& rhs) {
   return {&c, MergeTag(), std::forward<Rhs>(rhs)};
 }
 
 // Scratch <=
 template <typename... Ts, typename Rhs>
-std::tuple<Scratch<Ts...>*, MergeTag, typename std::decay<Rhs>::type>
-operator<=(Scratch<Ts...>& s, Rhs&& rhs) {
+Rule<Scratch<Ts...>*, MergeTag, typename std::decay<Rhs>::type> operator<=(
+    Scratch<Ts...>& s, Rhs&& rhs) {
   return {&s, MergeTag(), std::forward<Rhs>(rhs)};
 }
 
 // Stdout <=
 template <typename... Ts, typename Rhs>
-std::tuple<Stdout*, MergeTag, typename std::decay<Rhs>::type> operator<=(
-    Stdout& o, Rhs&& rhs) {
+Rule<Stdout*, MergeTag, typename std::decay<Rhs>::type> operator<=(Stdout& o,
+                                                                   Rhs&& rhs) {
   return {&o, MergeTag(), std::forward<Rhs>(rhs)};
 }
 
 // Stdout +=
 template <typename Rhs>
-std::tuple<Stdout*, DeferredMergeTag, typename std::decay<Rhs>::type>
-operator+=(Stdout& o, Rhs&& rhs) {
+Rule<Stdout*, DeferredMergeTag, typename std::decay<Rhs>::type> operator+=(
+    Stdout& o, Rhs&& rhs) {
   return {&o, DeferredMergeTag(), std::forward<Rhs>(rhs)};
 }
 

@@ -1,13 +1,16 @@
 #ifndef RA_CROSS_H_
 #define RA_CROSS_H_
 
+#include <set>
 #include <type_traits>
 #include <utility>
 
 #include "fmt/format.h"
 #include "range/v3/all.hpp"
 
+#include "common/hash_util.h"
 #include "common/type_list.h"
+#include "ra/lineaged_tuple.h"
 
 namespace fluent {
 namespace ra {
@@ -21,8 +24,11 @@ class PhysicalCross {
   auto ToRange() {
     return ranges::view::for_each(left_.ToRange(), [this](const auto& left) {
       return ranges::yield_from(
-          right_.ToRange() | ranges::view::transform([left](const auto& right) {
-            return std::tuple_cat(left, right);
+          right_.ToRange() | ranges::view::transform([left](auto right) {
+            right.lineage.insert(left.lineage.begin(), left.lineage.end());
+            return make_lineaged_tuple(
+                std::move(right.lineage),
+                std::tuple_cat(left.tuple, std::move(right.tuple)));
           }));
     });
   }

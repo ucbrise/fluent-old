@@ -7,6 +7,9 @@
 #include "fmt/format.h"
 #include "range/v3/all.hpp"
 
+#include "common/hash_util.h"
+#include "ra/lineaged_tuple.h"
+
 namespace fluent {
 namespace ra {
 
@@ -15,7 +18,11 @@ class PhysicalFilter {
  public:
   PhysicalFilter(PhysicalChild child, F* f) : child_(std::move(child)), f_(f) {}
 
-  auto ToRange() { return child_.ToRange() | ranges::view::filter(*f_); }
+  auto ToRange() {
+    return child_.ToRange() | ranges::view::filter([this](const auto& lt) {
+             return (*f_)(lt.tuple);
+           });
+  }
 
  private:
   PhysicalChild child_;

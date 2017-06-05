@@ -1,123 +1,111 @@
 # Fluent
-TODO(mwhittaker): Copy some of the comments in `fluent_builder.h` and
-`fluent_executor.h` into here and explain how to use the fluent library.
+Fluent is a C++ reimplementation of [Bloom][bloom_lang].
 
-## Lineage
-Here's a brief overview of how distributed lineage is implemented in Fluent.
-We store all lineage information in PostgreSQL (for now). To explain what
-exactly is stored, it's best to look at an example:
+# Getting Started
+In this section, we'll walk through how to write a very simple fluent program.
+Here it is in full (we'll walk through it piece by piece momentarily):
 
 ```c++
 zmq::context_t context(1);
-postgres::ConnectionConfig config = GetConnectionConfig();
-postgres::PqxxClient client(config);
-
-auto f = fluent("my_program", "inproc://addr", &context, &client)
-  .table<int, char>("my_table")
-  .scratch<int>("my_scratch")
-  .channel<std::string, float>("my_channel")
-  .RegisterRules([](auto& t, auto& s, auto& c) {
-    using namespace fluent::infix;
-    return std::make_tuple(s <= c.Iterable(), t <= s.Iterable());
-  };
+ConnectionConfig conn;
+std::set<std::tuple<int, char, float>> ts = {{42, 'a', 9001.}};
+auto f = fluent<NoopClient>("name", "tcp://0.0.0.0:8000", &context, conn)
+  .table<int, char, float>("t1")
+  .table<float, int>("t2")
+  .scratch<int, int, float>("s")
+  .channel<std::string, float, char>("c")
+  .RegisterBootstrapRules([&](auto& t1, auto& t2, auto& s, auto& c) {
+    return std::make_tuple(t1 <= ra::make_iterable("ts", &ts));
+  })
+  .RegisterRules([](auto& t1, auto& t2, auto& s, auto& c) {
+    return std::make_tuple(t2 <= t1.iterable | ra::project<2, 0>());
+  });
+f.Run();
 ```
 
-This fluent program has three collections---
+First, we call the `fluent` function which starts building a `FluentExecutor`:
+the thing that actually executes a fluent program.
 
-- a table `my_table(int, char)`,
-- a scratch `my_scratch(int)`, and
-- a channel `my_channel(std::string, float)`.
-
----and two rules:
-
-- `s <= c.Iterable` and
-- `t <= s.Iterable()`
-
-Information about this program, its collections, and its rules are found in the
-`Nodes`, `Collections`, and `Rules` tables within the postgres database.
-
-- The `Nodes(id, name)` relation holds the name and id (the hash of the name)
-  for every fluent program.
-- The `Collections(node_id, collection_name)` relation holds the name of every
-  collection of every fluent program.
-- The `Rules(node_id, rule_number, rule)` relation holds every rule of every
-  fluent program.
-
-```
-> SELECT * FROM Nodes;
-+----+------------+
-| id | name       |
-|----+------------|
-| 42 | my_program |
-+----+------------+
-
-> SELECT * FROM Collections;
-+---------+-----------------+
-| node_id | collection_name |
-|---------+-----------------|
-| 42      | my_table        |
-| 42      | my_sratch       |
-| 42      | my_channel      |
-+---------+-----------------+
-
-> SELECT * FROM Rules;
-+---------+-------------+----------+
-| node_id | rule_number | rule     |
-|---------+-------------+----------|
-| 42      | 0           | Iterable |
-| 42      | 1           | Iterable |
-+---------+-------------+----------+
+```c++
+  zmq::context_t context(1);
+  ConnectionConfig conn;
+  auto f = fluent<NoopClient>("name", "tcp://0.0.0.0:8000", &context, conn)
 ```
 
-The postgres database also has a relation for every collection of every
-program. For a program `p` and collection `c`, the relation is named `p_c`. The
-schema of the relation is the same as the schema of `c` with three additional
-columns prepended: the hash of the tuple, the logical time at which the tuple
-was inserted, and the logical time at which the tuple was deleted.
+We provide the name of the program (i.e. `name`), the address on which the
+program should listen (i.e. `tcp://0.0.0.0:8000`), and some miscellaneous stuff
+that you can ignore for now. Next, we declare the collections our program will
+use:
 
-```
-> \d my_program_my_table
-+---------------+---------+-----------+
-| Column        | Type    | Modifiers |
-+---------------+---------+-----------+
-| hash          | bigint  | not null  |
-| time_inserted | integer | not null  |
-| time_deleted  | integer |           |
-| col_0         | integer | not null  |
-| col_1         | char(1) | not null  |
-+---------------+---------+-----------+
-
-> \d my_program_my_scratch
-+---------------+---------+-----------+
-| Column        | Type    | Modifiers |
-+---------------+---------+-----------+
-| hash          | bigint  | not null  |
-| time_inserted | integer | not null  |
-| time_deleted  | integer |           |
-| col_0         | integer | not null  |
-+---------------+---------+-----------+
+```c++
+  .table<int, char, float>("t1")
+  .table<float, int>("t2")
+  .scratch<int, int, float>("s")
+  .channel<std::string, float, char>("c")
 ```
 
-Additionally, for each program `p`, we generate a `p_lineage` table:
+This code declares that our fluent program will use
 
-```
-> \d my_program_lineage
-+---------------------+---------+-----------+
-| Column              | Type    | Modifiers |
-+---------------------+---------+-----------+
-| dep_node_id         | bigint  | not null  |
-| dep_collection_name | text    | not null  |
-| dep_tuple_hash      | bigint  | not null  |
-| rule number         | integer | not null  |
-| inserted            | boolean | not null  |
-| collection_name     | text    | not null  |
-| tuple_hash          | bigint  | not null  |
-| time                | integer | not null  |
-+---------------------+---------+-----------+
+1. a 3-column table named `t1` with types `int`, `char`, and `float`;
+2. a 2-column table named `t2` with types `float` and `int`;
+3. a 3-column scratch named `s` with types `int`, `int`, and `float`; and
+4. a 3-column channel named `c` with types `string`, `float`, and `char`.
+
+Next, we register a single bootstrap rule.
+
+```c++
+  .RegisterBootstrapRules([&](auto& t1, auto& t2, auto& s, auto& c) {
+    return std::make_tuple(t1 <= ra::make_iterable("ts", &ts));
+  })
 ```
 
-where a tuple `(dn, dc, dt, r, i, c, t, time)` represents that the tuple `dt`
-in collection `dc` on node `dn` was used by rule `r` to insert (if `i` is true)
-or delete (if `i` is false) the tuple `t` into collection `c` at time `time`.
+This rule says to merge the contents of `ts` into the `t1` table. When we run
+the fluent program, this rule will be executed once at the beginning of the
+program.
 
-TODO(mwhittaker): Explain how logical time works.
+Then, we register a regular rule.
+
+```c++
+  .RegisterRules([](auto& t1, auto& t2, auto& s, auto& c) {
+    return std::make_tuple(t2 <= t1.Iterable() | ra::project<2, 0>());
+  });
+```
+
+This rule says to project out the second and zeroth columns of `t1` and merge
+them into the `t2` relation. This rule will be executed every tick.
+
+Finally, we run the program!
+
+```c++
+f.Run();
+```
+
+`Run` will block and repeatedly execute our registered rules and receive
+messages from other fluent nodes.
+
+## Tour
+There are six different collections:
+
+- [`Channel`](channel.h)
+- [`Periodic`](periodic.h)
+- [`Scratch`](scratch.h)
+- [`Stdin`](stdin.h)
+- [`Stdout`](stdout.h)
+- [`Table`](table.h)
+
+lots of miscellaneous files for networking, serialization, etc.:
+
+- [`infix.h`](infix.h)
+- [`network_state.h`](network_state.h)
+- [`rule.h`](rule.h)
+- [`rule_tags.h`](rule_tags.h)
+- [`serialization.h`](serialization.h)
+- [`socket_cache.cc`](socket_cache.cc)
+- [`socket_cache.h`](socket_cache.h)
+
+and two main classes for building and executing fluent programs:
+
+- [`FluentBuilder`](fluent_builder.h)
+- [`FluentExecutor`](fluent_executor.h)
+
+[bloom_lang]: http://bloom-lang.net

@@ -7,8 +7,11 @@
 #include "fmt/format.h"
 #include "range/v3/all.hpp"
 
+#include "common/hash_util.h"
 #include "common/string_util.h"
+#include "common/tuple_util.h"
 #include "common/type_list.h"
+#include "ra/lineaged_tuple.h"
 
 namespace fluent {
 namespace ra {
@@ -19,8 +22,9 @@ class PhysicalProject {
   PhysicalProject(PhysicalChild child) : child_(std::move(child)) {}
 
   auto ToRange() {
-    return child_.ToRange() | ranges::view::transform([](const auto& t) {
-             return std::tuple_cat(std::make_tuple(std::get<Is>(t))...);
+    return child_.ToRange() | ranges::view::transform([](auto lt) {
+             return make_lineaged_tuple(std::move(lt.lineage),
+                                        TupleProject<Is...>(lt.tuple));
            });
   }
 

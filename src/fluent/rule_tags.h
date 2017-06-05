@@ -1,6 +1,8 @@
 #ifndef FLUENT_RULE_TAGS_H_
 #define FLUENT_RULE_TAGS_H_
 
+#include <string>
+
 namespace fluent {
 
 // Bloom [1] had four types of rules:
@@ -51,9 +53,15 @@ namespace fluent {
 //
 // [1]: http://db.cs.berkeley.edu/papers/cidr11-bloom.pdf
 // [2]: http://en.cppreference.com/w/cpp/iterator/iterator_tags
-struct MergeTag {};
-struct DeferredMergeTag {};
-struct DeferredDeleteTag {};
+struct MergeTag {
+  std::string ToDebugString() const { return "<="; }
+};
+struct DeferredMergeTag {
+  std::string ToDebugString() const { return "+="; }
+};
+struct DeferredDeleteTag {
+  std::string ToDebugString() const { return "-="; }
+};
 
 }  // namespace fluent
 

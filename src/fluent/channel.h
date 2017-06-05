@@ -20,8 +20,8 @@
 #include "zmq_util/zmq_util.h"
 
 namespace fluent {
-
 namespace detail {
+
 // See `GetParser`.
 template <typename... Ts, std::size_t... Is>
 std::tuple<Ts...> parse_tuple_impl(const std::vector<std::string>& columns,
@@ -35,7 +35,17 @@ std::tuple<Ts...> parse_tuple(const std::vector<std::string>& columns) {
   using Indices = std::make_index_sequence<sizeof...(Ts)>;
   return parse_tuple_impl<Ts...>(columns, Indices());
 }
+
 }  // namespace detail
+
+// Fluent nodes send tuples to one another. A parser is responsible for parsing
+// serialized tuples and processing them. More specifically, a parser is given
+// the node id of the sending node, the time at which the tuple was sent, the
+// channel to which the tuple was sent, the stringified columns of the tuple,
+// and the local time.
+using Parser = std::function<void(
+    std::size_t dep_node_id, int dep_time, const std::string& channel_name,
+    const std::vector<std::string>& columns, int time)>;
 
 // A channel is a pseudo-relation. The first column of the channel is a string
 // specifying the ZeroMQ to which the tuple should be sent. For example, if
@@ -48,32 +58,36 @@ class Channel {
                 "ZeroMQ address (e.g. tcp://localhost:9999).");
 
  public:
-  Channel(std::string name, SocketCache* socket_cache)
-      : name_(std::move(name)), socket_cache_(socket_cache) {}
+  Channel(std::size_t id, std::string name, SocketCache* socket_cache)
+      : id_(id), name_(std::move(name)), socket_cache_(socket_cache) {}
 
   const std::string& Name() const { return name_; }
 
   const std::set<std::tuple<T, Ts...>>& Get() const { return ts_; }
 
   ra::Iterable<std::set<std::tuple<T, Ts...>>> Iterable() const {
-    return ra::make_iterable(&ts_);
+    return ra::make_iterable(name_, &ts_);
   }
 
   // Merge assumes a `std::string ToString(const U&)` function exists for `U`
   // in `T, Ts...`.
-  template <typename RA>
-  void Merge(const RA& ra) {
-    static_assert(!IsSet<typename std::decay<RA>::type>::value, "");
-    static_assert(!IsVector<typename std::decay<RA>::type>::value, "");
-    auto physical = ra.ToPhysical();
-    auto rng = physical.ToRange();
-    MergeImpl(ranges::begin(rng), ranges::end(rng),
-              std::make_index_sequence<sizeof...(Ts) + 1>());
-  }
+  void Merge(const std::set<std::tuple<T, Ts...>>& ts, int time) {
+    for (const std::tuple<T, Ts...>& t : ts) {
+      VLOG(1) << "Channel " << this->Name() << " sending tuple to "
+              << std::get<0>(t) << ".";
 
-  void Merge(const std::set<std::tuple<T, Ts...>>& ts) {
-    MergeImpl(std::begin(ts), std::end(ts),
-              std::make_index_sequence<sizeof...(Ts) + 1>());
+      std::vector<zmq::message_t> msgs;
+      msgs.push_back(zmq_util::string_to_message(ToString(id_)));
+      msgs.push_back(zmq_util::string_to_message(this->Name()));
+      msgs.push_back(zmq_util::string_to_message(ToString(time)));
+      auto strings = TupleMap(t, [](const auto& x) { return ToString(x); });
+      TupleIter(strings, [&msgs](const std::string& s) {
+        msgs.push_back(zmq_util::string_to_message(s));
+      });
+
+      zmq::socket_t& socket = socket_cache_->At(std::get<0>(t));
+      zmq_util::send_msgs(std::move(msgs), &socket);
+    }
   }
 
   std::set<std::tuple<T, Ts...>> Tick() {
@@ -82,41 +96,25 @@ class Channel {
     return ts;
   }
 
-  // `Collection<T1, ..., Tn>.GetParser()(columns)` parses a vector of `n`
-  // strings into a tuple of type `std::tuple<T1, ..., Tn>` and inserts it into
-  // the collection. The ith element of the tuple is parsed using a global `Ti
+  // `GetParser(f)` returns a parser (see Parser above) which parses a tuple
+  // destined for this channel and then invokes `f`.
+  //
+  // The ith element of the tuple is parsed using a global `Ti
   // FromString<Ti>(const std::string&)` function which is assumed to exists
   // (see `serialization.h` for more information).
   template <typename F>
-  std::function<void(std::size_t, const std::vector<std::string>& columns)>
-  GetParser(F f) {
-    return
-        [this, f](std::size_t time, const std::vector<std::string>& columns) {
-          const auto t = detail::parse_tuple<T, Ts...>(columns);
-          f(time, t);
-          ts_.insert(t);
-        };
+  Parser GetParser(F f) {
+    return [this, f](std::size_t dep_node_id, int dep_time,
+                     const std::string& channel_name,
+                     const std::vector<std::string>& columns, int time) {
+      const auto t = detail::parse_tuple<T, Ts...>(columns);
+      f(dep_node_id, dep_time, channel_name, t, time);
+      ts_.insert(t);
+    };
   }
 
  private:
-  template <typename Iterator, typename Sentinel, std::size_t... Is>
-  void MergeImpl(Iterator iter, Sentinel end, std::index_sequence<Is...>) {
-    for (; iter != end; ++iter) {
-      VLOG(1) << "Channel " << this->Name() << " sending tuple to "
-              << std::get<0>(*iter) << ".";
-
-      std::vector<std::string> strings = {ToString(std::get<Is>(*iter))...};
-      std::vector<zmq::message_t> msgs;
-      msgs.push_back(zmq_util::string_to_message(this->Name()));
-      for (const std::string& s : strings) {
-        msgs.push_back(zmq_util::string_to_message(s));
-      }
-
-      zmq::socket_t& socket = socket_cache_->At(std::get<0>(*iter));
-      zmq_util::send_msgs(std::move(msgs), &socket);
-    }
-  }
-
+  const std::size_t id_;
   const std::string name_;
   std::set<std::tuple<T, Ts...>> ts_;
 

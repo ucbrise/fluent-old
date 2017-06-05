@@ -3,8 +3,8 @@
 #include "glog/logging.h"
 
 #include "examples/chat/client.h"
-#include "postgres/connection_config.h"
-#include "postgres/pqxx_client.h"
+#include "lineagedb/connection_config.h"
+#include "lineagedb/pqxx_client.h"
 
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
@@ -21,7 +21,7 @@ int main(int argc, char* argv[]) {
   }
 
   ClientArgs args{argv[4], argv[5], argv[6]};
-  fluent::postgres::ConnectionConfig config{"localhost", 5432, argv[1], argv[2],
-                                            argv[3]};
-  return ClientMain<fluent::postgres::PqxxClient>(args, config);
+  fluent::lineagedb::ConnectionConfig config{"localhost", 5432, argv[1],
+                                             argv[2], argv[3]};
+  return ClientMain<fluent::lineagedb::PqxxClient>(args, config);
 }

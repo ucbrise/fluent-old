@@ -7,7 +7,9 @@
 #include "fmt/format.h"
 #include "range/v3/all.hpp"
 
+#include "common/hash_util.h"
 #include "common/type_list.h"
+#include "ra/lineaged_tuple.h"
 
 namespace fluent {
 namespace ra {
@@ -17,7 +19,13 @@ class PhysicalMap {
  public:
   PhysicalMap(PhysicalChild child, F* f) : child_(child), f_(f) {}
 
-  auto ToRange() { return child_.ToRange() | ranges::view::transform(*f_); }
+  auto ToRange() {
+    auto r = child_.ToRange() | ranges::view::transform([this](auto lt) {
+               return make_lineaged_tuple(std::move(lt.lineage),
+                                          (*f_)(std::move(lt.tuple)));
+             });
+    return r;
+  }
 
  private:
   PhysicalChild child_;

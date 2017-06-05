@@ -1,10 +1,11 @@
 #include "ra/project.h"
 
+#include <set>
 #include <tuple>
 #include <type_traits>
 #include <utility>
-#include <vector>
 
+#include "glog/logging.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "range/v3/all.hpp"
@@ -16,63 +17,98 @@
 namespace fluent {
 
 TEST(Project, SimpleProject) {
-  std::vector<std::tuple<int, char>> xs = {{1, 'a'}, {2, 'b'}, {3, 'c'}};
+  Hash<std::tuple<int, char>> hash;
+  std::tuple<int, char> t0 = {1, 'a'};
+  std::tuple<int, char> t1 = {2, 'b'};
+  std::tuple<int, char> t2 = {3, 'c'};
+  std::set<std::tuple<int, char>> xs = {t0, t1, t2};
 
   {
-    auto project = ra::make_iterable(&xs) | ra::project<0>();
+    auto project = ra::make_iterable("xs", &xs) | ra::project<0>();
+    std::set<ra::LineagedTuple<int>> expected = {
+        ra::make_lineaged_tuple({{"xs", hash(t0)}}, std::make_tuple(1)),
+        ra::make_lineaged_tuple({{"xs", hash(t1)}}, std::make_tuple(2)),
+        ra::make_lineaged_tuple({{"xs", hash(t2)}}, std::make_tuple(3)),
+    };
+
     static_assert(
         std::is_same<decltype(project)::column_types, TypeList<int>>::value,
         "");
-    std::vector<std::tuple<int>> expected = {{1}, {2}, {3}};
-    ExpectRngsEqual(project.ToPhysical().ToRange(),
-                    ranges::view::all(expected));
-    EXPECT_EQ(project.ToDebugString(), "Project<0>(Iterable)");
+    ExpectRngsUnorderedEqual(project.ToPhysical().ToRange(), expected);
+    EXPECT_EQ(project.ToDebugString(), "Project<0>(xs)");
   }
 
   {
-    auto project = ra::make_iterable(&xs) | ra::project<1>();
-    std::vector<std::tuple<int>> expected = {{'a'}, {'b'}, {'c'}};
+    auto project = ra::make_iterable("xs", &xs) | ra::project<1>();
+    std::set<ra::LineagedTuple<char>> expected = {
+        ra::make_lineaged_tuple({{"xs", hash(t0)}}, std::make_tuple('a')),
+        ra::make_lineaged_tuple({{"xs", hash(t1)}}, std::make_tuple('b')),
+        ra::make_lineaged_tuple({{"xs", hash(t2)}}, std::make_tuple('c')),
+    };
+
     static_assert(
         std::is_same<decltype(project)::column_types, TypeList<char>>::value,
         "");
-    ExpectRngsEqual(project.ToPhysical().ToRange(),
-                    ranges::view::all(expected));
+    ExpectRngsUnorderedEqual(project.ToPhysical().ToRange(), expected);
+    EXPECT_EQ(project.ToDebugString(), "Project<1>(xs)");
   }
 
   {
-    auto project = ra::make_iterable(&xs) | ra::project<1, 0>();
+    auto project = ra::make_iterable("xs", &xs) | ra::project<1, 0>();
+    std::set<ra::LineagedTuple<char, int>> expected = {
+        ra::make_lineaged_tuple({{"xs", hash(t0)}}, std::make_tuple('a', 1)),
+        ra::make_lineaged_tuple({{"xs", hash(t1)}}, std::make_tuple('b', 2)),
+        ra::make_lineaged_tuple({{"xs", hash(t2)}}, std::make_tuple('c', 3)),
+    };
+
     static_assert(std::is_same<decltype(project)::column_types,
                                TypeList<char, int>>::value,
                   "");
-    std::vector<std::tuple<char, int>> expected = {
-        {'a', 1}, {'b', 2}, {'c', 3}};
-    ExpectRngsEqual(project.ToPhysical().ToRange(),
-                    ranges::view::all(expected));
+    ExpectRngsUnorderedEqual(project.ToPhysical().ToRange(), expected);
+    EXPECT_EQ(project.ToDebugString(), "Project<1, 0>(xs)");
   }
 
   {
-    auto project = ra::make_iterable(&xs) | ra::project<0, 1>();
+    auto project = ra::make_iterable("xs", &xs) | ra::project<0, 1>();
+    std::set<ra::LineagedTuple<int, char>> expected = {
+        ra::make_lineaged_tuple({{"xs", hash(t0)}}, t0),
+        ra::make_lineaged_tuple({{"xs", hash(t1)}}, t1),
+        ra::make_lineaged_tuple({{"xs", hash(t2)}}, t2),
+    };
+
     static_assert(std::is_same<decltype(project)::column_types,
                                TypeList<int, char>>::value,
                   "");
-    ExpectRngsEqual(project.ToPhysical().ToRange(), ranges::view::all(xs));
+    ExpectRngsUnorderedEqual(project.ToPhysical().ToRange(), expected);
+    EXPECT_EQ(project.ToDebugString(), "Project<0, 1>(xs)");
   }
 }
 
 TEST(Project, RepeatedProject) {
-  std::vector<std::tuple<int, char>> xs = {{1, 'a'}, {2, 'b'}, {3, 'c'}};
-  auto project = ra::make_iterable(&xs) | ra::project<1, 0, 1>();
+  Hash<std::tuple<int, char>> hash;
+  std::tuple<int, char> t0 = {1, 'a'};
+  std::tuple<int, char> t1 = {2, 'b'};
+  std::tuple<int, char> t2 = {3, 'c'};
+  std::set<std::tuple<int, char>> xs = {t0, t1, t2};
+  auto project = ra::make_iterable("xs", &xs) | ra::project<1, 0, 1>();
+
+  std::set<ra::LineagedTuple<char, int, char>> expected = {
+      ra::make_lineaged_tuple({{"xs", hash(t0)}}, std::make_tuple('a', 1, 'a')),
+      ra::make_lineaged_tuple({{"xs", hash(t1)}}, std::make_tuple('b', 2, 'b')),
+      ra::make_lineaged_tuple({{"xs", hash(t2)}}, std::make_tuple('c', 3, 'c')),
+  };
+
   static_assert(std::is_same<decltype(project)::column_types,
                              TypeList<char, int, char>>::value,
                 "");
-  std::vector<std::tuple<char, int, char>> expected = {
-      {'a', 1, 'a'}, {'b', 2, 'b'}, {'c', 3, 'c'}};
-  ExpectRngsEqual(project.ToPhysical().ToRange(), ranges::view::all(expected));
+  ExpectRngsUnorderedEqual(project.ToPhysical().ToRange(), expected);
+  EXPECT_EQ(project.ToDebugString(), "Project<1, 0, 1>(xs)");
 }
 
 }  // namespace fluent
 
 int main(int argc, char** argv) {
+  google::InitGoogleLogging(argv[0]);
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

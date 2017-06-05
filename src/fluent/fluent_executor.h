@@ -23,13 +23,16 @@
 #include "fluent/network_state.h"
 #include "fluent/periodic.h"
 #include "fluent/periodic.h"
+#include "fluent/rule.h"
 #include "fluent/rule_tags.h"
 #include "fluent/scratch.h"
 #include "fluent/socket_cache.h"
 #include "fluent/stdin.h"
 #include "fluent/stdout.h"
 #include "fluent/table.h"
-#include "postgres/connection_config.h"
+#include "lineagedb/connection_config.h"
+#include "ra/lineage_tuple.h"
+#include "ra/lineaged_tuple.h"
 
 namespace fluent {
 namespace detail {
@@ -89,58 +92,14 @@ struct UnwrapUniquePtr<std::unique_ptr<T>> {
 // See below.
 template <typename Collections, typename BootstrapRules, typename Rules,
           template <template <typename> class, template <typename> class>
-          class PostgresClient,
+          class LineageDbClient,
           template <typename> class Hash, template <typename> class ToSql>
 class FluentExecutor;
 
 // # Overview
 // A FluentExecutor runs a Fluent program. You build up a Fluent program using
-// a FluentBuilder and then use it to execute the program. It is best explained
-// through an example.
-//
-//   // This FluentExecutor will have four collections:
-//   //   - a 3-column table named "t1" with types [int, char, float]
-//   //   - a 2-column table named "t2" with types [float, int]
-//   //   - a 3-column scratch named "s" with types [int, int, float]
-//   //   - a 3-column channel named "c" with types [std::string, float, char]
-//   // The FluentExecutor will also have two rules:
-//   //   - The first is a bootstrap rule (registered with
-//   //     RegisterBootstrapRules) that will move the contents of `tuples`
-//   //     into `t1`. This rule will be executed exactly once at the beginning
-//   //     of the fluent program.
-//   //   - The second rule projects out the third and first columns of t1 and
-//   //     puts them into t2. It will be run every tick of the program.
-//   // The FluentExecutor will also record the history of its state and the
-//   // lineage of every tuple it derives using a PqxxClient.
-//   zmq::context_t context(1);
-//   ConnectionConfig config;
-//   auto f = fluent<PqxxClient>("name", "address", &context, config)
-//     .table<int, char, float>("t1")
-//     .table<float, int>("t2")
-//     .scratch<int, int, float>("s")
-//     .channel<std::string, float, char>("c")
-//     .RegisterBootstrapRules([&](auto& t1, auto& t2, auto& s, auto& c) {
-//       return std::make_tuple(t1 <= ra::make_iterable(&tuples));
-//     });
-//     .RegisterRules([](auto& t1, auto& t2, auto& s, auto& c) {
-//       return std::make_tuple(t2 <= t1.iterable | ra::project<2, 0>());
-//     });
-//
-//   // Calling `f.BootstrapTick()` will run the bootstrap rules. Every rule
-//   // registered with `RegisterBootstrapRules` above will be called.
-//   // Afterwards, every collection is "ticked". For example, scratches and
-//   // channels are cleared.
-//   f.BootstrapTick();
-//
-//   // Calling `f.Tick()` will run the rules in exactly the same way
-//   // `f.BootstrapTick()` ran the bootstrap rules.
-//   f.Tick();
-//
-//   // Calling `f.Run()` will run a Fluent program. The program will call
-//   // `f.BootstrapTick()` and then repeatedly call `f.Tick()` and then wait
-//   // for messages to arrive from other Fluent nodes, populating channels
-//   // appropriately.
-//   f.Run();
+// a FluentBuilder and then use it to execute the program. See the README for
+// an example.
 //
 // # Implementation
 // - Every C in Cs is one of the following forms:
@@ -156,20 +115,19 @@ class FluentExecutor;
 // - Bootstrap{Lhss,RuleTags,Rhss} work exactly like their non-Bootstrap
 //   counterparts.
 // - A FluentExecutor steals most of its guts from a FluentBuilder.
-// - A FluentExecutor uses a PostgresClient<Hash, Sql> object to record history
+// - A FluentExecutor uses a LineageDbClient<Hash, Sql> object to record history
 //   and lineage. If you don't want to record history or lineage, then use a
 //   NoopClient. Otherwise use a PqxxClient.
 template <typename... Cs, typename... BootstrapLhss,
           typename... BootstrapRuleTags, typename... BootstrapRhss,
           typename... Lhss, typename... RuleTags, typename... Rhss,
           template <template <typename> class, template <typename> class>
-          class PostgresClient,
+          class LineageDbClient,
           template <typename> class Hash, template <typename> class ToSql>
 class FluentExecutor<
     TypeList<Cs...>,
-    std::tuple<std::tuple<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>,
-    std::tuple<std::tuple<Lhss, RuleTags, Rhss>...>, PostgresClient, Hash,
-    ToSql> {
+    std::tuple<Rule<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>,
+    std::tuple<Rule<Lhss, RuleTags, Rhss>...>, LineageDbClient, Hash, ToSql> {
   static_assert(sizeof...(BootstrapLhss) == sizeof...(BootstrapRuleTags) &&
                     sizeof...(BootstrapRuleTags) == sizeof...(BootstrapRhss),
                 "The ith entry of BootstrapLhss corresponds to the left-hand "
@@ -189,28 +147,27 @@ class FluentExecutor<
                 "RuleTags, and Rhss must be equal");
 
  public:
-  using BootstrapRules = std::tuple<
-      std::tuple<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>;
-  using Rules = std::tuple<std::tuple<Lhss, RuleTags, Rhss>...>;
-  using Parser =
-      std::function<void(std::size_t, const std::vector<std::string>& columns)>;
+  using BootstrapRules =
+      std::tuple<Rule<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>;
+  using Rules = std::tuple<Rule<Lhss, RuleTags, Rhss>...>;
 
-  FluentExecutor(std::string name,
+  FluentExecutor(std::string name, std::size_t id,
                  std::tuple<std::unique_ptr<Cs>...> collections,
                  BootstrapRules bootstrap_rules,
                  std::map<std::string, Parser> parsers,
                  std::unique_ptr<NetworkState> network_state, Stdin* stdin,
                  std::vector<Periodic*> periodics,
-                 std::unique_ptr<PostgresClient<Hash, ToSql>> postgres_client,
+                 std::unique_ptr<LineageDbClient<Hash, ToSql>> lineagedb_client,
                  Rules rules)
       : name_(std::move(name)),
+        id_(id),
         collections_(std::move(collections)),
         bootstrap_rules_(std::move(bootstrap_rules)),
         parsers_(std::move(parsers)),
         network_state_(std::move(network_state)),
         stdin_(stdin),
         periodics_(periodics),
-        postgres_client_(std::move(postgres_client)),
+        lineagedb_client_(std::move(lineagedb_client)),
         rules_(rules) {
     // Initialize periodic timeouts. See the comment above `PeriodicTimeout`
     // below for more information.
@@ -219,7 +176,7 @@ class FluentExecutor<
       timeout_queue_.push(PeriodicTimeout{now + p->Period(), p});
     }
 
-    InitPostgres();
+    InitLineageDbClient();
   }
 
   // Get<I>() returns a const reference to the Ith collection.
@@ -228,17 +185,28 @@ class FluentExecutor<
     return *std::get<I>(collections_);
   }
 
+  // DO_NOT_SUMIT(mwhittaker): Document.
+  const LineageDbClient<Hash, ToSql>& GetLineageDbClient() {
+    return *lineagedb_client_.get();
+  }
+
   // Sequentially execute each registered bootstrap query and then invoke the
   // `Tick` method of every collection.
   void BootstrapTick() {
-    TupleIter(bootstrap_rules_, [this](auto& rule) { ExecuteRule(&rule); });
+    TupleIteri(bootstrap_rules_, [this](std::size_t rule_number, auto& rule) {
+      ExecuteRule(rule_number, &rule);
+    });
+    time_++;
     TupleIter(collections_, [this](auto& c) { TickCollection(c.get()); });
   }
 
   // Sequentially execute each registered query and then invoke the `Tick`
   // method of every collection.
   void Tick() {
-    TupleIter(rules_, [this](auto& rule) { ExecuteRule(&rule); });
+    TupleIteri(rules_, [this](std::size_t rule_number, auto& rule) {
+      ExecuteRule(rule_number, &rule);
+    });
+    time_++;
     TupleIter(collections_, [this](auto& c) { TickCollection(c.get()); });
   }
 
@@ -258,16 +226,29 @@ class FluentExecutor<
 
     // Read from the network.
     if (pollitems[0].revents & ZMQ_POLLIN) {
+      // msgs[0] = dep node id
+      // msgs[1] = dep collection name
+      // msgs[2] = dep time
+      // msgs[3] = tuple element 0
+      // msgs[4] = tuple element 1
+      // ...
       std::vector<zmq::message_t> msgs =
           zmq_util::recv_msgs(&network_state_->socket);
+
       std::vector<std::string> strings;
-      for (std::size_t i = 1; i < msgs.size(); ++i) {
+      for (std::size_t i = 3; i < msgs.size(); ++i) {
         strings.push_back(zmq_util::message_to_string(msgs[i]));
       }
 
-      const std::string channel_name = zmq_util::message_to_string(msgs[0]);
+      const std::size_t dep_node_id =
+          FromString<std::size_t>(zmq_util::message_to_string(msgs[0]));
+      const std::string channel_name = zmq_util::message_to_string(msgs[1]);
+      const int dep_time =
+          FromString<int>(zmq_util::message_to_string(msgs[2]));
+
       if (parsers_.find(channel_name) != std::end(parsers_)) {
-        parsers_[channel_name](time_, strings);
+        parsers_[channel_name](dep_node_id, dep_time, channel_name, strings,
+                               time_);
       } else {
         LOG(WARNING) << "A message was received for a channel named "
                      << channel_name
@@ -277,7 +258,7 @@ class FluentExecutor<
 
     // Read from stdin.
     if (stdin_ != nullptr && pollitems[1].revents & ZMQ_POLLIN) {
-      postgres_client_->InsertTuple(stdin_->Name(), time_, stdin_->GetLine());
+      lineagedb_client_->InsertTuple(stdin_->Name(), time_, stdin_->GetLine());
     }
 
     // Trigger periodics.
@@ -304,10 +285,10 @@ class FluentExecutor<
   }
 
  private:
-  // Initialize a node with the postgres database.
-  void InitPostgres() {
+  // Initialize a node with the lineagedb database.
+  void InitLineageDbClient() {
     // Nodes.
-    postgres_client_->Init(name_);
+    lineagedb_client_->Init();
 
     // Collections.
     TupleIter(collections_, [this](const auto& collection) {
@@ -319,23 +300,23 @@ class FluentExecutor<
 
     // Rules.
     TupleIteri(rules_, [this](std::size_t i, const auto& rule) {
-      postgres_client_->AddRule(i, rule);
+      lineagedb_client_->AddRule(i, rule.ToDebugString());
     });
   }
 
-  // Register a collection with the postgres database.
+  // Register a collection with the lineagedb database.
   template <typename Collection, typename... Ts>
   void AddCollection(const Collection& c, TypeList<Ts...>) {
-    postgres_client_->template AddCollection<Ts...>(c->Name());
+    lineagedb_client_->template AddCollection<Ts...>(c->Name());
   }
 
-  // Tick a collection and insert the deleted tuples into the postgres
+  // Tick a collection and insert the deleted tuples into the lineagedb
   // database.
   template <typename Collection>
   void TickCollection(Collection* c) {
     auto deleted = c->Tick();
     for (const auto& t : deleted) {
-      postgres_client_->DeleteTuple(c->Name(), time_, t);
+      lineagedb_client_->DeleteTuple(c->Name(), time_, t);
     }
   }
 
@@ -369,59 +350,73 @@ class FluentExecutor<
     while (timeout_queue_.size() != 0 && timeout_queue_.top().timeout <= now) {
       PeriodicTimeout timeout = timeout_queue_.top();
       timeout_queue_.pop();
-      postgres_client_->InsertTuple(timeout.periodic->Name(), time_,
-                                    timeout.periodic->Tock());
+      lineagedb_client_->InsertTuple(timeout.periodic->Name(), time_,
+                                     timeout.periodic->Tock());
       timeout.timeout = now + timeout.periodic->Period();
       timeout_queue_.push(timeout);
     }
   }
 
   // TODO(mwhittaker): Document.
-  template <typename Lhs, typename Rhs>
-  void ExecuteRule(Lhs* collection, MergeTag, const Rhs& ra) {
-    using tuple_type =
-        typename TypeListToTuple<typename Rhs::column_types>::type;
-    std::set<tuple_type> s;
-    ra::StreamRaInto(ra, &s);
+  template <typename Lhs, typename Rhs, typename UpdateCollection>
+  void ExecuteRule(int rule_number, Lhs* collection, const Rhs& ra,
+                   bool inserted, UpdateCollection update_collection) {
+    using column_types = typename Rhs::column_types;
+    using tuple_type = typename TypeListToTuple<column_types>::type;
+    Hash<tuple_type> hash;
 
-    for (const auto& t : s) {
-      postgres_client_->InsertTuple(collection->Name(), time_, t);
-    }
-    collection->Merge(s);
+    ranges::for_each(ra.ToPhysical().ToRange(), [&](const auto& lt) {
+      std::size_t tuple_hash = hash(lt.tuple);
+      for (const ra::LineageTuple& l : lt.lineage) {
+        lineagedb_client_->AddDerivedLineage(l.collection, l.hash, rule_number,
+                                             inserted, collection->Name(),
+                                             tuple_hash, time_);
+      }
+
+      if (inserted) {
+        lineagedb_client_->InsertTuple(collection->Name(), time_, lt.tuple);
+      } else {
+        lineagedb_client_->DeleteTuple(collection->Name(), time_, lt.tuple);
+      }
+
+      update_collection(*collection, std::set<tuple_type>{lt.tuple});
+    });
+  }
+
+  template <typename... Ts, typename Rhs>
+  void ExecuteRule(int rule_number, Channel<Ts...>* collection, MergeTag,
+                   const Rhs& ra) {
+    ExecuteRule(
+        rule_number, collection, ra, true,
+        [this](Channel<Ts...>& c, const std::set<std::tuple<Ts...>>& ts) {
+          c.Merge(ts, time_);
+        });
   }
 
   template <typename Lhs, typename Rhs>
-  void ExecuteRule(Lhs* collection, DeferredMergeTag, const Rhs& ra) {
-    // TODO(mwhittaker): Remove duplication.
-    using tuple_type =
-        typename TypeListToTuple<typename Rhs::column_types>::type;
-    std::set<tuple_type> s;
-    ra::StreamRaInto(ra, &s);
-
-    for (const auto& t : s) {
-      postgres_client_->InsertTuple(collection->Name(), time_, t);
-    }
-    collection->DeferredMerge(s);
+  void ExecuteRule(int rule_number, Lhs* collection, MergeTag, const Rhs& ra) {
+    ExecuteRule(rule_number, collection, ra, true, std::mem_fn(&Lhs::Merge));
   }
 
   template <typename Lhs, typename Rhs>
-  void ExecuteRule(Lhs* collection, DeferredDeleteTag, const Rhs& ra) {
-    using tuple_type =
-        typename TypeListToTuple<typename Rhs::column_types>::type;
-    std::set<tuple_type> s;
-    ra::StreamRaInto(ra, &s);
+  void ExecuteRule(int rule_number, Lhs* collection, DeferredMergeTag,
+                   const Rhs& ra) {
+    ExecuteRule(rule_number, collection, ra, true,
+                std::mem_fn(&Lhs::DeferredMerge));
+  }
 
-    for (const auto& t : s) {
-      postgres_client_->DeleteTuple(collection->Name(), time_, t);
-    }
-    collection->DeferredDelete(s);
+  template <typename Lhs, typename Rhs>
+  void ExecuteRule(int rule_number, Lhs* collection, DeferredDeleteTag,
+                   const Rhs& ra) {
+    ExecuteRule(rule_number, collection, ra, false,
+                std::mem_fn(&Lhs::DeferredDelete));
   }
 
   template <typename Lhs, typename RuleTag, typename Rhs>
-  void ExecuteRule(std::tuple<Lhs, RuleTag, Rhs>* rule) {
+  void ExecuteRule(std::size_t rule_number, Rule<Lhs, RuleTag, Rhs>* rule) {
     time_++;
-    ExecuteRule(CHECK_NOTNULL(std::get<0>(*rule)), std::get<1>(*rule),
-                std::get<2>(*rule));
+    ExecuteRule(static_cast<int>(rule_number), CHECK_NOTNULL(rule->collection),
+                rule->rule_tag, rule->ra);
   }
 
   // The logical time of the fluent program. The logical time begins at 0 and
@@ -430,14 +425,15 @@ class FluentExecutor<
   int time_ = 0;
 
   // See `FluentBuilder`.
-  std::string name_;
+  const std::string name_;
+  const std::size_t id_;
   std::tuple<std::unique_ptr<Cs>...> collections_;
   BootstrapRules bootstrap_rules_;
   std::map<std::string, Parser> parsers_;
   std::unique_ptr<NetworkState> network_state_;
   Stdin* const stdin_;
   std::vector<Periodic*> periodics_;
-  std::unique_ptr<PostgresClient<Hash, ToSql>> postgres_client_;
+  std::unique_ptr<LineageDbClient<Hash, ToSql>> lineagedb_client_;
 
   // A collection of rules (lhs, type, rhs) where
   //

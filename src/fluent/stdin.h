@@ -12,7 +12,6 @@
 #include "zmq.hpp"
 
 #include "common/macros.h"
-#include "ra/ra_util.h"
 
 namespace fluent {
 
@@ -27,7 +26,7 @@ class Stdin {
   }
 
   ra::Iterable<std::set<std::tuple<std::string>>> Iterable() const {
-    return ra::make_iterable(&lines_);
+    return ra::make_iterable(Name(), &lines_);
   }
 
   zmq::pollitem_t Pollitem() {

@@ -43,7 +43,7 @@ int ClientMain(const ClientArgs& args,
           .RegisterBootstrapRules([&](auto&, auto&, auto& connect, auto&) {
             using namespace fluent::infix;
             return std::make_tuple(
-                connect <= ra::make_iterable("connect_tuple", &connect_tuple));
+                connect <= ra::make_const("connect_tuple", &connect_tuple));
           })
           .RegisterRules([&](auto& in, auto& out, auto&, auto& mcast) {
             using namespace fluent::infix;

@@ -61,8 +61,8 @@ class Iterable {
   const T* iterable_;
 };
 
-template <typename T>
-Iterable<T> make_iterable(std::string name, const T* iterable) {
+template <typename T, template <typename> class Hash = Hash>
+Iterable<T, Hash> make_iterable(std::string name, const T* iterable) {
   return {std::move(name), iterable};
 }
 

@@ -26,6 +26,14 @@ install and build the rest of the dependencies for you!
 ./build/common/common_macros_test # run another test
 (cd build && make test)           # run all the tests
 
+# Generating Tags
+./scripts/generate_tags.sh
+
+# Everything
+./scripts/build.sh Debug 4 && \
+    ./scripts/generate_tags.sh && \
+    (cd build && make test)
+
 # Run a chat server listening on port 8000.
 ./build/examples/chat/examples_chat_noop_server 'tcp://*:8000'
 
@@ -45,5 +53,14 @@ install and build the rest of the dependencies for you!
 | [`fluent`](src/fluent)       | Main fluent code.                       |
 | [`examples`](src/examples)   | Example fluent programs.                |
 
+## Design Documents
+For more detailed documentation describing Fluent, refer to the following
+documents:
+
+- [Fluent and lineage overview.][doc_lineage_overview]
+- [Black box lineage design.][doc_black_boxes]
+
 [bloom_paper]: https://scholar.google.com/scholar?cluster=9165311711752272482
 [gpp_tutorial]: http://scholtyssek.org/blog/2015/06/11/install-gcc-with-c14-support-on-ubuntumint
+[doc_lineage_overview]: https://docs.google.com/document/d/1ykhcDQv8h9Eiymt47N7kx7oWlAmRbRsuA7EMZTIndNs/edit?usp=sharing
+[doc_black_boxes]: https://docs.google.com/document/d/1bEMB0LiDQlCbGVSf2t2vo7RvJc3Dnh1WfRHTPsV0ehE/edit?usp=sharing

@@ -30,7 +30,7 @@ def get_collection(cur, node_name, collection_name, time):
         WHERE (time_inserted = %s AND time_inserted = time_deleted) OR
               (time_inserted <= %s AND (time_deleted IS NULL OR time_deleted > %s))
     """.format(node_name, collection_name), (time, time, time))
-    collection["tuples"] += [list(t[3:]) for t in cur.fetchall()]
+    collection["tuples"] += [[str(t[0])] + list(t[3:]) for t in cur.fetchall()]
 
     return collection
 
@@ -103,6 +103,8 @@ def node():
         "rules": rules,
         "time": max_time,
         "collections": collections,
+        "clicked_tuple": None,
+        "lineage_tuples": None,
     }
     return flask.jsonify(node=n)
 
@@ -116,3 +118,48 @@ def collections():
                    for collection_name in collection_names]
     cur.close()
     return flask.jsonify(collections=collections)
+
+@app.route("/lineage")
+def lineage():
+    node_name = flask.request.args.get("node_name", "")
+    collection_name = flask.request.args.get("collection_name", "")
+    tuple_hash = flask.request.args.get("hash", 0, type=int)
+    time = flask.request.args.get("time", 0, type=int)
+
+    cur = db.cursor()
+
+    # The time of the most recent insertion of the tuple.
+    cur.execute("""
+        SELECT MAX(time_inserted)
+        FROM {}_{}
+        WHERE hash = %s AND (
+                (time_inserted = %s AND time_inserted = time_deleted) OR
+                (time_inserted <= %s AND (time_deleted IS NULL OR time_deleted > %s))
+              );
+    """.format(node_name, collection_name), (tuple_hash, time, time, time))
+    latest_insert_time = cur.fetchone()[0]
+
+    # The lineage.
+    cur.execute("""
+        SELECT
+            N.name,
+            L.dep_collection_name,
+            L.dep_tuple_hash,
+            L.dep_time
+        FROM Nodes N, {}_lineage L
+        WHERE N.id = L.dep_node_id AND
+              L.collection_name = %s AND
+              L.tuple_hash = %s AND
+              time = %s;
+    """.format(node_name), (collection_name, tuple_hash, latest_insert_time))
+    lineage_tuples = [
+        {
+            "node_name": t[0],
+            "collection_name": t[1],
+            "tuple_hash": str(t[2]),
+            "time": t[3] if t[3] is not None else latest_insert_time,
+        } for t in cur.fetchall()
+    ]
+
+    cur.close()
+    return flask.jsonify(lineage=lineage_tuples)

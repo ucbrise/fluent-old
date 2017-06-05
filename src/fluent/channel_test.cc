@@ -10,6 +10,7 @@
 #include "gtest/gtest.h"
 #include "zmq.hpp"
 
+#include "fluent/mock_pickler.h"
 #include "fluent/socket_cache.h"
 #include "ra/all.h"
 #include "zmq_util/zmq_util.h"
@@ -21,7 +22,8 @@ using ::testing::UnorderedElementsAreArray;
 TEST(Channel, SimpleMerge) {
   zmq::context_t context(1);
   SocketCache cache(&context);
-  Channel<std::string, int, int> c(42, "c", {{"addr", "x", "y"}}, &cache);
+  Channel<MockPickler, std::string, int, int> c(42, "c", {{"addr", "x", "y"}},
+                                                &cache);
 
   const std::string a_address = "inproc://a";
   const std::string b_address = "inproc://b";
@@ -60,7 +62,8 @@ TEST(Channel, TickClearsChannel) {
 
   zmq::context_t context(1);
   SocketCache cache(&context);
-  Channel<std::string, int, int> c(42, "c", {{"addr", "x", "y"}}, &cache);
+  Channel<MockPickler, std::string, int, int> c(42, "c", {{"addr", "x", "y"}},
+                                                &cache);
 
   c.ts_.insert(Tuple("foo", 1, 1));
   c.ts_.insert(Tuple("bar", 2, 2));

@@ -5,6 +5,8 @@
 #include "glog/logging.h"
 #include "gtest/gtest.h"
 
+#include "fluent/mock_pickler.h"
+
 namespace fluent {
 
 TEST(CollectionUtil, CollectionTypes) {
@@ -41,18 +43,21 @@ TEST(CollectionUtil, CollectionTypes) {
                 "");
 
   // Channels.
-  static_assert(std::is_same<                                     //
-                    CollectionTypes<Channel<std::string>>::type,  //
-                    TypeList<std::string>>::value,                //
-                "");
-  static_assert(std::is_same<                                          //
-                    CollectionTypes<Channel<std::string, int>>::type,  //
-                    TypeList<std::string, int>>::value,                //
-                "");
   static_assert(
-      std::is_same<                                                      //
-          CollectionTypes<Channel<std::string, int, char, bool>>::type,  //
-          TypeList<std::string, int, char, bool>>::value,                //
+      std::is_same<                                                  //
+          CollectionTypes<Channel<MockPickler, std::string>>::type,  //
+          TypeList<std::string>>::value,                             //
+      "");
+  static_assert(
+      std::is_same<                                                       //
+          CollectionTypes<Channel<MockPickler, std::string, int>>::type,  //
+          TypeList<std::string, int>>::value,                             //
+      "");
+  static_assert(
+      std::is_same<  //
+          CollectionTypes<
+              Channel<MockPickler, std::string, int, char, bool>>::type,  //
+          TypeList<std::string, int, char, bool>>::value,                 //
       "");
 
   // Stdin.
@@ -85,9 +90,9 @@ TEST(CollectionUtil, GetCollectionType) {
             (GetCollectionType<Scratch<int, int>>::value));
 
   EXPECT_EQ(CollectionType::CHANNEL,
-            (GetCollectionType<Channel<std::string>>::value));
+            (GetCollectionType<Channel<MockPickler, std::string>>::value));
   EXPECT_EQ(CollectionType::CHANNEL,
-            (GetCollectionType<Channel<std::string, int>>::value));
+            (GetCollectionType<Channel<MockPickler, std::string, int>>::value));
 
   EXPECT_EQ(CollectionType::STDIN, (GetCollectionType<Stdin>::value));
   EXPECT_EQ(CollectionType::STDOUT, (GetCollectionType<Stdout>::value));

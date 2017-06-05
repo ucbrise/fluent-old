@@ -10,9 +10,9 @@
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"
 #include "lineagedb/connection_config.h"
-#include "ra/all.h"
+#include "ra/logical/all.h"
 
-namespace ra = fluent::ra;
+namespace lra = fluent::ra::logical;
 
 struct ClientArgs {
   std::string server_address;
@@ -42,19 +42,20 @@ int ClientMain(const ClientArgs& args,
                                                       {{"addr", "msg"}})
           .RegisterBootstrapRules([&](auto&, auto&, auto& connect, auto&) {
             using namespace fluent::infix;
-            return std::make_tuple(
-                connect <= ra::make_const("connect_tuple", &connect_tuple));
+            return std::make_tuple(connect <=
+                                   lra::make_iterable(&connect_tuple));
           })
           .RegisterRules([&](auto& in, auto& out, auto&, auto& mcast) {
             using namespace fluent::infix;
             auto from_in =
-                mcast <= (in.Iterable() |
-                          ra::map([&](const std::tuple<std::string>& line) {
+                mcast <= (lra::make_collection(&in) |
+                          lra::map([&](const std::tuple<std::string>& line) {
                             return std::make_tuple(args.server_address,
                                                    std::get<0>(line));
                           }));
 
-            auto to_out = out <= (mcast.Iterable() | ra::project<1>());
+            auto to_out =
+                out <= (lra::make_collection(&mcast) | lra::project<1>());
 
             return std::make_tuple(from_in, to_out);
           })

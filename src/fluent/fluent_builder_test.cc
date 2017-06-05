@@ -14,38 +14,39 @@
 #include "fluent/infix.h"
 #include "lineagedb/connection_config.h"
 #include "lineagedb/noop_client.h"
-#include "ra/all.h"
+#include "ra/logical/all.h"
 
 namespace fluent {
 
 TEST(FluentBuilder, SimpleBuildCheck) {
   zmq::context_t context(1);
   lineagedb::ConnectionConfig conf;
-  auto f =
-      fluent<lineagedb::NoopClient>("name", "inproc://yolo", &context, conf)
-          .ConsumeValueOrDie()
-          .table<std::string, int>("t", {{"x", "y"}})
-          .scratch<std::string, int>("s", {{"x", "y"}})
-          .channel<std::string, int>("c", {{"addr", "x"}})
-          .stdin()
-          .stdout()
-          .periodic("p", std::chrono::milliseconds(100))
-          .RegisterRules(
-              [](auto& t, auto& s, auto& c, auto& in, auto& out, auto& p) {
-                using namespace fluent::infix;
-                (void)in.Iterable();
-                (void)p.Iterable();
-                auto rule_a = t <= s.Iterable();
-                auto rule_b = t += s.Iterable();
-                auto rule_c = t -= s.Iterable();
-                auto rule_d = s <= s.Iterable();
-                auto rule_e = c <= s.Iterable();
-                auto rule_f = out <= (s.Iterable() | ra::project<0>());
-                auto rule_g = out += (s.Iterable() | ra::project<0>());
-                return std::make_tuple(rule_a, rule_b, rule_c, rule_d, rule_e,
-                                       rule_f, rule_g);
-              });
-  EXPECT_EQ(Status::OK, f.status());
+  auto fb_or = fluent<lineagedb::NoopClient>("n", "inproc://a", &context, conf);
+  ASSERT_EQ(Status::OK, fb_or.status());
+  auto fe_or = fb_or.ConsumeValueOrDie()
+                   .table<std::string, int>("t", {{"x", "y"}})
+                   .scratch<std::string, int>("s", {{"x", "y"}})
+                   .channel<std::string, int>("c", {{"addr", "x"}})
+                   .stdin()
+                   .stdout()
+                   .periodic("p", std::chrono::milliseconds(100))
+                   .RegisterRules([](auto& t, auto& s, auto& c, auto& in,
+                                     auto& out, auto& p) {
+                     UNUSED(in);
+                     UNUSED(p);
+                     using namespace fluent::infix;
+                     using namespace fluent::ra::logical;
+                     auto rule0 = t <= make_collection(&s);
+                     auto rule1 = t += make_collection(&s);
+                     auto rule2 = t -= make_collection(&s);
+                     auto rule3 = s <= make_collection(&s);
+                     auto rule4 = c <= make_collection(&s);
+                     auto rule5 = out <= (make_collection(&s) | project<0>());
+                     auto rule6 = out += (make_collection(&s) | project<0>());
+                     return std::make_tuple(rule0, rule1, rule2, rule3, rule4,
+                                            rule5, rule6);
+                   });
+  EXPECT_EQ(Status::OK, fe_or.status());
 }
 
 }  // namespace fluent

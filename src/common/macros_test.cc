@@ -9,34 +9,46 @@ namespace fluent {
 
 class CopyableAndAssignable {
  public:
-  CopyableAndAssignable(std::vector<int> xs) : xs_(std::move(xs)) {}
-
- private:
-  std::vector<int> xs_;
+  CopyableAndAssignable() {}
 };
 
 class NotCopyableAndAssignable {
  public:
-  NotCopyableAndAssignable(std::vector<int> xs) : xs_(std::move(xs)) {}
-  DISALLOW_COPY_AND_ASSIGN(NotCopyableAndAssignable)
+  NotCopyableAndAssignable() {}
+  DISALLOW_COPY_AND_ASSIGN(NotCopyableAndAssignable);
+};
 
- private:
-  std::vector<int> xs_;
+class NotCopyableAndAssignableButMoveable {
+ public:
+  NotCopyableAndAssignableButMoveable() {}
+  DISALLOW_COPY_AND_ASSIGN(NotCopyableAndAssignableButMoveable);
+  DEFAULT_MOVE_AND_ASSIGN(NotCopyableAndAssignableButMoveable);
 };
 
 TEST(Macros, DisallowCopyAndAssign) {
   {
-    CopyableAndAssignable x({1, 2, 3});
+    CopyableAndAssignable x;
     CopyableAndAssignable y(x);
     y = x;
   }
 
   // The following code will not compile.
   //   {
-  //     NotCopyableAndAssignable x({1, 2, 3});
+  //     NotCopyableAndAssignable x;
   //     NotCopyableAndAssignable y(x);
   //     y = x;
   //   }
+}
+
+TEST(Macros, DefaultMoveAndAssign) {
+  NotCopyableAndAssignableButMoveable x;
+  NotCopyableAndAssignableButMoveable z(std::move(x));
+  z = std::move(x);
+}
+
+TEST(Macros, Unused) {
+  int x = 0;
+  UNUSED(x);
 }
 
 }  // namespace fluent

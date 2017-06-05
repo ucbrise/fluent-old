@@ -8,6 +8,104 @@
 
 namespace fluent {
 
+TEST(TypeTraits, And) {
+  static_assert(And<std::true_type, std::true_type>::value, "");
+  static_assert(!And<std::true_type, std::false_type>::value, "");
+  static_assert(!And<std::false_type, std::true_type>::value, "");
+  static_assert(!And<std::false_type, std::false_type>::value, "");
+}
+
+TEST(TypeTraits, Or) {
+  static_assert(Or<std::true_type, std::true_type>::value, "");
+  static_assert(Or<std::true_type, std::false_type>::value, "");
+  static_assert(Or<std::false_type, std::true_type>::value, "");
+  static_assert(!Or<std::false_type, std::false_type>::value, "");
+}
+
+TEST(TypeTraits, Not) {
+  static_assert(Not<std::false_type>::value, "");
+  static_assert(!Not<std::true_type>::value, "");
+}
+
+TEST(TypeTraits, Lt) {
+  using one = std::integral_constant<int, 1>;
+  using two = std::integral_constant<int, 2>;
+  static_assert(!Lt<one, one>::value, "");
+  static_assert(Lt<one, two>::value, "");
+  static_assert(!Lt<two, one>::value, "");
+  static_assert(!Lt<two, two>::value, "");
+}
+
+TEST(TypeTraits, Le) {
+  using one = std::integral_constant<int, 1>;
+  using two = std::integral_constant<int, 2>;
+  static_assert(Le<one, one>::value, "");
+  static_assert(Le<one, two>::value, "");
+  static_assert(!Le<two, one>::value, "");
+  static_assert(Le<two, two>::value, "");
+}
+
+TEST(TypeTraits, Eq) {
+  using one = std::integral_constant<int, 1>;
+  using two = std::integral_constant<int, 2>;
+  static_assert(Eq<one, one>::value, "");
+  static_assert(!Eq<one, two>::value, "");
+  static_assert(!Eq<two, one>::value, "");
+  static_assert(Eq<two, two>::value, "");
+}
+
+TEST(TypeTraits, Ne) {
+  using one = std::integral_constant<int, 1>;
+  using two = std::integral_constant<int, 2>;
+  static_assert(!Ne<one, one>::value, "");
+  static_assert(Ne<one, two>::value, "");
+  static_assert(Ne<two, one>::value, "");
+  static_assert(!Ne<two, two>::value, "");
+}
+
+TEST(TypeTraits, Gt) {
+  using one = std::integral_constant<int, 1>;
+  using two = std::integral_constant<int, 2>;
+  static_assert(!Gt<one, one>::value, "");
+  static_assert(!Gt<one, two>::value, "");
+  static_assert(Gt<two, one>::value, "");
+  static_assert(!Gt<two, two>::value, "");
+}
+
+TEST(TypeTraits, Ge) {
+  using one = std::integral_constant<int, 1>;
+  using two = std::integral_constant<int, 2>;
+  static_assert(Ge<one, one>::value, "");
+  static_assert(!Ge<one, two>::value, "");
+  static_assert(Ge<two, one>::value, "");
+  static_assert(Ge<two, two>::value, "");
+}
+
+TEST(TypeTraits, All) {
+  static_assert(All<>::value, "");
+  static_assert(All<std::true_type>::value, "");
+  static_assert(!All<std::false_type>::value, "");
+  static_assert(All<std::true_type, std::true_type>::value, "");
+  static_assert(!All<std::true_type, std::false_type>::value, "");
+}
+
+TEST(TypeTraits, Any) {
+  static_assert(!Any<>::value, "");
+  static_assert(Any<std::true_type>::value, "");
+  static_assert(!Any<std::false_type>::value, "");
+  static_assert(Any<std::true_type, std::true_type>::value, "");
+  static_assert(Any<std::true_type, std::false_type>::value, "");
+}
+
+TEST(TypeTraits, InRange) {
+  static_assert(InRange<0, 0, 5>::value, "");
+  static_assert(InRange<1, 0, 5>::value, "");
+  static_assert(InRange<2, 0, 5>::value, "");
+  static_assert(InRange<3, 0, 5>::value, "");
+  static_assert(InRange<4, 0, 5>::value, "");
+  static_assert(!InRange<5, 0, 5>::value, "");
+}
+
 TEST(TypeTraits, IsTemplate) {
   static_assert(IsTemplate<std::set, std::set<int>>::value, "");
   static_assert(IsTemplate<std::vector, std::vector<int>>::value, "");
@@ -66,6 +164,20 @@ TEST(TypeTraits, Unwrap) {
   static_assert(std::is_same<bool, Unwrap<std::tuple<bool>>::type>::value, "");
   static_assert(std::is_same<int, Unwrap<std::set<int>>::type>::value, "");
   static_assert(std::is_same<bool, Unwrap<std::set<bool>>::type>::value, "");
+}
+
+TEST(TypeTraits, IsInvocable) {
+  static_assert(IsInvocable<void(int), int>::value, "");
+  static_assert(IsInvocable<void(const int), int>::value, "");
+  static_assert(IsInvocable<void(const int&), int>::value, "");
+  static_assert(IsInvocable<bool(int), int>::value, "");
+  static_assert(IsInvocable<bool(const int), int>::value, "");
+  static_assert(IsInvocable<bool(const int&), int>::value, "");
+
+  static_assert(!IsInvocable<void(int, int), int>::value, "");
+  static_assert(!IsInvocable<void(int&), int>::value, "");
+  static_assert(!IsInvocable<void(std::string), int>::value, "");
+  static_assert(!IsInvocable<void(), int>::value, "");
 }
 
 }  // namespace fluent

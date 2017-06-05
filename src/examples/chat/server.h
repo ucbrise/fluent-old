@@ -10,9 +10,9 @@
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"
 #include "lineagedb/connection_config.h"
-#include "ra/all.h"
+#include "ra/logical/all.h"
 
-namespace ra = fluent::ra;
+namespace lra = fluent::ra::logical;
 
 struct ServerArgs {
   std::string server_address;
@@ -36,15 +36,16 @@ int ServerMain(const ServerArgs& args,
           .RegisterRules([&](auto& connect, auto& mcast, auto& nodelist) {
             using namespace fluent::infix;
 
-            auto subscribe =
-                nodelist <= (connect.Iterable() | ra::project<1, 2>());
+            auto subscribe = nodelist <= (lra::make_collection(&connect) |
+                                          lra::project<1, 2>());
 
             // TODO(mwhittaker): Currently, nicknames are not being used.
             // We should prepend the nickaname of the sender to the
             // message before broadcasting it.
-            auto multicast = mcast <= (ra::make_cross(mcast.Iterable(),
-                                                      nodelist.Iterable()) |
-                                       ra::project<2, 1>());
+            auto multicast =
+                mcast <= (lra::make_cross(lra::make_collection(&mcast),
+                                          lra::make_collection(&nodelist)) |
+                          lra::project<2, 1>());
 
             return std::make_tuple(subscribe, multicast);
           })

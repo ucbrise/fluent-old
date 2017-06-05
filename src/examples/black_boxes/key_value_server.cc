@@ -13,9 +13,9 @@
 #include "fluent/infix.h"
 #include "lineagedb/connection_config.h"
 #include "lineagedb/pqxx_client.h"
-#include "ra/all.h"
+#include "ra/logical/all.h"
 
-namespace ra = fluent::ra;
+namespace lra = fluent::ra::logical;
 namespace ldb = fluent::lineagedb;
 
 int main(int argc, char* argv[]) {
@@ -42,17 +42,17 @@ int main(int argc, char* argv[]) {
                              auto& get_resp) {
             using namespace fluent::infix;
             auto set = set_resp <=
-                       (set_req.Iterable() |
-                        ra::map([&kvs](const auto& t)
-                                    -> std::tuple<std::string, std::int64_t> {
+                       (lra::make_collection(&set_req) |
+                        lra::map([&kvs](const auto& t)
+                                     -> std::tuple<std::string, std::int64_t> {
                           kvs[std::get<3>(t)] = std::get<4>(t);
                           return {std::get<1>(t), std::get<2>(t)};
                         }));
             auto get =
                 get_resp <=
-                (get_req.Iterable() |
-                 ra::map([&kvs](const auto& t) -> std::tuple<
-                             std::string, std::int64_t, std::string> {
+                (lra::make_collection(&get_req) |
+                 lra::map([&kvs](const auto& t) -> std::tuple<
+                              std::string, std::int64_t, std::string> {
                    return {std::get<1>(t), std::get<2>(t), kvs[std::get<3>(t)]};
                  }));
             return std::make_tuple(set, get);

@@ -432,6 +432,73 @@ TEST(TupleUtil, TupleProject) {
   EXPECT_EQ(actual, expected);
 }
 
+TEST(TupleUtil, TupleProjectBySizetList) {
+  std::tuple<int, char, float> t{0, '1', 2.0};
+
+  EXPECT_EQ(TupleProjectBySizetList<SizetList<>>(t), std::tuple<>{});
+
+  EXPECT_EQ(TupleProjectBySizetList<SizetList<0>>(t), std::tuple<int>{0});
+  EXPECT_EQ(TupleProjectBySizetList<SizetList<1>>(t), std::tuple<char>{'1'});
+  EXPECT_EQ(TupleProjectBySizetList<SizetList<2>>(t), std::tuple<char>{2.0});
+
+  // Arguments are parenthesized so that the EXPECT_EQ macro doesn't get
+  // confused about all the commas.
+  EXPECT_EQ((TupleProjectBySizetList<SizetList<0, 0>>(t)),
+            (std::tuple<int, int>{0, 0}));
+  EXPECT_EQ((TupleProjectBySizetList<SizetList<0, 1>>(t)),
+            (std::tuple<int, char>{0, '1'}));
+  EXPECT_EQ((TupleProjectBySizetList<SizetList<0, 2>>(t)),
+            (std::tuple<int, float>{0, 2.0}));
+  EXPECT_EQ((TupleProjectBySizetList<SizetList<1, 0>>(t)),
+            (std::tuple<char, int>{'1', 0}));
+  EXPECT_EQ((TupleProjectBySizetList<SizetList<1, 1>>(t)),
+            (std::tuple<char, char>{'1', '1'}));
+  EXPECT_EQ((TupleProjectBySizetList<SizetList<1, 2>>(t)),
+            (std::tuple<char, float>{'1', 2.0}));
+  EXPECT_EQ((TupleProjectBySizetList<SizetList<2, 0>>(t)),
+            (std::tuple<float, int>{2.0, 0}));
+  EXPECT_EQ((TupleProjectBySizetList<SizetList<2, 1>>(t)),
+            (std::tuple<float, char>{2.0, '1'}));
+  EXPECT_EQ((TupleProjectBySizetList<SizetList<2, 2>>(t)),
+            (std::tuple<float, float>{2.0, 2.0}));
+
+  auto actual = TupleProjectBySizetList<SizetList<0, 1, 0, 2, 1>>(t);
+  auto expected = std::tuple<int, char, int, float, char>{0, '1', 0, 2.0, '1'};
+  EXPECT_EQ(actual, expected);
+}
+
+TEST(TupleUtil, TupleTake) {
+  std::tuple<int, char, float, bool> t = {0, '1', 2.0, false};
+  std::tuple<> t0 = {};
+  std::tuple<int> t1 = {0};
+  std::tuple<int, char> t2 = {0, '1'};
+  std::tuple<int, char, float> t3 = {0, '1', 2.0};
+  std::tuple<int, char, float, bool> t4 = {0, '1', 2.0, false};
+
+  EXPECT_EQ(TupleTake<0>(t), t0);
+  EXPECT_EQ(TupleTake<1>(t), t1);
+  EXPECT_EQ(TupleTake<2>(t), t2);
+  EXPECT_EQ(TupleTake<3>(t), t3);
+  EXPECT_EQ(TupleTake<4>(t), t4);
+  EXPECT_EQ(TupleTake<5>(t), t4);
+}
+
+TEST(TupleUtil, TupleDrop) {
+  std::tuple<int, char, float, bool> t = {0, '1', 2.0, false};
+  std::tuple<int, char, float, bool> t0 = {0, '1', 2.0, false};
+  std::tuple<char, float, bool> t1 = {'1', 2.0, false};
+  std::tuple<float, bool> t2 = {2.0, false};
+  std::tuple<bool> t3 = {false};
+  std::tuple<> t4 = {};
+
+  EXPECT_EQ(TupleDrop<0>(t), t0);
+  EXPECT_EQ(TupleDrop<1>(t), t1);
+  EXPECT_EQ(TupleDrop<2>(t), t2);
+  EXPECT_EQ(TupleDrop<3>(t), t3);
+  EXPECT_EQ(TupleDrop<4>(t), t4);
+  EXPECT_EQ(TupleDrop<5>(t), t4);
+}
+
 TEST(TupleUtil, OstreamOperator) {
   std::tuple<int, char, float> t{1, '2', 3.0};
   std::ostringstream os;

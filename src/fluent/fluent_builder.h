@@ -15,181 +15,135 @@
 #include "glog/logging.h"
 #include "zmq.hpp"
 
+#include "collections/all.h"
+#include "collections/collection.h"
 #include "common/hash_util.h"
 #include "common/macros.h"
+#include "common/mock_pickler.h"
+#include "common/static_assert.h"
 #include "common/status.h"
 #include "common/status_macros.h"
 #include "common/status_or.h"
 #include "common/string_util.h"
 #include "common/type_list.h"
-#include "fluent/channel.h"
+#include "common/type_traits.h"
 #include "fluent/fluent_executor.h"
-#include "fluent/mock_pickler.h"
 #include "fluent/network_state.h"
-#include "fluent/periodic.h"
 #include "fluent/rule.h"
-#include "fluent/scratch.h"
-#include "fluent/socket_cache.h"
-#include "fluent/stdin.h"
-#include "fluent/stdout.h"
-#include "fluent/table.h"
 #include "lineagedb/connection_config.h"
 #include "lineagedb/to_sql.h"
+#include "ra/logical/logical_ra.h"
+#include "zmq_util/socket_cache.h"
 
 namespace fluent {
+namespace detail {
+
+template <typename Rules>
+struct ValidateRules;
+
+template <typename... Collections, typename... RuleTags, typename... Ras>
+struct ValidateRules<TypeList<Rule<Collections, RuleTags, Ras>...>> {
+  using all_collections = All<std::is_base_of<Collection, Collections>...>;
+  static_assert(StaticAssert<all_collections>::value, "");
+  using all_rule_tags = All<std::is_base_of<RuleTag, RuleTags>...>;
+  static_assert(StaticAssert<all_rule_tags>::value, "");
+  using all_ras = All<std::is_base_of<ra::logical::LogicalRa, Ras>...>;
+  static_assert(StaticAssert<all_ras>::value, "");
+  static constexpr bool value = true;
+};
+
+}  // namespace detail
 
 // See below.
 template <typename Collections, typename BootstrapRules,
-          template <template <typename> class, template <typename> class,
-                    typename> class LineageDbClient,
+          template <template <typename> class Hash,
+                    template <typename> class ToSql, typename Clock>
+          class LineageDbClient,
           template <typename> class Hash = Hash,
           template <typename> class ToSql = lineagedb::ToSql,
           template <typename> class Pickler = MockPickler,
           typename Clock = std::chrono::system_clock>
 class FluentBuilder;
 
-// # Overview
-// A FluentBuilder is a class that you can use to build up a FluentExecutor.
-// See the README for an overview of how to use a FluentBuilder.
-//
-// # Implementation
-// Each FluentBuilder maintains two key fields (in addition to a bunch of other
-// less important fields): `collections_` and `boostrap_rules_`.
-//
-// `collections_` contains pointers to every collection registered with this
-// FluentBuilder. For example, given the following FluentBuilder:
-//
-//   auto f = fluent<...>(...)
-//     .table<int, char, float>("t1", {{"x", "y", "z"}})
-//     .table<float, int>("t2", {{"x", "y", "z"}})
-//     .scratch<int, int, float>("s", {{"x", "y", "z"}})
-//     .channel<std::string, float, char>("c", {{"addr", "x", "y"}})
-//
-// `collections_` will have the following type:
-//
-//   std::tuple<
-//     std::unique_ptr<Table<int, char, float>>,             // t1
-//     std::unique_ptr<Table<float, int>>,                   // t2
-//     std::unique_ptr<Scratch<int, int, float>>,            // s
-//     std::unique_ptr<Channel<_, std::string, float, char>> // c
-//   >
-//
-// `boostrap_rules_` is a collection of rules of the form (lhs, type, rhs)
-// where
-//
-//   - `lhs` is a pointer to a collection,
-//   - `type` is an instance of one of the structs below, and
-//   - `rhs` is a relational algebra expression.
-//
-// The Ith rule has type
-//
-//   std::tuple<BootstrapLhss[I], BootstrapRuleTags[I], BootstrapRhss[I]>
-//
-// Whenever a user calls a function like `.table`, `.scratch`, or `.channel`,
-// we return a brand new FluentBuilder with the newly registered collection
-// appended to `collections_`. Whenever a user calls `.RegisterBootstrapRules`,
-// we return a brand new FluentBuilder with the newly registered rules
-// replacing `boostrap_rules_`.
-template <typename... Cs, typename... BootstrapLhss,
-          typename... BootstrapRuleTags, typename... BootstrapRhss,
-          template <template <typename> class, template <typename> class,
-                    typename> class LineageDbClient,
+template <typename... Collections, typename... BootstrapCollections,
+          typename... BootstrapRuleTags, typename... BootstrapRas,
+          template <template <typename> class ToSql,
+                    template <typename> class Hash, typename Clock>
+          class LineageDbClient,
           template <typename> class Hash, template <typename> class ToSql,
           template <typename> class Pickler, typename Clock>
 class FluentBuilder<
-    TypeList<Cs...>,
-    std::tuple<Rule<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>,
+    TypeList<Collections...>,
+    TypeList<Rule<BootstrapCollections, BootstrapRuleTags, BootstrapRas>...>,
     LineageDbClient, Hash, ToSql, Pickler, Clock> {
-  static_assert(sizeof...(BootstrapLhss) == sizeof...(BootstrapRuleTags) &&
-                    sizeof...(BootstrapRuleTags) == sizeof...(BootstrapRhss),
-                "The ith entry of BootstrapLhss corresponds to the left-hand "
-                "side of the ith bootstrap rule. The ith entry of "
-                "BootstrapRuleTags corresponds to the type of the bootstrap "
-                "rule. The ith entry of BootstrapRhss corresponds to the "
-                "right-hand side of the ith bootstrap rule. Thus, the sizes of "
-                "BootstrapLhss, BootstrapRuleTags, and BootstrapRhss must be "
-                "equal");
+  using BootstrapRules =
+      TypeList<Rule<BootstrapCollections, BootstrapRuleTags, BootstrapRas>...>;
+  using BootstrapRulesTuple = typename TypeListToTuple<BootstrapRules>::type;
+
+  template <typename Collection>
+  using WithCollection =
+      FluentBuilder<TypeList<Collections..., Collection>, BootstrapRules,
+                    LineageDbClient, Hash, ToSql, Pickler, Clock>;
+
+  template <typename BootstrapRules_>
+  using WithBootstrapRules =
+      FluentBuilder<TypeList<Collections...>, BootstrapRules_, LineageDbClient,
+                    Hash, ToSql, Pickler, Clock>;
+
+  using all_collections = All<std::is_base_of<Collection, Collections>...>;
+  static_assert(StaticAssert<all_collections>::value, "");
+  static_assert(StaticAssert<detail::ValidateRules<BootstrapRules>>::value, "");
 
  public:
-  using BootstrapRules =
-      std::tuple<Rule<BootstrapLhss, BootstrapRuleTags, BootstrapRhss>...>;
-
   DISALLOW_COPY_AND_ASSIGN(FluentBuilder);
-  FluentBuilder(FluentBuilder&&) = default;
-  FluentBuilder& operator=(FluentBuilder&&) = default;
+  DEFAULT_MOVE_AND_ASSIGN(FluentBuilder);
 
   // Create a table, scratch, channel, stdin, stdout, or periodic. Note the
   // `&&` at the end of each declaration. This means that these methods can
   // only be invoked on an rvalue-reference, which is necessary since the
   // methods move their contents.
-
   template <typename... Us>
-  FluentBuilder<TypeList<Cs..., Table<Us...>>, BootstrapRules, LineageDbClient,
-                Hash, ToSql, Pickler, Clock>
-  table(const std::string& name,
-        std::array<std::string, sizeof...(Us)> column_names) && {
+  WithCollection<Table<Us...>> table(
+      const std::string& name,
+      std::array<std::string, sizeof...(Us)> column_names) && {
     LOG(INFO) << "Adding table " << name << "(" << Join(column_names) << ").";
     return AddCollection(
         std::make_unique<Table<Us...>>(name, std::move(column_names)));
   }
 
   template <typename... Us>
-  FluentBuilder<TypeList<Cs..., Scratch<Us...>>, BootstrapRules,
-                LineageDbClient, Hash, ToSql, Pickler, Clock>
-  scratch(const std::string& name,
-          std::array<std::string, sizeof...(Us)> column_names) && {
+  WithCollection<Scratch<Us...>> scratch(
+      const std::string& name,
+      std::array<std::string, sizeof...(Us)> column_names) && {
     LOG(INFO) << "Adding scratch " << name << "(" << Join(column_names) << ").";
     return AddCollection(
         std::make_unique<Scratch<Us...>>(name, std::move(column_names)));
   }
 
   template <typename... Us>
-  FluentBuilder<TypeList<Cs..., Channel<Pickler, Us...>>, BootstrapRules,
-                LineageDbClient, Hash, ToSql, Pickler, Clock>
-  channel(const std::string& name,
-          std::array<std::string, sizeof...(Us)> column_names) && {
+  WithCollection<Channel<Pickler, Us...>> channel(
+      const std::string& name,
+      std::array<std::string, sizeof...(Us)> column_names) && {
     LOG(INFO) << "Adding channel " << name << "(" << Join(column_names) << ").";
     auto c = std::make_unique<Channel<Pickler, Us...>>(
         id_, name, std::move(column_names), &network_state_->socket_cache);
-    CHECK(parsers_.find(c->Name()) == parsers_.end())
-        << "The channel name '" << c->Name()
-        << "' is used multiple times. Channel names must be unique.";
-
-    LineageDbClient<Hash, ToSql, Clock>* client = lineagedb_client_.get();
-    parsers_.insert(std::make_pair(
-        c->Name(), c->GetParser([client](std::size_t dep_node_id, int dep_time,
-                                         const std::string& channel_name,
-                                         const auto& t, int time) {
-          using tuple_type = typename std::decay<decltype(t)>::type;
-          std::size_t tuple_hash = Hash<tuple_type>()(t);
-          RETURN_IF_ERROR(
-              client->InsertTuple(channel_name, time, Clock::now(), t));
-          RETURN_IF_ERROR(client->AddNetworkedLineage(
-              dep_node_id, dep_time, channel_name, tuple_hash, time));
-          return Status::OK;
-        })));
     return AddCollection(std::move(c));
   }
 
-  FluentBuilder<TypeList<Cs..., Stdin>, BootstrapRules, LineageDbClient, Hash,
-                ToSql, Pickler, Clock>
-  stdin() && {
+  WithCollection<Stdin> stdin() && {
     LOG(INFO) << "Adding stdin.";
-    auto stdin = std::make_unique<Stdin>();
-    stdin_ = stdin.get();
-    return AddCollection(std::move(stdin));
+    auto stdin_ptr = std::make_unique<Stdin>();
+    stdin_ = stdin_ptr.get();
+    return AddCollection(std::move(stdin_ptr));
   }
 
-  FluentBuilder<TypeList<Cs..., Stdout>, BootstrapRules, LineageDbClient, Hash,
-                ToSql, Pickler, Clock>
-  stdout() && {
+  WithCollection<Stdout> stdout() && {
     LOG(INFO) << "Adding stdout.";
     return AddCollection(std::make_unique<Stdout>());
   }
 
-  FluentBuilder<TypeList<Cs..., Periodic>, BootstrapRules, LineageDbClient,
-                Hash, ToSql, Pickler, Clock>
-  periodic(const std::string& name, const Periodic::period& period) && {
+  WithCollection<Periodic> periodic(const std::string& name,
+                                    const Periodic::period& period) && {
     LOG(INFO) << "Adding Periodic named " << name << ".";
     auto p = std::make_unique<Periodic>(name, period);
     periodics_.push_back(p.get());
@@ -197,16 +151,18 @@ class FluentBuilder<
   }
 
   // See `RegisterRules`
-  template <typename F>
-  FluentBuilder<TypeList<Cs...>, typename std::result_of<F(Cs&...)>::type,
-                LineageDbClient, Hash, ToSql, Pickler, Clock>
-  RegisterBootstrapRules(const F& f) && {
-    static_assert(sizeof...(BootstrapLhss) == 0,
+  template <typename F, typename RetTuple =
+                            typename std::result_of<F(Collections&...)>::type,
+            typename RetTypes = typename TupleToTypeList<RetTuple>::type>
+  WithBootstrapRules<RetTypes> RegisterBootstrapRules(const F& f) && {
+    static_assert(TypeListLen<BootstrapRules>::value == 0,
                   "You are registering bootstrap rules with a FluentBuilder "
                   "that already has bootstrap rules registered with it. This "
                   "is disallowed.");
-    return RegisterBootstrapRulesImpl(
-        f, std::make_index_sequence<sizeof...(Cs)>());
+    static_assert(StaticAssert<IsTuple<RetTuple>>::value, "");
+    static_assert(StaticAssert<detail::ValidateRules<RetTypes>>::value, "");
+    return RegisterBootstrapRulesImpl<F, RetTuple, RetTypes>(
+        f, std::make_index_sequence<sizeof...(Collections)>());
   }
 
   // Recall the example from above:
@@ -229,12 +185,17 @@ class FluentBuilder<
   // Note that `t <= ra` is syntactic sugar for `std::make_pair(t, ra)`
   // implemented by Collection's `<=` operator. `RegisterRules` will execute
   // `f` to generate the rules and use them to construct a `FluentExecutor`.
-  template <typename F>
-  WARN_UNUSED StatusOr<FluentExecutor<
-      TypeList<Cs...>, BootstrapRules, typename std::result_of<F(Cs&...)>::type,
-      LineageDbClient, Hash, ToSql, Pickler, Clock>>
+  template <typename F, typename RetTuple =
+                            typename std::result_of<F(Collections&...)>::type,
+            typename RetTypes = typename TupleToTypeList<RetTuple>::type>
+  WARN_UNUSED StatusOr<
+      FluentExecutor<TypeList<Collections...>, BootstrapRules, RetTypes,
+                     LineageDbClient, Hash, ToSql, Pickler, Clock>>
   RegisterRules(const F& f) && {
-    return RegisterRulesImpl(f, std::make_index_sequence<sizeof...(Cs)>());
+    static_assert(StaticAssert<IsTuple<RetTuple>>::value, "");
+    static_assert(StaticAssert<detail::ValidateRules<RetTypes>>::value, "");
+    return RegisterRulesImpl<F, RetTuple, RetTypes>(
+        f, std::make_index_sequence<sizeof...(Collections)>());
   }
 
  private:
@@ -253,7 +214,7 @@ class FluentBuilder<
   }
 
   // Constructs an empty FluentBuilder. Note that this constructor should only
-  // be called when Cs and BootstrapRules are both empty. This private
+  // be called when Collections and BootstrapRules are both empty. This private
   // constructor is used primarily by the `fluent` function down below.
   FluentBuilder(
       const std::string& name, std::size_t id, const std::string& address,
@@ -265,36 +226,19 @@ class FluentBuilder<
         stdin_(nullptr),
         lineagedb_client_(std::move(lineagedb_client)) {
     static_assert(
-        sizeof...(Cs) == 0,
+        sizeof...(Collections) == 0,
         "This constructor must only be called on empty FluentBuilders.");
     static_assert(
-        std::tuple_size<BootstrapRules>::value == 0,
+        TypeListLen<BootstrapRules>::value == 0,
         "This constructor must only be called on empty FluentBuilders.");
-  }
-
-  // Constructs an empty FluentBuilder. Note that this constructor should
-  // only be called when Cs is empty (i.e. sizeof...(Cs) == 0). This private
-  // constructor is used primarily by the `fluent` function down below.
-  FluentBuilder(const std::string& name, const std::string& address,
-                zmq::context_t* context,
-                const lineagedb::ConnectionConfig& connection_config)
-      : name_(name),
-        id_(Hash<std::string>()(name)),
-        network_state_(std::make_unique<NetworkState>(address, context)),
-        stdin_(nullptr),
-        lineagedb_client_(std::make_unique<LineageDbClient<Hash, ToSql, Clock>>(
-            name_, id_, address, connection_config)) {
-    static_assert(sizeof...(Cs) == 0,
-                  "The FluentBuilder(const std::string& address, "
-                  "zmq::context_t* const context) constructor should only be "
-                  "called when Cs is empty.");
   }
 
   // Moves the guts of one FluentBuilder into another.
   FluentBuilder(
       std::string name, std::size_t id,
-      std::tuple<std::unique_ptr<Cs>...> collections,
-      BootstrapRules boostrap_rules, std::map<std::string, Parser> parsers,
+      std::tuple<std::unique_ptr<Collections>...> collections,
+      BootstrapRulesTuple boostrap_rules,
+      // std::map<std::string, Parser> parsers,
       std::unique_ptr<NetworkState> network_state, Stdin* stdin,
       std::vector<Periodic*> periodics,
       std::unique_ptr<LineageDbClient<Hash, ToSql, Clock>> lineagedb_client)
@@ -302,66 +246,60 @@ class FluentBuilder<
         id_(id),
         collections_(std::move(collections)),
         boostrap_rules_(std::move(boostrap_rules)),
-        parsers_(std::move(parsers)),
+        // parsers_(std::move(parsers)),
         network_state_(std::move(network_state)),
         stdin_(stdin),
         periodics_(std::move(periodics)),
         lineagedb_client_(std::move(lineagedb_client)) {}
 
   // Return a new FluentBuilder with `c` appended to `collections`.
-  template <typename C>
-  FluentBuilder<TypeList<Cs..., C>, BootstrapRules, LineageDbClient, Hash,
-                ToSql, Pickler, Clock>
-  AddCollection(std::unique_ptr<C> c) {
-    std::tuple<std::unique_ptr<Cs>..., std::unique_ptr<C>> collections =
-        std::tuple_cat(std::move(collections_), std::make_tuple(std::move(c)));
-    return {std::move(name_),
-            id_,
-            std::move(collections),
+  template <typename Collection>
+  WithCollection<Collection> AddCollection(std::unique_ptr<Collection> c) {
+    std::tuple<std::unique_ptr<Collections>..., std::unique_ptr<Collection>>
+        collections = std::tuple_cat(std::move(collections_),
+                                     std::make_tuple(std::move(c)));
+    return {std::move(name_), id_, std::move(collections),
             std::move(boostrap_rules_),
-            std::move(parsers_),
-            std::move(network_state_),
-            stdin_,
-            std::move(periodics_),
+            // std::move(parsers_),
+            std::move(network_state_), stdin_, std::move(periodics_),
             std::move(lineagedb_client_)};
   }
 
   // See `RegisterBootstrapRules`.
-  template <typename F, std::size_t... Is>
-  FluentBuilder<TypeList<Cs...>, typename std::result_of<F(Cs&...)>::type,
-                LineageDbClient, Hash, ToSql, Pickler, Clock>
+  template <typename F, typename RetTuple, typename RetTypes, std::size_t... Is>
+  FluentBuilder<TypeList<Collections...>, RetTypes, LineageDbClient, Hash,
+                ToSql, Pickler, Clock>
   RegisterBootstrapRulesImpl(const F& f, std::index_sequence<Is...>) {
     auto boostrap_rules = f(*std::get<Is>(collections_)...);
+    using correct_ret = std::is_same<decltype(boostrap_rules), RetTuple>;
+    static_assert(StaticAssert<correct_ret>::value, "");
     TupleIter(boostrap_rules, [](const auto& rule) {
       LOG(INFO) << "Registering bootstrap rule: " << rule.ToDebugString();
     });
-    return {std::move(name_),
-            id_,
-            std::move(collections_),
+    return {std::move(name_), id_, std::move(collections_),
             std::move(boostrap_rules),
-            std::move(parsers_),
-            std::move(network_state_),
-            stdin_,
-            std::move(periodics_),
+            // std::move(parsers_),
+            std::move(network_state_), stdin_, std::move(periodics_),
             std::move(lineagedb_client_)};
   }
 
   // See `RegisterRules`.
-  template <typename F, std::size_t... Is,
-            typename Executor =
-                FluentExecutor<TypeList<Cs...>, BootstrapRules,
-                               typename std::result_of<F(Cs&...)>::type,
-                               LineageDbClient, Hash, ToSql, Pickler, Clock>>
+  template <typename F, typename RetTuple, typename RetTypes, std::size_t... Is,
+            typename Executor = FluentExecutor<
+                TypeList<Collections...>, BootstrapRules, RetTypes,
+                LineageDbClient, Hash, ToSql, Pickler, Clock>>
   StatusOr<Executor> RegisterRulesImpl(const F& f, std::index_sequence<Is...>) {
-    auto relalgs = f(*std::get<Is>(collections_)...);
-    TupleIter(relalgs, [](const auto& rule) {
+    auto rules = f(*std::get<Is>(collections_)...);
+    using correct_ret = std::is_same<decltype(rules), RetTuple>;
+    static_assert(StaticAssert<correct_ret>::value, "");
+    TupleIter(rules, [](const auto& rule) {
       LOG(INFO) << "Registering rule: " << rule.ToDebugString();
     });
     return Executor::Make(std::move(name_), id_, std::move(collections_),
-                          std::move(boostrap_rules_), std::move(parsers_),
+                          std::move(boostrap_rules_),  //  std::move(parsers_),
                           std::move(network_state_), stdin_,
                           std::move(periodics_), std::move(lineagedb_client_),
-                          std::move(relalgs));
+                          std::move(rules));
   }
 
   // The name of the fluent program.
@@ -376,11 +314,12 @@ class FluentBuilder<
   // paranoid that as data was being moved from one FluentBuilder to
   // another, pointers to fields would be invalidated. Maybe we don't need the
   // unique_ptr, but I'd need to think harder about it.
-  std::tuple<std::unique_ptr<Cs>...> collections_;
+  std::tuple<std::unique_ptr<Collections>...> collections_;
 
   // See class documentation above.
-  BootstrapRules boostrap_rules_;
+  BootstrapRulesTuple boostrap_rules_;
 
+#if 0
   // `parsers_`  maps channel names to parsing functions that can parse a
   // packet (represented as a vector of strings) into a tuple and insert it
   // into the appropriate channel. For example, imagine we had a
@@ -388,6 +327,7 @@ class FluentBuilder<
   // contain an entry for key `"c"` and `parsers_["c"]({"foo", "1", "2.0"})`
   // would insert the tuple ("foo", 1, 2.0) into `"c"`.
   std::map<std::string, Parser> parsers_;
+#endif
 
   // Each fluent program sends tuples to other fluent nodes over the network
   // and receives tuples from other fluent nodes over the network. This is the
@@ -407,45 +347,41 @@ class FluentBuilder<
   std::unique_ptr<LineageDbClient<Hash, ToSql, Clock>> lineagedb_client_;
 
   // All FluentBuilders are friends of one another.
-  template <typename, typename,
-            template <template <typename> class, template <typename> class,
-                      typename> class,
-            template <typename> class, template <typename> class,
-            template <typename> class, typename>
-  friend class FluentBuilder;
-
-  // The `fluent` function is used to construct a FluentBuilder without any
-  // collections. Recall that looks something like this:
-  //
-  //   auto f = fluent("tcp://*:8000");
-  //     .table<int, char, float>("t")
-  //     .scratch<int, int, float>("s")
-  //     // and so on...
-  template <template <template <typename> class, template <typename> class,
-                      typename> class LineageDbClient_,
+  template <typename Collections_, typename BootstrapRules_,
+            template <template <typename> class Hash_,
+                      template <typename> class ToSql_, typename Clock_>
+            class LineageDbClient_,
             template <typename> class Hash_, template <typename> class ToSql_,
             template <typename> class Pickler_, typename Clock_>
-  friend StatusOr<FluentBuilder<TypeList<>, std::tuple<>, LineageDbClient_,
-                                Hash_, ToSql_, Pickler_, Clock_>>
+  friend class FluentBuilder;
+
+  // The `fluent` function is used to construct an empty FluentBuilder.
+  template <template <template <typename> class Hash_,
+                      template <typename> class ToSql_, typename Clock_>
+            class LineageDbClient_,
+            template <typename> class Hash_, template <typename> class ToSql_,
+            template <typename> class Pickler_, typename Clock_>
+  friend StatusOr<FluentBuilder<TypeList<>, TypeList<>, LineageDbClient_, Hash_,
+                                ToSql_, Pickler_, Clock_>>
   fluent(const std::string& name, const std::string& address,
          zmq::context_t* context,
          const lineagedb::ConnectionConfig& connection_config);
 };
 
-// Create an empty FluentBuilder listening on ZeroMQ address `address` using
-// the ZeroMQ context `context`.
-template <template <template <typename> class, template <typename> class,
-                    typename> class LineageDbClient,
+// Create an empty FluentBuilder.
+template <template <template <typename> class Hash,
+                    template <typename> class ToSql, typename Clock>
+          class LineageDbClient,
           template <typename> class Hash = Hash,
           template <typename> class ToSql = lineagedb::ToSql,
           template <typename> class Pickler = MockPickler,
           typename Clock = std::chrono::system_clock>
-StatusOr<FluentBuilder<TypeList<>, std::tuple<>, LineageDbClient, Hash, ToSql,
+StatusOr<FluentBuilder<TypeList<>, TypeList<>, LineageDbClient, Hash, ToSql,
                        Pickler, Clock>>
 fluent(const std::string& name, const std::string& address,
        zmq::context_t* context,
        const lineagedb::ConnectionConfig& connection_config) {
-  return FluentBuilder<TypeList<>, std::tuple<>, LineageDbClient, Hash, ToSql,
+  return FluentBuilder<TypeList<>, TypeList<>, LineageDbClient, Hash, ToSql,
                        Pickler, Clock>::Make(name, address, context,
                                              connection_config);
 }

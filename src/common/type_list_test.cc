@@ -59,14 +59,35 @@ TEST(TypeList, TypeListConcat) {
                 "");
 }
 
+TEST(TypeList, TypeListCons) {
+  using as = TypeList<>;
+  using bs = TypeListCons<int, as>::type;
+  using cs = TypeListCons<bool, bs>::type;
+  using ds = TypeListCons<float, cs>::type;
+
+  static_assert(std::is_same<as, TypeList<>>::value, "");
+  static_assert(std::is_same<bs, TypeList<int>>::value, "");
+  static_assert(std::is_same<cs, TypeList<bool, int>>::value, "");
+  static_assert(std::is_same<ds, TypeList<float, bool, int>>::value, "");
+}
+
+TEST(TypeList, TypeListAppend) {
+  using as = TypeList<>;
+  using bs = TypeListAppend<as, int>::type;
+  using cs = TypeListAppend<bs, bool>::type;
+  using ds = TypeListAppend<cs, float>::type;
+
+  static_assert(std::is_same<as, TypeList<>>::value, "");
+  static_assert(std::is_same<bs, TypeList<int>>::value, "");
+  static_assert(std::is_same<cs, TypeList<int, bool>>::value, "");
+  static_assert(std::is_same<ds, TypeList<int, bool, float>>::value, "");
+}
+
 TEST(TypeList, TypeListProject) {
   using xs = TypeList<int, char, float, double>;
-
-  {
-    using ys = TypeListProject<xs, 0>::type;
-    using expected = TypeList<int>;
-    static_assert(std::is_same<ys, expected>::value, "");
-  }
+  using ys = TypeListProject<xs, 0>::type;
+  using expected = TypeList<int>;
+  static_assert(std::is_same<ys, expected>::value, "");
 }
 
 TEST(TypeList, TypeListTake) {

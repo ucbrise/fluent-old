@@ -25,8 +25,8 @@ install and build the rest of the dependencies for you!
 ./scripts/build.sh Release 4 # build the code in release mode with 4 cores
 
 # Testing
-./build/ra_cross_test          # run a test
-./build/common_macros_test # run another test
+./build/bin/ra_logical_cross_test # run a test
+./build/bin/common_macros_test    # run another test
 (cd build && make test)           # run all the tests
 
 # Generating Tags
@@ -38,23 +38,12 @@ install and build the rest of the dependencies for you!
     (cd build && make test)
 
 # Run a chat server listening on port 8000.
-./build/examples_chat_noop_server 'tcp://*:8000'
+./build/bin/examples_chat_noop_server 'tcp://*:8000'
 
 # Run a chat client on port 8001 with nickname "zardoz"
-./build/examples_chat_noop_client \
+./build/bin/examples_chat_noop_client \
     tcp://0.0.0.0:8000 tcp://0.0.0.0:8001 zardoz
 ```
-
-## Tour
-| Directory                    | Description                             |
-| ---------------------------- | --------------------------------------- |
-| [`common`](src/common)       | Helpful functions, macros, and whatnot. |
-| [`testing`](src/testing)     | Testing utilities.                      |
-| [`zmq_util`](src/zmq_util)   | ZeroMQ utilities.                       |
-| [`ra`](src/ra)               | Relational algebra implementation.      |
-| [`lineagedb`](src/lineagedb) | Lineage database clients.               |
-| [`fluent`](src/fluent)       | Main fluent code.                       |
-| [`examples`](src/examples)   | Example fluent programs.                |
 
 ## Design Documents
 For more detailed documentation describing Fluent, refer to the following

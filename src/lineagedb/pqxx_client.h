@@ -58,12 +58,14 @@ struct ToSqlType {
 //   client.Init("my_fluent_node");
 //
 //   // Add the types of our collections.
-//   client.AddCollection<string, float>("t") // a table t[string, float].
-//   client.AddCollection<string, float>("c") // a channel c[string, float].
+//   client.AddCollection<int, float>("t", "Table")   // Table t[int, float].
+//   client.AddCollection<int, float>("c", "Channel") // Channel c[int, float].
 //
 //   // Add all our rules.
-//   client.AddRule(0, t += c.Iterable());
-//   client.AddRule(1, t -= (c.Iterable() | ra::filter(f)));
+//   client.AddRule(0, true, t += c.Iterable());
+//   client.AddRule(1, true, t -= (c.Iterable() | ra::filter(f)));
+//   client.AddRule(0, false, t += c.Iterable());
+//   client.AddRule(1, false, t -= (c.Iterable() | ra::filter(f)));
 //
 //   // Add and delete some tuples.
 //   client.InsertTuple("t", 0 /* time_inserted */, make_tuple("hi",  42.0));
@@ -89,11 +91,12 @@ template <typename Connection, typename Work, template <typename> class Hash,
           template <typename> class ToSql>
 class InjectablePqxxClient {
  public:
-  InjectablePqxxClient(std::string name, std::size_t id,
+  InjectablePqxxClient(std::string name, std::size_t id, std::string address,
                        const ConnectionConfig& connection_config)
       : connection_(connection_config.ToString()),
         name_(std::move(name)),
-        id_(id) {
+        id_(id),
+        address_(std::move(address)) {
     LOG(INFO)
         << "Established a lineagedb connection with the following parameters: "
         << connection_config.ToString();
@@ -103,12 +106,13 @@ class InjectablePqxxClient {
   void Init() {
     initialized_ = true;
 
-    ExecuteQuery("Init",
-                 fmt::format(R"(
-      INSERT INTO Nodes (id, name)
+    ExecuteQuery(
+        "Init",
+        fmt::format(R"(
+      INSERT INTO Nodes (id, name, address)
       VALUES ({});
     )",
-                             Join(SqlValues(std::make_tuple(id_, name_)))));
+                    Join(SqlValues(std::make_tuple(id_, name_, address_)))));
 
     ExecuteQuery("CreateLineageTable", fmt::format(R"(
       CREATE TABLE {}_lineage (
@@ -127,7 +131,8 @@ class InjectablePqxxClient {
   }
 
   template <typename... Ts>
-  void AddCollection(const std::string& collection_name) {
+  void AddCollection(const std::string& collection_name,
+                     const std::string& collection_type) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >= 1 column.");
     CHECK(initialized_) << "Call Init first.";
 
@@ -137,13 +142,13 @@ class InjectablePqxxClient {
     CHECK_NE(collection_name, std::string("lineage"))
         << "Lineage is a reserved collection name.";
 
-    ExecuteQuery(
-        "AddCollection",
-        fmt::format(R"(
-      INSERT INTO Collections (node_id, collection_name)
+    ExecuteQuery("AddCollection",
+                 fmt::format(R"(
+      INSERT INTO Collections (node_id, collection_name, collection_type)
       VALUES ({});
     )",
-                    Join(SqlValues(std::make_tuple(id_, collection_name)))));
+                             Join(SqlValues(std::make_tuple(
+                                 id_, collection_name, collection_type)))));
 
     std::vector<std::string> types = SqlTypes<Ts...>();
     std::vector<std::string> columns;
@@ -163,14 +168,17 @@ class InjectablePqxxClient {
                              name_, collection_name, Join(columns)));
   }
 
-  void AddRule(std::size_t rule_number, const std::string& rule_string) {
+  void AddRule(std::size_t rule_number, bool is_bootstrap,
+               const std::string& rule_string) {
     CHECK(initialized_) << "Call Init first.";
-    ExecuteQuery("AddRule", fmt::format(R"(
-      INSERT INTO Rules (node_id, rule_number, rule)
+    ExecuteQuery(
+        "AddRule",
+        fmt::format(R"(
+      INSERT INTO Rules (node_id, rule_number, is_bootstrap, rule)
       VALUES ({});
     )",
-                                        Join(SqlValues(std::make_tuple(
-                                            id_, rule_number, rule_string)))));
+                    Join(SqlValues(std::make_tuple(
+                        id_, rule_number, is_bootstrap, rule_string)))));
   }
 
   template <typename... Ts>
@@ -282,10 +290,13 @@ class InjectablePqxxClient {
   bool initialized_ = false;
 
   // The name of fluent node using this client.
-  std::string name_;
+  const std::string name_;
 
   // Each fluent node named `n` has a unique id `hash(n)`.
-  std::int64_t id_;
+  const std::int64_t id_;
+
+  // The address of the fluent program.
+  const std::string address_;
 };
 
 // See InjectablePqxxClient documentation above.

@@ -37,10 +37,10 @@ template <template <typename> class Hash, template <typename> class ToSql>
 class MockPqxxClient
     : public InjectablePqxxClient<MockConnection, MockWork, Hash, ToSql> {
  public:
-  MockPqxxClient(std::string name, std::size_t id,
+  MockPqxxClient(std::string name, std::size_t id, std::string address,
                  const ConnectionConfig& connection_config)
       : InjectablePqxxClient<MockConnection, MockWork, Hash, ToSql>(
-            std::move(name), id, connection_config) {}
+            std::move(name), id, std::move(address), connection_config) {}
 
   void ExecuteQuery(const std::string& name,
                     const std::string& query) override {

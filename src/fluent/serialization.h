@@ -36,71 +36,71 @@ T FromString(const std::string&);
 
 // std::string
 template <>
-std::string ToString(const std::string& s) {
+inline std::string ToString(const std::string& s) {
   return s;
 }
 
 template <>
-std::string FromString<std::string>(const std::string& s) {
+inline std::string FromString<std::string>(const std::string& s) {
   return s;
 }
 
 // char
 template <>
-std::string ToString(const char& c) {
+inline std::string ToString(const char& c) {
   return std::string(1, c);
 }
 
 template <>
-char FromString<char>(const std::string& s) {
+inline char FromString<char>(const std::string& s) {
   return s[0];
 }
 
 // int
 template <>
-int FromString<int>(const std::string& s) {
+inline int FromString<int>(const std::string& s) {
   return std::stoi(s);
 }
 
 // long
 template <>
-long FromString<long>(const std::string& s) {
+inline long FromString<long>(const std::string& s) {
   return std::stol(s);
 }
 
 // long long
 template <>
-long long FromString<long long>(const std::string& s) {
+inline long long FromString<long long>(const std::string& s) {
   return std::stoll(s);
 }
 
 // unsigned long
 template <>
-unsigned long FromString<unsigned long>(const std::string& s) {
+inline unsigned long FromString<unsigned long>(const std::string& s) {
   return std::stoul(s);
 }
 
 // unsigned long long
 template <>
-unsigned long long FromString<unsigned long long>(const std::string& s) {
+inline unsigned long long FromString<unsigned long long>(const std::string& s) {
   return std::stoull(s);
 }
 
 // float
 template <>
-float FromString<float>(const std::string& s) {
+inline float FromString<float>(const std::string& s) {
   return std::stof(s);
 }
 
 // double
 template <>
-double FromString<double>(const std::string& s) {
+inline double FromString<double>(const std::string& s) {
   return std::stod(s);
 }
 
 // long double
 template <>
-long double FromString<long double>(const std::string& s) {
+inline long double FromString<long double>(const std::string& s) {
   return std::stold(s);
 }
 

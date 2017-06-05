@@ -36,8 +36,9 @@ int ClientMain(const ClientArgs& args,
                                        args.nickname)};
 
   auto f =
-      fluent::fluent<LineageDbClient>("chat_client", args.client_address,
-                                      &context, connection_config)
+      fluent::fluent<LineageDbClient>("chat_client_" + args.nickname,
+                                      args.client_address, &context,
+                                      connection_config)
           .stdin()
           .stdout()
           .template channel<server_address_t, client_address_t, nickname_t>(

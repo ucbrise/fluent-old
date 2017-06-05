@@ -29,21 +29,29 @@ template <template <typename> class Hash, template <typename> class ToSql>
 class MockClient {
  public:
   // Client Mocks //////////////////////////////////////////////////////////////
-  MockClient(std::string name, std::size_t id, const ConnectionConfig& config)
-      : name_(std::move(name)), id_(id), config_(config) {}
+  MockClient(std::string name, std::size_t id, std::string address,
+             const ConnectionConfig& config)
+      : name_(std::move(name)),
+        id_(id),
+        address_(std::move(address)),
+        config_(config) {}
 
   void Init() { init_ = true; }
 
   template <typename... Ts>
-  void AddCollection(const std::string& collection_name) {
+  void AddCollection(const std::string& collection_name,
+                     const std::string& collection_type) {
     std::vector<std::string> types;
     TupleIter(TupleFromTypes<ToSqlType, Ts...>(),
               [&types](const std::string& s) { types.push_back(s); });
-    add_collection_.push_back(std::make_pair(collection_name, types));
+    add_collection_.push_back(
+        std::make_tuple(collection_name, collection_type, types));
   }
 
-  void AddRule(std::size_t rule_number, const std::string& rule_string) {
-    add_rule_.push_back(std::make_pair(rule_number, rule_string));
+  void AddRule(std::size_t rule_number, bool is_bootstrap,
+               const std::string& rule_string) {
+    add_rule_.push_back(
+        std::make_tuple(rule_number, is_bootstrap, rule_string));
   }
 
   template <typename... Ts>
@@ -89,13 +97,35 @@ class MockClient {
   }
 
   // Getters ///////////////////////////////////////////////////////////////////
+  using AddCollectionTuple =
+      std::tuple<std::string, std::string, std::vector<std::string>>;
+  using AddRuleTuple = std::tuple<std::size_t, bool, std::string>;
+  using InsertTupleTuple =
+      std::tuple<std::string, int, std::vector<std::string>>;
+  using DeleteTupleTuple =
+      std::tuple<std::string, int, std::vector<std::string>>;
+  using AddNetworkedLineageTuple =
+      std::tuple<std::size_t, int, std::string, std::size_t, int>;
+  using AddDerivedLineageTuple = std::tuple<std::string, std::size_t, int, bool,
+                                            std::string, std::size_t, int>;
+
   bool GetInit() const { return init_; }
-  const auto& GetAddCollection() const { return add_collection_; }
-  const auto& GetAddRule() const { return add_rule_; }
-  const auto& GetInsertTuple() const { return insert_tuple_; }
-  const auto& GetDeleteTuple() const { return delete_tuple_; }
-  const auto& GetAddNetworkedLineage() const { return add_networked_lineage_; }
-  const auto& GetAddDerivedLineage() const { return add_derived_lineage_; }
+  const std::vector<AddCollectionTuple>& GetAddCollection() const {
+    return add_collection_;
+  }
+  const std::vector<AddRuleTuple>& GetAddRule() const { return add_rule_; }
+  const std::vector<InsertTupleTuple>& GetInsertTuple() const {
+    return insert_tuple_;
+  }
+  const std::vector<DeleteTupleTuple>& GetDeleteTuple() const {
+    return delete_tuple_;
+  }
+  const std::vector<AddNetworkedLineageTuple>& GetAddNetworkedLineage() const {
+    return add_networked_lineage_;
+  }
+  const std::vector<AddDerivedLineageTuple>& GetAddDerivedLineage() const {
+    return add_derived_lineage_;
+  }
 
  private:
   template <typename T>
@@ -103,42 +133,38 @@ class MockClient {
 
   const std::string name_;
   const std::size_t id_;
+  const std::string address_;
   const ConnectionConfig config_;
 
   // True iff Init has been called.
   bool init_ = false;
 
-  // Every time `AddCollection<Ts...>(name)` is called, the pair `(name,
-  // (ToSql<Ts>().Type()...))` is appended to `add_collection_`.
-  std::vector<std::pair<std::string, std::vector<std::string>>> add_collection_;
+  // Every time `AddCollection<Ts...>(name, type)` is called, the tuple `(name,
+  // type, (ToSql<Ts>().Type()...))` is appended to `add_collection_`.
+  std::vector<AddCollectionTuple> add_collection_;
 
-  // Every time `AddRule(i, rule)` is called, the pair `(i, stringified rule)`
+  // Every time `AddRule(i, b, rule)` is called, the pair `(i, b, rule rule)`
   // is appended to `add_rule_`.
-  std::vector<std::pair<std::size_t, std::string>> add_rule_;
+  std::vector<AddRuleTuple> add_rule_;
 
   // Every time `InsertTuple(name, time, (t1, ..., tn))` is called, the tuple
   // `(name, time, [ToSql<decltype(ti)>()(ti)...])` is appended to
   // `insert_tuple_`.
-  std::vector<std::tuple<std::string, int, std::vector<std::string>>>
-      insert_tuple_;
+  std::vector<InsertTupleTuple> insert_tuple_;
 
   // Every time `DeleteTuple(name, time, (t1, ..., tn))` is called, the tuple
   // `(name, time, [ToSql<decltype(ti)>()(ti)...])` is appended to
   // `delete_tuple_`.
-  std::vector<std::tuple<std::string, int, std::vector<std::string>>>
-      delete_tuple_;
+  std::vector<DeleteTupleTuple> delete_tuple_;
 
   // Every time `AddNetworkedLineage(dn, dtime, name, hash, time)` is called,
   // the tuple `(dn, dtime, name, hash, time)` is appended to
   // `add_networked_lineage_`.
-  std::vector<std::tuple<std::size_t, int, std::string, std::size_t, int>>
-      add_networked_lineage_;
+  std::vector<AddNetworkedLineageTuple> add_networked_lineage_;
 
   // Every time `AddDerivedLineage(dn, dh, rn, i, n, h, t)` is called, the
   // tuple `(dn, dh, rn, i, n, h, t)` is appended to `add_derived_lineage_`.
-  std::vector<std::tuple<std::string, std::size_t, int, bool, std::string,
-                         std::size_t, int>>
-      add_derived_lineage_;
+  std::vector<AddDerivedLineageTuple> add_derived_lineage_;
 };
 
 }  // namespace lineagedb

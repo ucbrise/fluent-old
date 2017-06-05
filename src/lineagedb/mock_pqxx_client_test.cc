@@ -23,14 +23,14 @@ namespace lineagedb {
 
 TEST(MockPqxxClient, Init) {
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client("name", 9001, c);
+  MockPqxxClient<Hash, ToSql> client("name", 9001, "127.0.0.1", c);
   client.Init();
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(2));
   ExpectStringsEqualIgnoreWhiteSpace(queries[0].second, R"(
-    INSERT INTO Nodes (id, name)
-    VALUES (9001, 'name');
+    INSERT INTO Nodes (id, name, address)
+    VALUES (9001, 'name', '127.0.0.1');
   )");
   ExpectStringsEqualIgnoreWhiteSpace(queries[1].second, R"(
     CREATE TABLE name_lineage (
@@ -49,15 +49,15 @@ TEST(MockPqxxClient, Init) {
 
 TEST(MockPqxxClient, AddCollection) {
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client("name", 9001, c);
+  MockPqxxClient<Hash, ToSql> client("name", 9001, "127.0.0.1", c);
   client.Init();
-  client.AddCollection<int, char, bool>("t");
+  client.AddCollection<int, char, bool>("t", "Table");
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(4));
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, R"(
-    INSERT INTO Collections (node_id, collection_name)
-    VALUES (9001, 't');
+    INSERT INTO Collections (node_id, collection_name, collection_type)
+    VALUES (9001, 't', 'Table');
   )");
   ExpectStringsEqualIgnoreWhiteSpace(queries[3].second, R"(
     CREATE TABLE name_t (
@@ -74,15 +74,15 @@ TEST(MockPqxxClient, AddCollection) {
 
 TEST(MockPqxxClient, AddRule) {
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client("name", 9001, c);
+  MockPqxxClient<Hash, ToSql> client("name", 9001, "127.0.0.1", c);
   client.Init();
-  client.AddRule(0, "foo");
+  client.AddRule(0, true, "foo");
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(3));
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, R"(
-    INSERT INTO Rules (node_id, rule_number, rule)
-    VALUES (9001, 0, 'foo');
+    INSERT INTO Rules (node_id, rule_number, is_bootstrap, rule)
+    VALUES (9001, 0, true, 'foo');
   )");
 }
 
@@ -91,7 +91,7 @@ TEST(MockPqxxClient, InsertTuple) {
   tuple_t t = {1, true, 'a'};
 
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client("name", 9001, c);
+  MockPqxxClient<Hash, ToSql> client("name", 9001, "127.0.0.1", c);
   client.Init();
   client.InsertTuple("t", 42, t);
 
@@ -111,7 +111,7 @@ TEST(MockPqxxClient, DeleteTuple) {
   tuple_t t = {1, true, 'a'};
 
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client("name", 9001, c);
+  MockPqxxClient<Hash, ToSql> client("name", 9001, "127.0.0.1", c);
   client.Init();
   client.DeleteTuple("t", 42, t);
 
@@ -132,7 +132,7 @@ TEST(MockPqxxClient, AddNetworkedLineage) {
   tuple_t t = {1, true, 'a'};
 
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client("name", 9001, c);
+  MockPqxxClient<Hash, ToSql> client("name", 9001, "127.0.0.1", c);
   client.Init();
   client.AddNetworkedLineage(0, 1, "foo", 2, 3);
 
@@ -152,7 +152,7 @@ TEST(MockPqxxClient, AddDerivedLineage) {
   tuple_t t = {1, true, 'a'};
 
   ConnectionConfig c;
-  MockPqxxClient<Hash, ToSql> client("name", 9001, c);
+  MockPqxxClient<Hash, ToSql> client("name", 9001, "127.0.0.1", c);
   client.Init();
   client.AddDerivedLineage("foo", 1, 2, true, "bar", 3, 4);
 

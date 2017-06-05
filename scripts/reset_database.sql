@@ -6,17 +6,21 @@ CREATE SCHEMA PUBLIC;
 
 CREATE TABLE Nodes (
     id      bigint PRIMARY KEY,
-    name    text   NOT NULL
+    name    text   NOT NULL,
+    address text   NOT NULL
 );
 
 CREATE TABLE Collections (
     node_id         bigint NOT NULL,
-    collection_name text   NOT NULL
+    collection_name text   NOT NULL,
+    collection_type text   NOT NULL,
+    PRIMARY KEY (node_id, collection_name)
 );
 
 CREATE TABLE Rules (
-    node_id     bigint  NOT NULL,
-    rule_number integer NOT NULL,
-    rule        text    NOT NULL,
-    PRIMARY KEY (node_id, rule_number)
+    node_id      bigint  NOT NULL,
+    rule_number  integer NOT NULL,
+    is_bootstrap boolean NOT NULL,
+    rule         text    NOT NULL,
+    PRIMARY KEY (node_id, rule_number, is_bootstrap)
 );

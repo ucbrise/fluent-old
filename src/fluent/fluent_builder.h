@@ -233,7 +233,7 @@ class FluentBuilder<
         network_state_(std::make_unique<NetworkState>(address, context)),
         stdin_(nullptr),
         lineagedb_client_(std::make_unique<LineageDbClient<Hash, ToSql>>(
-            name_, id_, connection_config)) {
+            name_, id_, address, connection_config)) {
     static_assert(sizeof...(Cs) == 0,
                   "The FluentBuilder(const std::string& address, "
                   "zmq::context_t* const context) constructor should only be "

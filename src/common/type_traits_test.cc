@@ -1,5 +1,6 @@
 #include "common/type_traits.h"
 
+#include <memory>
 #include <vector>
 
 #include "glog/logging.h"
@@ -54,6 +55,17 @@ TEST(TypeTraits, IsTuple) {
   static_assert(!IsTuple<std::tuple<int>&>::value, "");
   static_assert(!IsTuple<const std::tuple<int>>::value, "");
   static_assert(!IsTuple<const std::tuple<int>&>::value, "");
+}
+
+TEST(TypeTraits, Unwrap) {
+  static_assert(std::is_same<int, Unwrap<std::unique_ptr<int>>::type>::value,
+                "");
+  static_assert(std::is_same<bool, Unwrap<std::unique_ptr<bool>>::type>::value,
+                "");
+  static_assert(std::is_same<int, Unwrap<std::tuple<int>>::type>::value, "");
+  static_assert(std::is_same<bool, Unwrap<std::tuple<bool>>::type>::value, "");
+  static_assert(std::is_same<int, Unwrap<std::set<int>>::type>::value, "");
+  static_assert(std::is_same<bool, Unwrap<std::set<bool>>::type>::value, "");
 }
 
 }  // namespace fluent

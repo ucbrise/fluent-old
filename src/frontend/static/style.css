@@ -1,0 +1,130 @@
+body {
+    background-color: #ebeff1;
+}
+
+#container {
+    font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+    line-height: 27px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-bottom: 20px;
+    padding-left: 1em;
+    padding-right: 1em;
+    padding-top: 20px;
+}
+
+#nodesrules, #collections {
+    float: left;
+}
+
+#nodesrules {
+    width: 5in;
+}
+
+#nodes {
+    margin-bottom: 1em;
+}
+
+#nodes ul {
+    padding: 0;
+    list-style-type: none;
+}
+
+.bolded {
+    font-weight: bold;
+}
+
+#nodes_list button:hover {
+    background-color: #ebeff1;
+}
+
+#nodes_list button {
+    width: 100%;
+    display: flex;
+}
+
+#rules ol, #rules ul {
+    margin: 0;
+}
+
+#collections {
+    min-width: 7in;
+}
+
+.column {
+    background-color: white;
+    border-radius: 2pt;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+    margin: 0.5em;
+    padding: 10pt;
+}
+
+.column h1 {
+    font-size: 20pt;
+    font-weight: lighter;
+    margin-bottom: 0.5em;
+    margin-top: 0em;
+}
+
+.node {
+    background: none;
+    border: none;
+    font-family: monospace;
+    font-size: 12pt;
+}
+
+.name {
+}
+
+.address {
+    margin-left: 5pt;
+    color: gray;
+}
+
+.rule {
+    font-family: monospace;
+}
+
+.collection {
+    font-family: monospace;
+}
+
+#collections_time {
+    font-family: monospace;
+}
+
+.collection_name {
+    font-size: 12pt;
+}
+
+.collection_type {
+    font-size: 12pt;
+    color: gray;
+}
+
+#collections table {
+    font-size: 12pt;
+    margin-bottom: 1.15em;
+    border-collapse: collapse;
+}
+
+#collections td, #collections th {
+    padding: 1pt;
+    border: 1.5pt solid gray;
+}
+
+#rules ul, #rules ol {
+    font-family: monospace;
+    font-size: 12pt;
+}
+
+#bootstrap_rules_list, #rules_list {
+}
+
+#bootstrap_tick_list, #tick_list, #receive_list {
+    list-style-type: none;
+}
+
+.current_rule {
+    font-weight: bold;
+}

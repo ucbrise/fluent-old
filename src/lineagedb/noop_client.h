@@ -13,14 +13,14 @@ namespace lineagedb {
 template <template <typename> class Hash, template <typename> class ToSql>
 class NoopClient {
  public:
-  NoopClient(std::string, std::size_t, const ConnectionConfig&) {}
+  NoopClient(std::string, std::size_t, std::string, const ConnectionConfig&) {}
 
   void Init() {}
 
   template <typename... Ts>
-  void AddCollection(const std::string&) {}
+  void AddCollection(const std::string&, const std::string&) {}
 
-  void AddRule(std::size_t, const std::string&) {}
+  void AddRule(std::size_t, bool, const std::string&) {}
 
   template <typename... Ts>
   void InsertTuple(const std::string&, int, const std::tuple<Ts...>&) {}

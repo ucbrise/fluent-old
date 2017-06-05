@@ -245,7 +245,7 @@ class FluentExecutor<
   //                 time_inserted integer)
   //   AS $$
   //     SELECT
-  //       CAST('redis_server' as text),
+  //       CAST('redis_server' AS TEXT),
   //       CAST('set_request' AS text),
   //       hash,
   //       time_inserted
@@ -260,10 +260,20 @@ class FluentExecutor<
   //   CREATE FUNCTION get_response_lineage(integer)
   //   RETURNS TABLE(collection_name text, hash integer, time_inserted integer)
   //   AS $$
-  //     SELECT
-  //       get_response_lineage_impl(Req.time_inserted, Req.key, Resp.value)
-  //     FROM get_request Req, get_response Resp
+  //     SELECT L.*
+  //     FROM get_request Req,
+  //          get_response Resp,
+  //          get_response_lineage_impl(Req.time_inserted, Req.key, Resp.value)
+  //          AS L
   //     WHERE Req.id = $1 AND Resp.id = $1
+  //     UNION
+  //     SELECT
+  //       CAST('redis_server' as text),
+  //       CAST('get_request' as text),
+  //       hash,
+  //       time_inserted
+  //     FROM redis_server_get_request
+  //     WHERE id = $1;
   //   $$ LANGUAGE SQL;
   //
   // Most of these two functions are boilerplate. The only creative bit that a
@@ -617,19 +627,28 @@ class FluentExecutor<
 
     const std::string lineage_command = fmt::format(
         R"(
-      CREATE FUNCTION {}_{}_lineage(bigint)
+      CREATE FUNCTION {0}_{2}_lineage(bigint)
       RETURNS TABLE(node_name text,
                     collection_name text,
                     hash bigint,
                     time_inserted integer)
       AS $$
-        SELECT {}_{}_lineage_impl(Req.time_inserted, {})
-        FROM {}_{} Req, {}_{} Resp
+        SELECT L.*
+        FROM {0}_{1} Req,
+             {0}_{2} Resp,
+             {0}_{2}_lineage_impl(Req.time_inserted, {3}) AS L
         WHERE Req.id = $1 AND Resp.id = $1
+        UNION
+        SELECT
+          CAST('{0}' AS TEXT),
+          CAST('{1}' AS TEXT),
+          hash,
+          time_inserted
+        FROM {0}_{1}
+        WHERE id = $1
       $$ LANGUAGE SQL;
     )",
-        name_, response.Name(), name_, response.Name(), Join(column_names),
-        name_, request.Name(), name_, response.Name());
+        name_, request.Name(), response.Name(), Join(column_names));
 
     return lineagedb_client_->RegisterBlackBoxLineage(
         response.Name(),

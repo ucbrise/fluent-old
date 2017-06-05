@@ -84,9 +84,6 @@ def node_collection_(cur, node_name, collection_name, time):
     return collection
 
 def black_box_backwards_lineage_(cur, node_name, collection_name, id_):
-    print(node_name)
-    print(collection_name)
-    print(id_)
     cur.execute("""
         SELECT *
         FROM {}_{}_lineage(%s);

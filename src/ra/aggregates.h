@@ -3,6 +3,8 @@
 
 #include <cstddef>
 
+#include "fmt/format.h"
+
 namespace fluent {
 namespace ra {
 namespace agg {
@@ -31,6 +33,8 @@ namespace agg {
 //   struct Aggregate {
 //     template <typename T>
 //     using type = AggregateImpl<I, T>;
+//
+//     static std::string ToDebugString const { ... }
 //   };
 //
 // Each aggregate (e.g. Sum, Avg, Count) is paramaterized on a size_t denoting
@@ -57,6 +61,8 @@ template <std::size_t I>
 struct Sum {
   template <typename T>
   using type = SumImpl<I, T>;
+
+  static std::string ToDebugString() { return fmt::format("Sum<{}>", I); }
 };
 
 template <std::size_t, typename T>
@@ -73,6 +79,8 @@ template <std::size_t I>
 struct Count {
   template <typename T>
   using type = CountImpl<I, T>;
+
+  static std::string ToDebugString() { return fmt::format("Count<{}>", I); }
 };
 
 template <std::size_t, typename T>
@@ -94,6 +102,8 @@ template <std::size_t I>
 struct Avg {
   template <typename T>
   using type = AvgImpl<I, T>;
+
+  static std::string ToDebugString() { return fmt::format("Avg<{}>", I); }
 };
 
 }  // namespace agg

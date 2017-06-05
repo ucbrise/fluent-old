@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "fmt/format.h"
 #include "range/v3/all.hpp"
 
 #include "common/type_list.h"
@@ -46,6 +47,10 @@ class Count {
   Count(LogicalChild child) : child_(std::move(child)) {}
 
   auto ToPhysical() const { return make_physical_count(child_.ToPhysical()); }
+
+  std::string ToDebugString() const {
+    return fmt::format("Count({})", child_.ToDebugString());
+  }
 
  private:
   const LogicalChild child_;

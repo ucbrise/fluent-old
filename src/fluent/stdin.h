@@ -1,6 +1,7 @@
 #ifndef FLUENT_STDIN_H_
 #define FLUENT_STDIN_H_
 
+#include <algorithm>
 #include <iostream>
 #include <set>
 #include <string>
@@ -20,6 +21,11 @@ class Stdin {
   Stdin() {}
   DISALLOW_COPY_AND_ASSIGN(Stdin);
 
+  const std::string& Name() const {
+    static const std::string name = "stdin";
+    return name;
+  }
+
   ra::Iterable<std::set<std::tuple<std::string>>> Iterable() const {
     return ra::make_iterable(&lines_);
   }
@@ -29,13 +35,19 @@ class Stdin {
             /* revents */ 0};
   }
 
-  void GetLine() {
+  std::tuple<std::string> GetLine() {
     std::string line;
     std::getline(std::cin, line);
-    lines_.insert(std::tuple<std::string>(line));
+    std::tuple<std::string> t(line);
+    lines_.insert(t);
+    return t;
   }
 
-  void Tick() { lines_.clear(); }
+  std::set<std::tuple<std::string>> Tick() {
+    std::set<std::tuple<std::string>> lines;
+    std::swap(lines_, lines);
+    return lines;
+  }
 
  private:
   std::set<std::tuple<std::string>> lines_;

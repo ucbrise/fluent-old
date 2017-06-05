@@ -34,6 +34,8 @@ TEST(GroupBy, SimpleSum) {
                              TypeList<int, int, std::size_t, double>>::value,
                 "");
   ExpectRngsUnorderedEqual(grouped.ToPhysical().ToRange(), expected);
+  EXPECT_EQ(grouped.ToDebugString(),
+            "GroupBy<Keys<0>, Sum<1>, Count<2>, Avg<3>>(Iterable)");
 }
 
 }  // namespace fluent

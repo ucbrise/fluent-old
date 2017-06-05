@@ -22,6 +22,7 @@ TEST(Filter, SimpleFilter) {
       std::is_same<decltype(filter)::column_types, TypeList<int>>::value, "");
   std::vector<std::tuple<int>> expected = {{1}, {3}};
   ExpectRngsEqual(filter.ToPhysical().ToRange(), ranges::view::all(expected));
+  EXPECT_EQ(filter.ToDebugString(), "Filter(Iterable)");
 }
 
 TEST(Filter, SimplePipedFilter) {

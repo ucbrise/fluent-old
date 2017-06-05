@@ -136,6 +136,22 @@ template <typename... Ts>
 struct TypeListLen<TypeList<Ts...>>
     : public std::integral_constant<std::size_t, sizeof...(Ts)> {};
 
+// AllSame
+template <typename TypeList>
+struct TypeListAllSame;
+
+template <>
+struct TypeListAllSame<TypeList<>> : public std::true_type {};
+
+template <typename T>
+struct TypeListAllSame<TypeList<T>> : public std::true_type {};
+
+template <typename T, typename U, typename... Us>
+struct TypeListAllSame<TypeList<T, U, Us...>> {
+  static constexpr bool value =
+      std::is_same<T, U>::value && TypeListAllSame<TypeList<U, Us...>>::value;
+};
+
 // Tuple -> TypeList
 template <typename Tuple>
 struct TupleToTypeList;

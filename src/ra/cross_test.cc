@@ -27,6 +27,7 @@ TEST(Cross, SimpleCross) {
       {1, "a"}, {2, "a"}, {3, "a"}, {1, "b"}, {2, "b"}, {3, "b"},
   };
   ExpectRngsUnorderedEqual(crossed.ToPhysical().ToRange(), expected);
+  EXPECT_EQ(crossed.ToDebugString(), "Cross(Iterable, Iterable)");
 }
 
 }  // namespace fluent

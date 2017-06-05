@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "fmt/format.h"
 #include "range/v3/all.hpp"
 
 namespace fluent {
@@ -37,6 +38,10 @@ class Filter {
 
   auto ToPhysical() const {
     return make_physical_filter(child_.ToPhysical(), &f_);
+  }
+
+  std::string ToDebugString() const {
+    return fmt::format("Filter({})", child_.ToDebugString());
   }
 
  private:

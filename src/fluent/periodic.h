@@ -3,6 +3,7 @@
 
 #include <cstddef>
 
+#include <algorithm>
 #include <chrono>
 #include <set>
 #include <string>
@@ -10,6 +11,7 @@
 #include <utility>
 
 #include "common/macros.h"
+#include "common/type_traits.h"
 #include "ra/iterable.h"
 
 namespace fluent {
@@ -55,12 +57,17 @@ class Periodic {
     return ra::make_iterable(&tocks_);
   }
 
-  void Tock() {
-    tocks_.insert(
-        std::tuple<id, time>(id_++, std::chrono::system_clock::now()));
+  std::tuple<id, time> Tock() {
+    std::tuple<id, time> t(id_++, std::chrono::system_clock::now());
+    tocks_.insert(t);
+    return t;
   }
 
-  void Tick() { tocks_.clear(); }
+  std::set<std::tuple<id, time>> Tick() {
+    std::set<std::tuple<id, time>> tocks;
+    std::swap(tocks, tocks_);
+    return tocks;
+  }
 
  private:
   const std::string name_;

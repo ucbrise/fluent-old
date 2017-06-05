@@ -4,8 +4,10 @@
 #include <type_traits>
 #include <utility>
 
+#include "fmt/format.h"
 #include "range/v3/all.hpp"
 
+#include "common/string_util.h"
 #include "common/type_list.h"
 
 namespace fluent {
@@ -44,6 +46,10 @@ class Project {
 
   auto ToPhysical() const {
     return make_physical_project<Is...>(child_.ToPhysical());
+  }
+
+  std::string ToDebugString() const {
+    return fmt::format("Project<{}>({})", Join(Is...), child_.ToDebugString());
   }
 
  private:

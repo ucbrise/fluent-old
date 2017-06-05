@@ -7,7 +7,15 @@
 #include "gtest/gtest.h"
 #include "range/v3/all.hpp"
 
+#include "common/string_util.h"
+
 namespace fluent {
+
+void ExpectStringsEqualIgnoreWhiteSpace(const std::string& x,
+                                        const std::string& y) {
+  EXPECT_EQ(CrunchWhitespace(x), CrunchWhitespace(y))
+      << "CrunchWhitespace(" << x << ") != CrunchWhitespace(" << y << ").";
+}
 
 // `ExpectRngsEqual(x, y)` uses `EXPECT_EQ` to check that
 //   (a) `x` and `y` have the same length and

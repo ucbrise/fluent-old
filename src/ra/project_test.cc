@@ -26,6 +26,7 @@ TEST(Project, SimpleProject) {
     std::vector<std::tuple<int>> expected = {{1}, {2}, {3}};
     ExpectRngsEqual(project.ToPhysical().ToRange(),
                     ranges::view::all(expected));
+    EXPECT_EQ(project.ToDebugString(), "Project<0>(Iterable)");
   }
 
   {

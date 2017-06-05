@@ -1,9 +1,15 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
+ADD_LIBRARY(common string_util.cc)
+
 MACRO(CREATE_COMMON_TEST NAME)
     CREATE_NAMED_TEST(common_${NAME} ${NAME})
-    TARGET_LINK_LIBRARIES(common_${NAME} glog)
+    TARGET_LINK_LIBRARIES(common_${NAME} common glog)
 ENDMACRO(CREATE_COMMON_TEST)
 
+CREATE_COMMON_TEST(hash_util_test)
 CREATE_COMMON_TEST(macros_test)
+CREATE_COMMON_TEST(string_util_test)
+CREATE_COMMON_TEST(tuple_util_test)
 CREATE_COMMON_TEST(type_list_test)
+CREATE_COMMON_TEST(type_traits_test)

@@ -36,6 +36,8 @@ class Iterable {
 
   auto ToPhysical() const { return make_physical_iterable(iterable_); }
 
+  std::string ToDebugString() const { return "Iterable"; }
+
  private:
   const T* iterable_;
 };

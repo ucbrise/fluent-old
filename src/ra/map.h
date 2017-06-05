@@ -4,6 +4,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "fmt/format.h"
 #include "range/v3/all.hpp"
 
 #include "common/type_list.h"
@@ -41,6 +42,10 @@ class Map {
 
   auto ToPhysical() const {
     return make_physical_map(child_.ToPhysical(), &f_);
+  }
+
+  std::string ToDebugString() const {
+    return fmt::format("Map({})", child_.ToDebugString());
   }
 
  private:

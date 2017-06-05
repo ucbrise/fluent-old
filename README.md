@@ -2,9 +2,17 @@
 Fluent = [Bloom][bloom_paper] + C++.
 
 ## Getting Started
-First, install a C++ compiler (e.g. `g++` or `clang++`) and `cmake`. Then,
-build the code. The build process will install and build all dependencies for
-you!
+There are three things you'll have to install for yourself:
+
+1. A C++ compiler that supports C++14. If you're trying to install an
+   up-to-date g++ on linux, [this tutorial][gpp_tutorial] might be helpful. If
+   you're tying to install an up-to-date clang++ on linux, [this
+   site](http://apt.llvm.org/) might be useful.
+2. [CMake](https://cmake.org/download) version 3.0 or better.
+3. [PostgreSQL and libpq](https://www.postgresql.org/download/).
+
+Once you have these installed, then just build the code! The build process will
+install and build the rest of the dependencies for you!
 
 ```bash
 # Building
@@ -34,3 +42,4 @@ you!
 | [`examples`](src/examples) | Example fluent programs.                |
 
 [bloom_paper]: https://scholar.google.com/scholar?cluster=9165311711752272482
+[gpp_tutorial]: http://scholtyssek.org/blog/2015/06/11/install-gcc-with-c14-support-on-ubuntumint

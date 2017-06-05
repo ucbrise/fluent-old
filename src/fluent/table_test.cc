@@ -35,7 +35,7 @@ const C& thd(const std::tuple<A, B, C>& t) {
 }  // namespace
 
 TEST(Table, SimpleMerge) {
-  Table<int, int> t("t");
+  Table<int, int> t("t", {{"x", "y"}});
   std::set<std::tuple<int, int>> empty;
   std::set<std::tuple<int, int>> s1 = {{1, 1}, {2, 2}};
   std::set<std::tuple<int, int>> s2 = {{2, 2}, {3, 3}};
@@ -49,7 +49,7 @@ TEST(Table, SimpleMerge) {
 }
 
 TEST(Table, SimpleDeferredMerge) {
-  Table<int, int> t("t");
+  Table<int, int> t("t", {{"x", "y"}});
   std::set<std::tuple<int, int>> empty = {};
   std::set<std::tuple<int, int>> s1 = {{1, 1}, {2, 2}};
   std::set<std::tuple<int, int>> s2 = {{2, 2}, {3, 3}};
@@ -65,7 +65,7 @@ TEST(Table, SimpleDeferredMerge) {
 }
 
 TEST(Table, SimpleDeferredDelete) {
-  Table<int, int> t("t");
+  Table<int, int> t("t", {{"x", "y"}});
   std::set<std::tuple<int, int>> empty = {};
   std::set<std::tuple<int, int>> s1 = {{1, 1}, {2, 2}};
   std::set<std::tuple<int, int>> s2 = {{2, 2}, {3, 3}};
@@ -86,7 +86,7 @@ TEST(Table, SimpleDeferredDelete) {
 }
 
 TEST(Table, DeferredMergeAndDelete) {
-  Table<int, int> t("t");
+  Table<int, int> t("t", {{"x", "y"}});
   std::set<std::tuple<int, int>> empty = {};
   std::set<std::tuple<int, int>> s1 = {{1, 1}, {2, 2}};
   std::set<std::tuple<int, int>> s2 = {{2, 2}, {3, 3}};
@@ -102,7 +102,7 @@ TEST(Table, DeferredMergeAndDelete) {
 }
 
 TEST(Table, TickDoesntClearTable) {
-  Table<int, int> t("t");
+  Table<int, int> t("t", {{"x", "y"}});
   std::set<std::tuple<int, int>> empty;
   std::set<std::tuple<int, int>> s = {{1, 1}, {2, 2}};
 

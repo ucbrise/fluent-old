@@ -88,6 +88,15 @@ TEST(TypeList, TypeListLen) {
   static_assert(TypeListLen<four>::value == 4, "");
 }
 
+TEST(TypeList, TypeListAll) {
+  static_assert(TypeListAll<TypeList<>, std::is_void>::value, "");
+  static_assert(TypeListAll<TypeList<void>, std::is_void>::value, "");
+  static_assert(TypeListAll<TypeList<void, void>, std::is_void>::value, "");
+  static_assert(!TypeListAll<TypeList<int>, std::is_void>::value, "");
+  static_assert(!TypeListAll<TypeList<void, int>, std::is_void>::value, "");
+  static_assert(!TypeListAll<TypeList<int, void>, std::is_void>::value, "");
+}
+
 TEST(TypeList, TypeListAllSame) {
   using a = TypeList<>;
   using b = TypeList<int>;

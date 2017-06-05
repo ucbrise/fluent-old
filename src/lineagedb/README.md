@@ -76,9 +76,9 @@ exactly is stored, it's best to look at an example:
 zmq::context_t context(1);
 postgres::ConnectionConfig config = GetConnectionConfig();
 auto f = fluent<PqxxClient>("my_program", "inproc://addr", &context, config)
-  .table<int, char>("my_table")
-  .scratch<int>("my_scratch")
-  .channel<std::string, float>("my_channel")
+  .table<int, char>("my_table", {{"x", "y"}})
+  .scratch<int>("my_scratch", {{"x"}})
+  .channel<std::string, float>("my_channel", {{"addr", "x"})
   .RegisterRules([](auto& t, auto& s, auto& c) {
     using namespace fluent::infix;
     return std::make_tuple(s <= c.Iterable(), t <= s.Iterable());
@@ -87,9 +87,9 @@ auto f = fluent<PqxxClient>("my_program", "inproc://addr", &context, config)
 
 This fluent program has three collections---
 
-- a table `my_table(int, char)`,
-- a scratch `my_scratch(int)`, and
-- a channel `my_channel(std::string, float)`.
+- a table `my_table(x:int, y:char)`,
+- a scratch `my_scratch(x:int)`, and
+- a channel `my_channel(addr:std::string, x:float)`.
 
 ---and two rules:
 
@@ -101,8 +101,8 @@ Information about this program, its collections, and its rules are found in the
 
 - The `Nodes(id, name, address)` relation holds the name, id (the hash of the
   name), and address for every fluent program.
-- The `Collections(node_id, collection_name, collection_type)` relation holds
-  the name and type of every collection of every fluent program.
+- The `Collections(node_id, collection_name, collection_type, column_names)`
+  relation holds the name and type of every collection of every fluent program.
 - The `Rules(node_id, rule_number, is_bootstrap, rule)` relation holds every
   rule of every fluent program.
 
@@ -115,13 +115,13 @@ Information about this program, its collections, and its rules are found in the
 +----+------------+-----------+
 
 > SELECT * FROM Collections;
-+---------+-----------------+-----------------+
-| node_id | collection_name | collection_type |
-|---------+-----------------+-----------------+
-| 42      | my_table        | Table           |
-| 42      | my_sratch       | Scratch         |
-| 42      | my_channel      | Channel         |
-+---------+-----------------+-----------------+
++---------+-----------------+-----------------+---------------+
+| node_id | collection_name | collection_type | column_names  |
+|---------+-----------------+-----------------+---------------+
+| 42      | my_table        | Table           | ['x', 'y']    |
+| 42      | my_sratch       | Scratch         | ['x']         |
+| 42      | my_channel      | Channel         | ['addr', 'x'] |
++---------+-----------------+-----------------+---------------+
 
 > SELECT * FROM Rules;
 +---------+-------------+--------------+--------+

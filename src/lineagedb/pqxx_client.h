@@ -131,8 +131,9 @@ class InjectablePqxxClient {
   }
 
   template <typename... Ts>
-  void AddCollection(const std::string& collection_name,
-                     const std::string& collection_type) {
+  void AddCollection(
+      const std::string& collection_name, const std::string& collection_type,
+      const std::array<std::string, sizeof...(Ts)>& column_names) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >= 1 column.");
     CHECK(initialized_) << "Call Init first.";
 
@@ -142,18 +143,22 @@ class InjectablePqxxClient {
     CHECK_NE(collection_name, std::string("lineage"))
         << "Lineage is a reserved collection name.";
 
-    ExecuteQuery("AddCollection",
-                 fmt::format(R"(
-      INSERT INTO Collections (node_id, collection_name, collection_type)
+    ExecuteQuery(
+        "AddCollection",
+        fmt::format(
+            R"(
+      INSERT INTO Collections (node_id, collection_name, collection_type,
+                               column_names)
       VALUES ({});
     )",
-                             Join(SqlValues(std::make_tuple(
-                                 id_, collection_name, collection_type)))));
+            Join(SqlValues(std::make_tuple(id_, collection_name,
+                                           collection_type, column_names)))));
 
     std::vector<std::string> types = SqlTypes<Ts...>();
     std::vector<std::string> columns;
     for (std::size_t i = 0; i < types.size(); ++i) {
-      columns.push_back(fmt::format("col_{} {} NOT NULL", i, types[i]));
+      columns.push_back(
+          fmt::format("{} {} NOT NULL", column_names[i], types[i]));
     }
     ExecuteQuery("AddCollectionTable",
                  fmt::format(R"(

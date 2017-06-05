@@ -13,7 +13,7 @@
 namespace fluent {
 
 TEST(Rule, ToDebugString) {
-  Table<int> t("t");
+  Table<int> t("t", {{"x"}});
   std::set<std::tuple<int>> xs;
   const Rule<Table<int>*, MergeTag, ra::Iterable<std::set<std::tuple<int>>>>
       rule{&t, MergeTag(), ra::make_iterable("xs", &xs)};

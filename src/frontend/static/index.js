@@ -18,39 +18,19 @@ fluent.ajax_get = function(url, on_success) {
   return xhr;
 }
 
-// `create_html_table(rows: string list list)` returns an html table created
-// from `rows`. For example, if rows is [["a", "b", "c"], ["d", "e", "f"]], the
-// returned table will look like this:
-//
-//   <table>
-//     <tr> <td>a</td> <td>b</td> <td>c</td> </tr>
-//     <tr> <td>e</td> <td>e</td> <td>f</td> </tr>
-//   </table>
-fluent.create_html_table = function(rows) {
-    var table = document.createElement("table");
-    for (var i = 0; i < rows.length; ++i) {
-        var row = document.createElement("tr");
-        for (var j = 0; j < rows[i].length; ++j) {
-            var element = document.createElement("td");
-            element.innerHTML = rows[i][j];
-            row.appendChild(element);
-        }
-        table.appendChild(row);
-    }
-    return table;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // Types
 ////////////////////////////////////////////////////////////////////////////////
 // type Collection = {
 //   name: string,
 //   type: string,
+//   column_names: string list,
 //   tuples: string list list,
 // }
-fluent.Collection = function(name, type, tuples) {
+fluent.Collection = function(name, type, column_names, tuples) {
     this.name = name;
     this.type = type;
+    this.column_names = column_names;
     this.tuples = tuples;
 }
 
@@ -514,6 +494,15 @@ fluent.render_collection = function(state, state_ui, collection, index) {
     collection_type.innerHTML = ": " + collection.type;
 
     var tuples = document.createElement("table");
+
+    var row = document.createElement("tr");
+    for (var i = 0; i < collection.column_names.length; ++i) {
+        var element = document.createElement("th");
+        element.innerHTML = collection.column_names[i];
+        row.appendChild(element);
+    }
+    tuples.appendChild(row);
+
     for (var i = 0; i < collection.tuples.length; ++i) {
         var tuple = collection.tuples[i];
         var row = document.createElement("tr");

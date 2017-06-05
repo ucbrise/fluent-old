@@ -21,6 +21,7 @@ TEST(MockToSql, ToSqlType) {
   EXPECT_EQ(MockToSql<long long>().Type(), "long long");
   EXPECT_EQ(MockToSql<float>().Type(), "float");
   EXPECT_EQ(MockToSql<double>().Type(), "double");
+  EXPECT_EQ((MockToSql<std::array<int, 2>>().Type()), "array<int, 2>");
 }
 
 TEST(MockToSql, ToSqlValue) {
@@ -34,6 +35,7 @@ TEST(MockToSql, ToSqlValue) {
   EXPECT_EQ(MockToSql<std::int64_t>().Value(5), "5");
   EXPECT_EQ(MockToSql<float>().Value(6.0), "6.000000");
   EXPECT_EQ(MockToSql<double>().Value(7.0), "7.000000");
+  EXPECT_EQ((MockToSql<std::array<int, 2>>().Value({{1, 2}})), "[1, 2]");
 }
 
 }  // namespace lineagedb

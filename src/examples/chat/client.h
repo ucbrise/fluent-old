@@ -13,12 +13,6 @@
 
 namespace ra = fluent::ra;
 
-using address_t = std::string;
-using server_address_t = std::string;
-using client_address_t = std::string;
-using nickname_t = std::string;
-using message_t = std::string;
-
 struct ClientArgs {
   std::string server_address;
   std::string client_address;
@@ -29,21 +23,21 @@ template <template <template <typename> class, template <typename> class>
           class LineageDbClient>
 int ClientMain(const ClientArgs& args,
                const fluent::lineagedb::ConnectionConfig& connection_config) {
+  using connect_tuple_t = std::tuple<std::string, std::string, std::string>;
+  std::vector<connect_tuple_t> connect_tuple = {
+      std::make_tuple(args.server_address, args.client_address, args.nickname)};
+
   zmq::context_t context(1);
-
-  std::vector<std::tuple<server_address_t, client_address_t, nickname_t>>
-      connect_tuple = {std::make_tuple(args.server_address, args.client_address,
-                                       args.nickname)};
-
   auto f =
       fluent::fluent<LineageDbClient>("chat_client_" + args.nickname,
                                       args.client_address, &context,
                                       connection_config)
           .stdin()
           .stdout()
-          .template channel<server_address_t, client_address_t, nickname_t>(
-              "connect")
-          .template channel<address_t, message_t>("mcast")
+          .template channel<std::string, std::string, std::string>(
+              "connect", {{"server_addr", "client_addr", "nickname"}})
+          .template channel<std::string, std::string>("mcast",
+                                                      {{"addr", "msg"}})
           .RegisterBootstrapRules([&](auto&, auto&, auto& connect, auto&) {
             using namespace fluent::infix;
             return std::make_tuple(

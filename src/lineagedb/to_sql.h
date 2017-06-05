@@ -3,11 +3,14 @@
 
 #include <cstdint>
 
+#include <array>
 #include <chrono>
 #include <string>
 #include <type_traits>
 
 #include "fmt/format.h"
+
+#include "common/string_util.h"
 
 namespace fluent {
 namespace lineagedb {
@@ -110,6 +113,19 @@ template <>
 struct ToSql<double> {
   std::string Type() { return "double precision"; }
   std::string Value(double x) { return std::to_string(x); }
+};
+
+template <typename T, std::size_t N>
+struct ToSql<std::array<T, N>> {
+  std::string Type() { return fmt::format("{}[]", ToSql<T>().Type()); }
+
+  std::string Value(const std::array<T, N>& xs) {
+    std::vector<std::string> values;
+    for (const T& x : xs) {
+      values.push_back(ToSql<T>().Value(x));
+    }
+    return fmt::format("ARRAY[{}]", Join(values));
+  }
 };
 
 template <typename Clock>

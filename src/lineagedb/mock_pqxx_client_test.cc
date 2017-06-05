@@ -51,22 +51,23 @@ TEST(MockPqxxClient, AddCollection) {
   ConnectionConfig c;
   MockPqxxClient<Hash, ToSql> client("name", 9001, "127.0.0.1", c);
   client.Init();
-  client.AddCollection<int, char, bool>("t", "Table");
+  client.AddCollection<int, char, bool>("t", "Table", {{"x", "c", "b"}});
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(4));
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, R"(
-    INSERT INTO Collections (node_id, collection_name, collection_type)
-    VALUES (9001, 't', 'Table');
+    INSERT INTO Collections (node_id, collection_name, collection_type,
+                             column_names)
+    VALUES (9001, 't', 'Table', ARRAY['x', 'c', 'b']);
   )");
   ExpectStringsEqualIgnoreWhiteSpace(queries[3].second, R"(
     CREATE TABLE name_t (
       hash          bigint  NOT NULL,
       time_inserted integer NOT NULL,
       time_deleted  integer,
-      col_0 integer NOT NULL,
-      col_1 char(1) NOT NULL,
-      col_2 boolean NOT NULL,
+      x integer NOT NULL,
+      c char(1) NOT NULL,
+      b boolean NOT NULL,
       PRIMARY KEY (hash, time_inserted)
     );
   )");

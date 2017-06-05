@@ -9,3 +9,7 @@ CREATE_BLACK_BOX_EXECUTABLE(key_value_client)
 CREATE_BLACK_BOX_EXECUTABLE(key_value_server)
 CREATE_BLACK_BOX_EXECUTABLE(primality_client)
 CREATE_BLACK_BOX_EXECUTABLE(primality_server)
+CREATE_BLACK_BOX_EXECUTABLE(redis_client)
+CREATE_BLACK_BOX_EXECUTABLE(redis_server)
+
+TARGET_LINK_LIBRARIES(examples_black_boxes_redis_server redox ev)

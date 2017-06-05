@@ -2,42 +2,128 @@
 <html>
 <head>
   <title>Fluent</title>
-  <link href='static/style.css' rel='stylesheet'>
+  <link href="static/style.css" rel="stylesheet">
+  <link href="static/flexboxgrid.css" rel="stylesheet">
   <meta name=viewport content="width=device-width, initial-scale=1">
 </head>
 
 <body>
   <div id="container">
-    <div id="nodesrules">
-      <div id="nodes" class="column">
-        <h1>Nodes</h1>
-        <button id="refresh_nodes_list">Refresh</button>
-        <ul id="nodes_list"></ul>
+    <div class="row">
+      <div class="col-xs-4">
+        <!-- Nodes -->
+        <div class="row">
+          <div class="col-xs">
+            <div id="nodes" class="column">
+              <h1>Nodes</h1>
+              <ul id="nodes_list">
+                <li class="node"
+                    v-for="name_address in node_name_addresses"
+                    v-bind:class="{current_node: node !== null &&
+                                                 node.name === name_address.name}"
+                    v-on:click="select_node(name_address.name, 0)">
+                  <span class="name">{{name_address.name}}</span>
+                  <span class="address">({{name_address.address}})</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rules -->
+        <div class="row">
+          <div class="col-xs">
+            <div id="rules" class="column" v-if="node !== null">
+              <h1>Rules</h1>
+
+              <ol id="bootstrap_rules_list" start="0">
+                <li class="rule" v-for="bootstrap_rule in node.bootstrap_rules">
+                  {{bootstrap_rule}}
+                </li>
+              </ol>
+
+              <ul id="bootstrap_tick_list" v-if="node.bootstrap_rules.length > 0">
+                <li class="rule">Tick</li>
+              </ul>
+
+              <ul id="receive_list">
+                <li class="rule">Receive</li>
+              </ul>
+
+              <ol id="rules_list" start="0">
+                <li class="rule" v-for="rule in node.rules">
+                  {{rule}}
+                </li>
+              </ol>
+
+              <ul id="tick_list">
+                <li class="rule">Tick</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div id="rules" class="column">
-        <h1>Rules</h1>
-        <ol id="bootstrap_rules_list" start="0"></ol>
-        <ul id="bootstrap_tick_list"></ul>
-        <ul id="receive_list"><li>Receive</li></ul>
-        <ol id="rules_list" start="0"></ol>
-        <ul id="tick_list"><li>Tick</li></ul>
+      <!-- Provenance Graph -->
+      <div class="col-xs-8">
+        <div id="provenance_graph" class="column">
+          <h1>Provenance Graph</h1>
+          <div id="cy"></div>
+        </div>
       </div>
     </div>
 
-    <div id="collections" class="column">
-      <h1>Collections</h1>
-      <div id="collections_time">
-        <center>
-          <button id="time_down">-</button>
-          Time: <span id="time">0</span>
-          <button id="time_up">+</button>
-        </center>
+    <!-- Collections -->
+    <div class="row" v-if="node !== null">
+      <div class="col-xs">
+        <div id="collections" class="column">
+          <h1>Collections</h1>
+
+          <div id="collections_time">
+            <center>
+              <button v-on:click="decrement_time">-</button>
+              Time: <span id="time">{{node.time}}</span>
+              <button v-on:click="increment_time">+</button>
+            </center>
+          </div>
+
+          <div id="collections_container">
+            <div class="collection" v-for="collection in node.collections">
+              <span class="collection_name">{{collection.name}}</span>
+              <span class="collection_type">({{collection.type}})</span>
+
+              <table>
+                <tr>
+                  <th v-for="column_name in collection.column_names">
+                    {{column_name}}
+                  </th>
+                </tr>
+                <tr v-for="tuple in collection.tuples"
+                    v-bind:class="{clicked_tuple: tuple[0] === node.clicked_hash}">
+                  <!--
+                  The first five columns of a relation are hash, logical time
+                  inserted, logical time deleted, physical time inserted, and
+                  physical time deleted. We do not include those in the UI.
+                  -->
+                  <td
+                      v-for="x in tuple.slice(5)"
+                      v-on:click="get_lineage(node.name, collection.name,
+                                              tuple[0], tuple[1])">
+                    {{x}}
+                  </td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
-      <div id="collections_container"></div>
     </div>
   </div>
 
+  <script src="https://unpkg.com/vue"></script>
+  <script type="text/javascript" src="static/cytoscape.js"></script>
+  <script src="https://cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.js"></script>
+  <script type="text/javascript" src="static/cytoscape-dagre.js"></script>
   <script type="text/javascript" src="static/index.js"></script>
 </body>
 </html>

@@ -143,22 +143,6 @@ TEST(TupleUtil, TupleToVector) {
   EXPECT_EQ(actual, expected);
 }
 
-TEST(TupleUtil, TupleFromTypes) {
-  {
-    using tuple_t = std::tuple<std::string, std::string, std::string>;
-    tuple_t actual = TupleFromTypes<detail::ToString, int, bool, char>();
-    tuple_t expected = {"int", "bool", "char"};
-    EXPECT_EQ(actual, expected);
-  }
-
-  {
-    using tuple_t = std::tuple<int*, bool*, char*>;
-    tuple_t actual = TupleFromTypes<detail::ToPointer, int, bool, char>();
-    tuple_t expected = {nullptr, nullptr, nullptr};
-    EXPECT_EQ(actual, expected);
-  }
-}
-
 TEST(TupleUtil, TupleProject) {
   std::tuple<int, char, float> t{0, '1', 2.0};
 

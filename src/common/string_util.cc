@@ -1,8 +1,17 @@
 #include "common/string_util.h"
 
 #include <algorithm>
+#include <iterator>
 
 namespace fluent {
+
+std::vector<std::string> Split(const std::string& s) {
+  // http://stackoverflow.com/a/5607650/3187068
+  std::stringstream ss(s);
+  std::istream_iterator<std::string> begin(ss);
+  std::istream_iterator<std::string> end;
+  return {begin, end};
+}
 
 std::string CrunchWhitespace(std::string s) {
   // Replace newlines with spaces.

@@ -5,6 +5,7 @@
 
 #include <string>
 #include <type_traits>
+#include <vector>
 
 #include "fmt/format.h"
 
@@ -84,6 +85,21 @@ template <>
 struct MockToSql<double> {
   std::string Type() { return "double"; }
   std::string Value(double x) { return std::to_string(x); }
+};
+
+template <typename T>
+struct MockToSql<std::vector<T>> {
+  std::string Type() {
+    return fmt::format("vector<{}>", MockToSql<T>().Type());
+  }
+
+  std::string Value(const std::vector<T>& xs) {
+    std::vector<std::string> values;
+    for (const T& x : xs) {
+      values.push_back(MockToSql<T>().Value(x));
+    }
+    return fmt::format("[{}]", Join(values));
+  }
 };
 
 template <typename T, std::size_t N>

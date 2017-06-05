@@ -9,7 +9,9 @@
 
 #include "common/string_util.h"
 #include "common/tuple_util.h"
+#include "common/type_list.h"
 #include "lineagedb/connection_config.h"
+#include "lineagedb/to_sql.h"
 
 namespace fluent {
 namespace lineagedb {
@@ -18,12 +20,6 @@ namespace detail {
 inline std::int64_t size_t_to_int64(std::size_t hash) {
   return static_cast<std::int64_t>(hash);
 }
-
-// `ToSqlType<ToSql, T>()()` is equivalent to `ToSql<T>.Type()`.
-template <template <typename> class ToSql, typename T>
-struct ToSqlType {
-  std::string operator()() { return ToSql<T>().Type(); }
-};
 
 }  // namespace detail
 
@@ -258,6 +254,8 @@ class InjectablePqxxClient {
                                 detail::size_t_to_int64(tuple_hash), time)))));
   }
 
+  void Exec(const std::string& query) { ExecuteQuery("Exec", query); }
+
  protected:
   // Transactionally execute the query `query` named `name`.
   virtual void ExecuteQuery(const std::string& name, const std::string& query) {
@@ -268,15 +266,14 @@ class InjectablePqxxClient {
   }
 
  private:
-  // detail::ToSqlType partially applied to ToSql.
   template <typename T>
-  using ToSqlType = detail::ToSqlType<ToSql, T>;
+  using Type = typename ToSqlType<ToSql>::template type<T>;
 
   // SqlTypes<T1, ... Tn> returns the vector
   // [ToSql<T1>.Type(), ..., ToSql<Tn>().Type()]
   template <typename... Ts>
   std::vector<std::string> SqlTypes() {
-    return TupleToVector(TupleFromTypes<ToSqlType, Ts...>());
+    return TupleToVector(TypeListMapToTuple<TypeList<Ts...>, Type>()());
   }
 
   // SqlValues((x1: T1, ..., xn: Tn)) returns the vector

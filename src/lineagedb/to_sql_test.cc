@@ -11,6 +11,12 @@
 namespace fluent {
 namespace lineagedb {
 
+template <typename T>
+using Type = ToSqlType<ToSql>::type<T>;
+
+template <typename T>
+using Value = ToSqlValue<ToSql>::type<T>;
+
 TEST(ToSql, ToSqlType) {
   EXPECT_EQ(ToSql<bool>().Type(), "boolean");
   EXPECT_EQ(ToSql<char>().Type(), "char(1)");
@@ -24,8 +30,26 @@ TEST(ToSql, ToSqlType) {
   EXPECT_EQ(ToSql<double>().Type(), "double precision");
   EXPECT_EQ(ToSql<double>().Type(), "double precision");
   EXPECT_EQ(ToSql<double>().Type(), "double precision");
+  EXPECT_EQ((ToSql<std::vector<int>>().Type()), "integer[]");
+  EXPECT_EQ((ToSql<std::vector<bool>>().Type()), "boolean[]");
   EXPECT_EQ((ToSql<std::array<int, 0>>().Type()), "integer[]");
   EXPECT_EQ((ToSql<std::array<bool, 1>>().Type()), "boolean[]");
+
+  EXPECT_EQ(Type<bool>()(), "boolean");
+  EXPECT_EQ(Type<char>()(), "char(1)");
+  EXPECT_EQ(Type<std::string>()(), "text");
+  EXPECT_EQ(Type<short int>()(), "smallint");
+  EXPECT_EQ(Type<int>()(), "integer");
+  EXPECT_EQ(Type<long>()(), "bigint");
+  EXPECT_EQ(Type<long long>()(), "bigint");
+  EXPECT_EQ(Type<std::int64_t>()(), "bigint");
+  EXPECT_EQ(Type<float>()(), "real");
+  EXPECT_EQ(Type<double>()(), "double precision");
+  EXPECT_EQ(Type<double>()(), "double precision");
+  EXPECT_EQ(Type<double>()(), "double precision");
+  EXPECT_EQ((Type<std::array<int, 0>>()()), "integer[]");
+  EXPECT_EQ((Type<std::array<bool, 1>>()()), "boolean[]");
+
   // TODO(mwhittaker): Test ToSql<std::chrono::time_point<Clock>>.
 }
 
@@ -43,7 +67,23 @@ TEST(ToSql, ToSqlValue) {
   EXPECT_EQ((ToSql<std::array<int, 0>>().Value({{}})), "ARRAY[]");
   EXPECT_EQ((ToSql<std::array<bool, 2>>().Value({{true, false}})),
             "ARRAY[true, false]");
-  // TODO(mwhittaker): Test ToSql<std::chrono::time_point<Clock>>.
+
+  EXPECT_EQ(Value<bool>()(true), "true");
+  EXPECT_EQ(Value<char>()('a'), "'a'");
+  EXPECT_EQ(Value<std::string>()("foo"), "'foo'");
+  EXPECT_EQ(Value<short int>()(1), "1");
+  EXPECT_EQ(Value<int>()(2), "2");
+  EXPECT_EQ(Value<long>()(3), "3");
+  EXPECT_EQ(Value<long long>()(4), "4");
+  EXPECT_EQ(Value<std::int64_t>()(5), "5");
+  EXPECT_EQ(Value<float>()(6.0), "6.000000");
+  EXPECT_EQ(Value<double>()(7.0), "7.000000");
+  EXPECT_EQ((Value<std::vector<int>>()({})), "ARRAY[]");
+  EXPECT_EQ((Value<std::vector<bool>>()({true, false})), "ARRAY[true, false]");
+  EXPECT_EQ((Value<std::array<int, 0>>()({{}})), "ARRAY[]");
+  EXPECT_EQ((Value<std::array<bool, 2>>()({{true, false}})),
+            "ARRAY[true, false]");
+  // TODO(mwhittaker): Test ToSqlValue<std::chrono::time_point<Clock>>.
 }
 
 }  // namespace lineagedb

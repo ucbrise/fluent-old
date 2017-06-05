@@ -109,7 +109,7 @@ class GroupBy<LogicalChild, Keys<Ks...>, Aggregates<AggregateColumns>...> {
   using key_types = typename TypeListProject<child_column_types, Ks...>::type;
   using aggregate_impl_types =
       TypeList<typename Aggregates<AggregateColumns>::template type<
-          typename child_column_types::template type<AggregateColumns>>...>;
+          typename TypeListGet<child_column_types, AggregateColumns>::type>...>;
   using aggregate_types =
       typename TypeListMap<aggregate_impl_types, detail::TypeOfGet>::type;
   using column_types =

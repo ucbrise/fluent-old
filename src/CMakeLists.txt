@@ -1,12 +1,40 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
-PROJECT(ToBeNamed)
-SET(TOBENAMED_VERSION_MAJOR 0)
-SET(TOBENAMED_VERSION_MINOR 1)
-SET(TOBENAMED_VERSION_PATCH 0)
+PROJECT(Fluent)
+SET(FLUENT_VERSION_MAJOR 0)
+SET(FLUENT_VERSION_MINOR 1)
+SET(FLUENT_VERSION_PATCH 0)
 
 INCLUDE(cmake/benchmarking.cmake NO_POLICY_SCOPE)
 INCLUDE(cmake/testing.cmake NO_POLICY_SCOPE)
+
+# Imagine the following file organization:
+#
+#   .
+#   ├── examples
+#   │   └── black_boxes
+#   │       ├── CMakeLists.txt
+#   │       └── key_value_client.cc
+#   └── ra
+#       ├── map.h
+#       └── map_test.cc
+#
+# When we build key_value_client.cc, it produces an executable called
+# examples_black_boxes_key_value_client. Similarly, when we build map_test.cc,
+# it produces an executable called ra_map_test. Because we prefix every
+# executable with its full path, we put all the executables into the same
+# build/bin directory. This allows to run executables like this:
+#
+#   ./build/bin/examples_black_boxes_key_value_client
+#
+# instead of like this:
+#
+#   ./build/examples/black_boxes/examples_black_boxes_key_value_client
+#
+# See [1] for information on setting executable paths in CMake.
+#
+# [1]: http://stackoverflow.com/a/6595001/3187068
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Clang provides four sanitizers. Add them with the following flags:
 #   -fsanitize=address

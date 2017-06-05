@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include "glog/logging.h"
+
 namespace fluent {
 
 // The `Collection<T1, ..., Tn>` class provides a `GetParser` method which
@@ -54,6 +56,19 @@ inline std::string ToString(const char& c) {
 template <>
 inline char FromString<char>(const std::string& s) {
   return s[0];
+}
+
+// bool
+template <>
+inline std::string ToString<bool>(const bool& b) {
+  return b ? "true" : "false";
+}
+
+template <>
+inline bool FromString<bool>(const std::string& s) {
+  CHECK(s == "true" || s == "false") << "Cannot parse '" << s
+                                     << "' into a bool.";
+  return s == "true";
 }
 
 // int

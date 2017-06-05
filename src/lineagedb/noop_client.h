@@ -39,6 +39,8 @@ class NoopClient {
 
   void AddDerivedLineage(const std::string&, std::size_t, int, bool,
                          const std::string&, std::size_t, int) {}
+
+  void Exec(const std::string&) {}
 };
 
 }  // namespace lineagedb

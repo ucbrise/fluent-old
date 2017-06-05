@@ -13,7 +13,34 @@ namespace detail {
 template <typename... Ts>
 struct Template {};
 
+template <typename T>
+struct Default;
+
+template <>
+struct Default<int> {
+  int operator()() { return 0; }
+};
+
+template <>
+struct Default<char> {
+  char operator()() { return 'a'; }
+};
+
+template <>
+struct Default<bool> {
+  char operator()() { return true; }
+};
+
 }  // namespace detail
+
+TEST(TypeList, TypeListGet) {
+  using typelist = TypeList<int, char, bool, int, float>;
+  static_assert(std::is_same<int, TypeListGet<typelist, 0>::type>::value, "");
+  static_assert(std::is_same<char, TypeListGet<typelist, 1>::type>::value, "");
+  static_assert(std::is_same<bool, TypeListGet<typelist, 2>::type>::value, "");
+  static_assert(std::is_same<int, TypeListGet<typelist, 3>::type>::value, "");
+  static_assert(std::is_same<float, TypeListGet<typelist, 4>::type>::value, "");
+}
 
 TEST(TypeList, TypeListMap) {
   using xs = TypeList<int, char, float>;
@@ -111,6 +138,12 @@ TEST(TypeList, TypeListAllSame) {
   static_assert(!TypeListAllSame<d>::value, "");
   static_assert(!TypeListAllSame<e>::value, "");
   static_assert(TypeListAllSame<f>::value, "");
+}
+
+TEST(TypeList, TypeListMapToTuple) {
+  using typelist = TypeList<int, char, bool>;
+  EXPECT_EQ((std::tuple<int, char, bool>{0, 'a', true}),
+            (TypeListMapToTuple<typelist, detail::Default>()()));
 }
 
 TEST(TypeList, TypeListTo) {

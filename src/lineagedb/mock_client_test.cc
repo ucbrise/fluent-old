@@ -33,6 +33,7 @@ TEST(MockClient, AddCollection) {
   client.AddCollection<int, bool, char>("fum", "Fum", {{"x", "y", "z"}});
 
   using Tuple = MockClient<Hash, MockToSql>::AddCollectionTuple;
+  ASSERT_EQ(client.GetAddCollection().size(), static_cast<std::size_t>(4));
   EXPECT_EQ(client.GetAddCollection()[0], Tuple("fee", "Fee", {}, {}));
   EXPECT_EQ(client.GetAddCollection()[1], Tuple("fi", "Fi", {"x"}, {"int"}));
   EXPECT_EQ(client.GetAddCollection()[2],
@@ -51,6 +52,7 @@ TEST(MockClient, AddRule) {
   client.AddRule(2, false, "baz");
 
   using Tuple = MockClient<Hash, MockToSql>::AddRuleTuple;
+  ASSERT_EQ(client.GetAddRule().size(), static_cast<std::size_t>(6));
   EXPECT_EQ(client.GetAddRule()[0], Tuple(0, true, "foo"));
   EXPECT_EQ(client.GetAddRule()[1], Tuple(1, true, "bar"));
   EXPECT_EQ(client.GetAddRule()[2], Tuple(2, true, "baz"));
@@ -66,6 +68,7 @@ TEST(MockClient, InsertTuple) {
   client.InsertTuple("c", 2, std::tuple<int, char, bool>{42, 'x', false});
 
   using Tuple = MockClient<Hash, MockToSql>::InsertTupleTuple;
+  ASSERT_EQ(client.GetInsertTuple().size(), static_cast<std::size_t>(3));
   EXPECT_EQ(client.GetInsertTuple()[0], Tuple("a", 0, {}));
   EXPECT_EQ(client.GetInsertTuple()[1], Tuple("b", 1, {"10"}));
   EXPECT_EQ(client.GetInsertTuple()[2], Tuple("c", 2, {"42", "x", "false"}));
@@ -78,6 +81,7 @@ TEST(MockClient, DeleteTuple) {
   client.DeleteTuple("c", 2, std::tuple<int, char, bool>{42, 'x', false});
 
   using Tuple = MockClient<Hash, MockToSql>::DeleteTupleTuple;
+  ASSERT_EQ(client.GetDeleteTuple().size(), static_cast<std::size_t>(3));
   EXPECT_EQ(client.GetDeleteTuple()[0], Tuple("a", 0, {}));
   EXPECT_EQ(client.GetDeleteTuple()[1], Tuple("b", 1, {"10"}));
   EXPECT_EQ(client.GetDeleteTuple()[2], Tuple("c", 2, {"42", "x", "false"}));
@@ -90,6 +94,8 @@ TEST(MockClient, AddNetworkedLineage) {
   client.AddNetworkedLineage(20, 21, "22", 23, 24);
 
   using Tuple = MockClient<Hash, MockToSql>::AddNetworkedLineageTuple;
+  ASSERT_EQ(client.GetAddNetworkedLineage().size(),
+            static_cast<std::size_t>(3));
   EXPECT_EQ(client.GetAddNetworkedLineage()[0], Tuple(0, 1, "2", 3, 4));
   EXPECT_EQ(client.GetAddNetworkedLineage()[1], Tuple(10, 11, "12", 13, 14));
   EXPECT_EQ(client.GetAddNetworkedLineage()[2], Tuple(20, 21, "22", 23, 24));
@@ -102,12 +108,26 @@ TEST(MockClient, AddDerivedLineage) {
   client.AddDerivedLineage("20", 21, 22, true, "23", 24, 25);
 
   using Tuple = MockClient<Hash, MockToSql>::AddDerivedLineageTuple;
+  ASSERT_EQ(client.GetAddDerivedLineage().size(), static_cast<std::size_t>(3));
   EXPECT_EQ(client.GetAddDerivedLineage()[0],
             Tuple("0", 1, 2, true, "3", 4, 5));
   EXPECT_EQ(client.GetAddDerivedLineage()[1],
             Tuple("10", 11, 12, true, "13", 14, 15));
   EXPECT_EQ(client.GetAddDerivedLineage()[2],
             Tuple("20", 21, 22, true, "23", 24, 25));
+}
+
+TEST(MockClient, Exec) {
+  MockClient<Hash, MockToSql> client("", 42, "", ConnectionConfig());
+  client.Exec("a cat");
+  client.Exec("in the hat");
+  client.Exec("ate green eggs and ham");
+
+  using Tuple = MockClient<Hash, MockToSql>::ExecTuple;
+  ASSERT_EQ(client.GetExec().size(), static_cast<std::size_t>(3));
+  EXPECT_EQ(client.GetExec()[0], Tuple("a cat"));
+  EXPECT_EQ(client.GetExec()[1], Tuple("in the hat"));
+  EXPECT_EQ(client.GetExec()[2], Tuple("ate green eggs and ham"));
 }
 
 }  // namespace lineagedb

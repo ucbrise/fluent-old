@@ -7,6 +7,7 @@
 #include <chrono>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 #include "fmt/format.h"
 
@@ -14,6 +15,9 @@
 
 namespace fluent {
 namespace lineagedb {
+
+// TODO(mwhittaker): Escape strings. This is actually pretty annoying to do
+// because pqxx's functions to escape strings require a database connection.
 
 // C++ code has a certain set of types and a certain set of values of each
 // type. For example, the value `42` is a C++ `int`. Postgres has a certain
@@ -28,12 +32,26 @@ namespace lineagedb {
 //
 // For example, `ToSql<std::string>.Type()` is `"text"` and
 // `ToSql<std::string>.Value("hello")` is `'hello'`.
-
-// TODO(mwhittaker): Escape strings. This is actually pretty annoying to do
-// because pqxx's functions to escape strings require a database connection.
-
 template <typename T>
 struct ToSql;
+
+// ToSqlType<ToSql>::type<T>()() == ToSql<T>().Type().
+template <template <typename> class ToSql>
+struct ToSqlType {
+  template <typename T>
+  struct type {
+    auto operator()() { return ToSql<T>().Type(); }
+  };
+};
+
+// ToSqlValue<ToSql>::type<T>()(x) == ToSql<T>().value(x).
+template <template <typename> class ToSql>
+struct ToSqlValue {
+  template <typename T>
+  struct type {
+    auto operator()(const T& x) { return ToSql<T>().Value(x); }
+  };
+};
 
 template <>
 struct ToSql<bool> {
@@ -113,6 +131,19 @@ template <>
 struct ToSql<double> {
   std::string Type() { return "double precision"; }
   std::string Value(double x) { return std::to_string(x); }
+};
+
+template <typename T>
+struct ToSql<std::vector<T>> {
+  std::string Type() { return fmt::format("{}[]", ToSql<T>().Type()); }
+
+  std::string Value(const std::vector<T>& xs) {
+    std::vector<std::string> values;
+    for (const T& x : xs) {
+      values.push_back(ToSql<T>().Value(x));
+    }
+    return fmt::format("ARRAY[{}]", Join(values));
+  }
 };
 
 template <typename T, std::size_t N>

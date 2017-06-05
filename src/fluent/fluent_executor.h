@@ -2,6 +2,7 @@
 #define FLUENT_FLUENT_EXECUTOR_H_
 
 #include <cstddef>
+#include <cstdint>
 
 #include <functional>
 #include <map>
@@ -17,6 +18,8 @@
 #include "gtest/gtest.h"
 #include "zmq.hpp"
 
+#include "common/macros.h"
+#include "common/string_util.h"
 #include "common/tuple_util.h"
 #include "common/type_list.h"
 #include "fluent/channel.h"
@@ -32,6 +35,7 @@
 #include "fluent/stdout.h"
 #include "fluent/table.h"
 #include "lineagedb/connection_config.h"
+#include "lineagedb/to_sql.h"
 #include "ra/lineage_tuple.h"
 #include "ra/lineaged_tuple.h"
 
@@ -126,6 +130,9 @@ class FluentExecutor<
 
     InitLineageDbClient();
   }
+  FluentExecutor(FluentExecutor&&) = default;
+  FluentExecutor& operator=(FluentExecutor&&) = default;
+  DISALLOW_COPY_AND_ASSIGN(FluentExecutor);
 
   // Get<I>() returns a const reference to the Ith collection.
   template <std::size_t I>
@@ -133,9 +140,152 @@ class FluentExecutor<
     return *std::get<I>(collections_);
   }
 
-  // DO_NOT_SUMIT(mwhittaker): Document.
+  // Return a reference to a FluentExecutor's Lineage DB client. When
+  // LineageDbClient is MockClient, this method allows us to unit test that
+  // FluentExecutors are properly tracking lineage and history. See
+  // fluent_executor_test.cc for some examples.
   const LineageDbClient<Hash, ToSql>& GetLineageDbClient() {
     return *lineagedb_client_.get();
+  }
+
+  // Refer to [1] for an overview of black box lineage. The
+  // RegisterBlackBoxLineage method is used to specify the lineage of a black
+  // box function. It helps to look at an example. Consider wrapping a simple
+  // key-value store with the following API:
+  //
+  //   - set(key: string, value: string) -> (suceeded: bool)
+  //   - get(key: string) -> (value: string)
+  //
+  // First, we write a Fluent shim with the following channels:
+  //
+  //   fluent("redis", ...)
+  //     .channel<string, string, int64_t, string, string>(
+  //       "set_request", {{"dst_addr", "src_addr", "id", "key", "value"}})
+  //     .channel<string, int64_t, bool>(
+  //       "set_response", {{"addr", "id", "succeeded"}})
+  //     .channel<string, string, int64_t, string>(
+  //       "get_request", {{"dst_addr", "src_addr", "id", "key"}})
+  //     .channel<string, int64_t, string>(
+  //       "get_response", {{"addr", "id", "value"}})
+  //     .RegisterRules(...);
+  //
+  // Fluent will automatically generate the following relations in postgres:
+  //
+  //   CREATE TABLE SetRequest (
+  //       hash          integer NOT NULL,
+  //       time_inserted integer NOT NULL,
+  //       time_deleted  integer NOT NULL,
+  //       dst_addr      text    NOT NULL,
+  //       src_addr      text    NOT NULL,
+  //       id            integer NOT NULL,
+  //       key           text    NOT NULL,
+  //       value         text    NOT NULL,
+  //       PRIMARY KEY (hash, time_inserted)
+  //   );
+  //
+  //   CREATE TABLE SetResponse (
+  //       hash          integer NOT NULL,
+  //       time_inserted integer NOT NULL,
+  //       time_deleted  integer NOT NULL,
+  //       addr          text    NOT NULL,
+  //       id            integer NOT NULL,
+  //       succeeded     boolean NOT NULL,
+  //       PRIMARY KEY (hash, time_inserted)
+  //   );
+  //
+  //   CREATE TABLE GetRequest (
+  //       hash          integer NOT NULL,
+  //       time_inserted integer NOT NULL,
+  //       time_deleted  integer NOT NULL,
+  //       dst_addr      text    NOT NULL,
+  //       src_addr      text    NOT NULL,
+  //       id            integer NOT NULL,
+  //       key           text    NOT NULL,
+  //       PRIMARY KEY (hash, time_inserted)
+  //   );
+  //
+  //   CREATE TABLE GetResponse (
+  //       hash          integer NOT NULL,
+  //       time_inserted integer NOT NULL,
+  //       time_deleted  integer NOT NULL,
+  //       addr          text    NOT NULL,
+  //       id            integer NOT NULL,
+  //       value         text    NOT NULL,
+  //       PRIMARY KEY (hash, time_inserted)
+  //   );
+  //
+  // We want to register the following two functions which specify the lineage
+  // of get responses:
+  //
+  //   -- get_response_lineage_impl(time_inserted, key, value)
+  //   CREATE get_response_lineage_impl(integer, text, text)
+  //   RETURNS TABLE(collection_name text, hash integer, time_inserted integer)
+  //   AS $$
+  //     SELECT CAST('set_request' AS text), hash, time_inserted
+  //     FROM set_request
+  //     WHERE time_inserted <= $1 AND key = $2
+  //     ORDER BY time_inserted DESC
+  //     LIMIT 1
+  //   $$ LANGUAGE SQL;
+  //
+  //   -- id
+  //   get_response_lineage(id)
+  //   CREATE FUNCTION get_response_lineage(integer)
+  //   RETURNS TABLE(collection_name text, hash integer, time_inserted integer)
+  //   AS $$
+  //     SELECT
+  //       get_response_lineage_impl(Req.time_inserted, Req.key, Resp.value)
+  //     FROM get_request Req, get_response Resp
+  //     WHERE Req.id = $1 AND Resp.id = $1
+  //   $$ LANGUAGE SQL;
+  //
+  // Most of these two functions are boilerplate. The only creative bit that a
+  // user would have to provide is this part:
+  //
+  //   SELECT CAST('set_request' AS text), hash, time_inserted
+  //   FROM set_request
+  //   WHERE time_inserted <= $1 AND key = $2
+  //   ORDER BY time_inserted DESC
+  //   LIMIT 1
+  //
+  // RegisterBlackBoxLineage(f) takes a function f that returns this lineage
+  // specification. f takes one argument for every argument of the first SQL
+  // function. For example, here's what f would look like to generate the SQL
+  // above:
+  //
+  // [](const string& time_inserted, const string& key, const string&) {
+  //   return fmt::format(R"(
+  //     SELECT CAST('set_request' AS text), hash, time_inserted
+  //     FROM set_request
+  //     WHERE time_inserted <= {} AND key = {}
+  //     ORDER BY time_inserted DESC
+  //     LIMIT 1
+  //   )", time_inserted, key);
+  // }
+  //
+  // [1]: https://goo.gl/yGmr78
+  template <std::size_t RequestIndex, std::size_t ResponseIndex, typename F>
+  FluentExecutor<TypeList<Cs...>, BootstrapRules, Rules, LineageDbClient, Hash,
+                 ToSql>&
+  RegisterBlackBoxLineage(F f) {
+    static_assert(RequestIndex < sizeof...(Cs), "RequestIndex out of bounds.");
+    static_assert(ResponseIndex < sizeof...(Cs),
+                  "ResponseIndex out of bounds.");
+    using RequestType =
+        typename std::decay<decltype(Get<RequestIndex>())>::type;
+    using ResponseType =
+        typename std::decay<decltype(Get<ResponseIndex>())>::type;
+    static_assert(
+        GetCollectionType<RequestType>::value == CollectionType::CHANNEL,
+        "Request collection is not a channel.");
+    static_assert(
+        GetCollectionType<ResponseType>::value == CollectionType::CHANNEL,
+        "Request collection is not a channel.");
+    static_assert(RequestIndex != ResponseIndex,
+                  "The same channel cannot be simultaneously a request and a "
+                  "response channel.");
+    RegisterBlackBoxLineageImpl(Get<RequestIndex>(), Get<ResponseIndex>(), f);
+    return *this;
   }
 
   // Sequentially execute each registered bootstrap query and then invoke the
@@ -314,6 +464,110 @@ class FluentExecutor<
       timeout.timeout = now + timeout.periodic->Period();
       timeout_queue_.push(timeout);
     }
+  }
+
+  // See RegisterBlackBoxLineage.
+  template <typename T>
+  using SqlType = typename lineagedb::ToSqlType<ToSql>::template type<T>;
+
+  // See RegisterBlackBoxLineage.
+  template <std::size_t... Is, typename F>
+  std::string CallBlackBoxLineageFunction(F f, std::index_sequence<Is...>) {
+    return f(("$" + std::to_string(Is + 1))...);
+  }
+
+  // See RegisterBlackBoxLineage.
+  // TODO(mwhittaker): Use a Status class.
+  template <typename... RequestTs, typename... ResponseTs, typename F>
+  void RegisterBlackBoxLineageImpl(const Channel<RequestTs...>& request,
+                                   const Channel<ResponseTs...>& response,
+                                   F f) {
+    // Validate request types.
+    const std::string request_columns_err =
+        "The first three columns of a request channel must be a dst_addr, "
+        "src_addr, and id column. The remaining columns are the arguments to "
+        "the request.";
+    CHECK_GE(request.ColumnNames().size(), static_cast<std::size_t>(3))
+        << request_columns_err;
+    CHECK_EQ(request.ColumnNames()[0], "dst_addr") << request_columns_err;
+    CHECK_EQ(request.ColumnNames()[1], "src_addr") << request_columns_err;
+    CHECK_EQ(request.ColumnNames()[2], "id") << request_columns_err;
+    using RequestTypes = TypeList<RequestTs...>;
+    static_assert(
+        std::is_same<std::string,
+                     typename TypeListGet<RequestTypes, 0>::type>::value,
+        "");
+    static_assert(
+        std::is_same<std::string,
+                     typename TypeListGet<RequestTypes, 1>::type>::value,
+        "");
+    static_assert(
+        std::is_same<std::int64_t,
+                     typename TypeListGet<RequestTypes, 2>::type>::value,
+        "");
+
+    // Validate response types.
+    const std::string response_columns_err =
+        "The first two columns of a response channel must be a addr and id "
+        "column. The remaining columns are the return values of the response.";
+    CHECK_GE(response.ColumnNames().size(), static_cast<std::size_t>(2))
+        << response_columns_err;
+    CHECK_EQ(response.ColumnNames()[0], "addr") << response_columns_err;
+    CHECK_EQ(response.ColumnNames()[1], "id") << response_columns_err;
+    using ResponseTypes = TypeList<ResponseTs...>;
+    static_assert(
+        std::is_same<std::string,
+                     typename TypeListGet<ResponseTypes, 0>::type>::value,
+        "");
+    static_assert(
+        std::is_same<std::int64_t,
+                     typename TypeListGet<ResponseTypes, 1>::type>::value,
+        "");
+
+    // Collect argument and return types.
+    using ArgTypes = typename TypeListDrop<RequestTypes, 3>::type;
+    using RetTypes = typename TypeListDrop<ResponseTypes, 2>::type;
+    std::vector<std::string> types;
+    auto arg_types = TypeListMapToTuple<ArgTypes, SqlType>()();
+    auto ret_types = TypeListMapToTuple<RetTypes, SqlType>()();
+    TupleIter(arg_types, [&types](const auto& s) { types.push_back(s); });
+    TupleIter(ret_types, [&types](const auto& s) { types.push_back(s); });
+
+    // Collect argument and return column names.
+    std::vector<std::string> column_names;
+    for (std::size_t i = 3; i < request.ColumnNames().size(); ++i) {
+      const std::string& column_name = request.ColumnNames()[i];
+      column_names.push_back(fmt::format("Req.{}", column_name));
+    }
+    for (std::size_t i = 2; i < response.ColumnNames().size(); ++i) {
+      const std::string& column_name = response.ColumnNames()[i];
+      column_names.push_back(fmt::format("Resp.{}", column_name));
+    }
+
+    // Issue SQL queries.
+    auto seq = std::make_index_sequence<1 + TypeListLen<ArgTypes>::value +
+                                        TypeListLen<RetTypes>::value>();
+    lineagedb_client_->Exec(fmt::format(
+        R"(
+      CREATE FUNCTION {}_{}_lineage_impl(integer, {})
+      RETURNS TABLE(collection_name text, hash bigint, time_inserted integer)
+      AS $${}$$ LANGUAGE SQL;
+    )",
+        name_, response.Name(), Join(types),
+        CallBlackBoxLineageFunction(f, seq)));
+
+    lineagedb_client_->Exec(fmt::format(
+        R"(
+      CREATE FUNCTION {}_{}_lineage(bigint)
+      RETURNS TABLE(collection_name text, hash bigint, time_inserted integer)
+      AS $$
+        SELECT {}_{}_lineage_impl(Req.time_inserted, {})
+        FROM {}_{} Req, {}_{} Resp
+        WHERE Req.id = $1 AND Resp.id = $1
+      $$ LANGUAGE SQL;
+    )",
+        name_, response.Name(), name_, response.Name(), Join(column_names),
+        name_, request.Name(), name_, response.Name()));
   }
 
   // TODO(mwhittaker): Document.

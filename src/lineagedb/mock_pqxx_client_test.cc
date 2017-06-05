@@ -168,6 +168,25 @@ TEST(MockPqxxClient, AddDerivedLineage) {
   )"));
 }
 
+TEST(MockPqxxClient, Exec) {
+  ConnectionConfig c;
+  MockPqxxClient<Hash, ToSql> client("name", 9001, "127.0.0.1", c);
+  client.Init();
+  client.Exec("who's on first?");
+  client.Exec("Yes.");
+  client.Exec("the fellow's name.");
+  client.Exec("Who.");
+  client.Exec("The guy on first.");
+
+  std::vector<std::pair<std::string, std::string>> queries = client.Queries();
+  ASSERT_EQ(queries.size(), static_cast<std::size_t>(7));
+  ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, "who's on first?");
+  ExpectStringsEqualIgnoreWhiteSpace(queries[3].second, "Yes.");
+  ExpectStringsEqualIgnoreWhiteSpace(queries[4].second, "the fellow's name.");
+  ExpectStringsEqualIgnoreWhiteSpace(queries[5].second, "Who.");
+  ExpectStringsEqualIgnoreWhiteSpace(queries[6].second, "The guy on first.");
+}
+
 }  // namespace lineagedb
 }  // namespace fluent
 

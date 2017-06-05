@@ -27,6 +27,23 @@ TEST(StringUtil, Join) {
   EXPECT_EQ(Join(std::array<std::string, 3>{{"a", "b", "c"}}), "a, b, c"s);
 }
 
+TEST(StringUtil, Split) {
+  using stringvec = std::vector<std::string>;
+  EXPECT_EQ((stringvec{}), Split(""));
+  EXPECT_EQ((stringvec{"a"}), Split("a"));
+  EXPECT_EQ((stringvec{"foo"}), Split("foo"));
+  EXPECT_EQ((stringvec{"foo"}), Split(" foo"));
+  EXPECT_EQ((stringvec{"foo"}), Split("foo "));
+  EXPECT_EQ((stringvec{"foo"}), Split(" foo "));
+  EXPECT_EQ((stringvec{"foo"}), Split("  foo  "));
+  EXPECT_EQ((stringvec{"foo", "bar"}), Split("foo bar"));
+  EXPECT_EQ((stringvec{"foo", "bar"}), Split("foo  bar"));
+  EXPECT_EQ((stringvec{"foo", "bar"}), Split("foo  bar "));
+  EXPECT_EQ((stringvec{"foo", "bar"}), Split(" foo  bar"));
+  EXPECT_EQ((stringvec{"foo", "bar"}), Split(" foo  bar "));
+  EXPECT_EQ((stringvec{"foo", "bar", "baz"}), Split("   foo   bar  baz "));
+}
+
 TEST(StringUtil, CrunchWhitespace) {
   using namespace std::literals::string_literals;
   EXPECT_EQ(CrunchWhitespace(""), ""s);

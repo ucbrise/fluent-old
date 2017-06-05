@@ -5,6 +5,11 @@
 
 #include "fmt/format.h"
 
+#include "common/sizet_list.h"
+#include "common/string_util.h"
+#include "common/tuple_util.h"
+#include "common/type_list.h"
+
 namespace fluent {
 namespace ra {
 namespace agg {
@@ -20,75 +25,100 @@ namespace agg {
 //
 //   make_iterable("r", r) | group_by<Keys<0, 1>, Sum<2>, Avg<3>, Count<4>>();
 //
-// Each of those aggregates should look like this:
+// Each of those aggregates should look something like this:
 //
-//   template <std::size_t, typename T>
-//   class AggregateImpl {
+//   template <typename SizetList, typename TypeList>
+//   class AggregateImpl;
+//
+//   template <std::size_t... Is, typename... Ts>
+//   class AggregateImpl<SizetList<Is...>, TypeList<Ts...>> {
 //    public:
-//     void Update(const T& x) { ... }
+//     void Update(const std::tuple<Ts...>& x) { ... }
 //     U Get() const { ... }
 //   };
 //
-//   template <std::size_t I>
+//   template <std::size_t... Is>
 //   struct Aggregate {
-//     template <typename T>
-//     using type = AggregateImpl<I, T>;
+//     template <typename TypeList>
+//     using type = AggregateImpl<SizetList<Is...>, TypeList>;
 //
 //     static std::string ToDebugString const { ... }
 //   };
 //
-// Each aggregate (e.g. Sum, Avg, Count) is paramaterized on a size_t denoting
-// the column over which the aggregate will be applied. The struct contains a
-// single type, called `type`, that is paramaterized on the column `I` and a
-// type `T`. `T` will be instantiated with the type of the `I`th column.
+// Each aggregate (e.g. Sum, Avg, Count) is paramaterized on a variadic number
+// of size_ts denoting the columns over which the aggregate will be applied.
+// The struct contains a single type, called `type`, that is paramaterized on
+// the columns `Is` and a list of types `Ts`. `Ts` will be instantiated with
+// the types of the `Is`th columns.
 //
 // The aggregate implementation (e.g. SumImpl, AvgImpl) has a method Update
 // which takes in values of the column, and a method `Get` which returns the
 // final aggregate. The return type of Get is arbitrary.
 
-template <std::size_t, typename T>
-class SumImpl {
+template <typename SizetList, typename TypeList>
+class SumImpl;
+
+template <std::size_t... Is, typename T, typename... Ts>
+class SumImpl<SizetList<Is...>, TypeList<T, Ts...>> {
+  static_assert(TypeListAllSame<TypeList<T, Ts...>>::value, "");
+
  public:
   SumImpl() : sum_() {}
-  void Update(const T& x) { sum_ += x; }
+  void Update(const std::tuple<T, Ts...>& t) {
+    TupleIter(t, [this](const T& x) { sum_ += x; });
+  }
   T Get() const { return sum_; }
 
  private:
   T sum_;
 };
 
-template <std::size_t I>
+template <std::size_t... Is>
 struct Sum {
-  template <typename T>
-  using type = SumImpl<I, T>;
+  template <typename TypeList>
+  using type = SumImpl<SizetList<Is...>, TypeList>;
 
-  static std::string ToDebugString() { return fmt::format("Sum<{}>", I); }
+  static std::string ToDebugString() {
+    return fmt::format("Sum<{}>", Join(Is...));
+  }
 };
 
-template <std::size_t, typename T>
-class CountImpl {
+template <typename SizetList, typename TypeList>
+class CountImpl;
+
+template <std::size_t... Is, typename... Ts>
+class CountImpl<SizetList<Is...>, TypeList<Ts...>> {
  public:
-  void Update(const T&) { count_++; }
+  void Update(const std::tuple<Ts...>&) { count_++; }
   std::size_t Get() const { return count_; }
 
  private:
   std::size_t count_ = 0;
 };
 
-template <std::size_t I>
+template <std::size_t... Is>
 struct Count {
-  template <typename T>
-  using type = CountImpl<I, T>;
+  template <typename TypeList>
+  using type = CountImpl<SizetList<Is...>, TypeList>;
 
-  static std::string ToDebugString() { return fmt::format("Count<{}>", I); }
+  static std::string ToDebugString() {
+    return fmt::format("Count<{}>", Join(Is...));
+  }
 };
 
-template <std::size_t, typename T>
-class AvgImpl {
+template <typename SizetList, typename TypeList>
+class AvgImpl;
+
+template <std::size_t... Is, typename T, typename... Ts>
+class AvgImpl<SizetList<Is...>, TypeList<T, Ts...>> {
+  static_assert(TypeListAllSame<TypeList<T, Ts...>>::value, "");
+
  public:
-  void Update(const T& x) {
-    sum_ += x;
-    count_++;
+  void Update(const std::tuple<T, Ts...>& t) {
+    TupleIter(t, [this](const T& x) {
+      sum_ += x;
+      count_++;
+    });
   }
 
   double Get() const { return sum_ / count_; }
@@ -98,12 +128,14 @@ class AvgImpl {
   std::size_t count_ = 0;
 };
 
-template <std::size_t I>
+template <std::size_t... Is>
 struct Avg {
-  template <typename T>
-  using type = AvgImpl<I, T>;
+  template <typename TypeList>
+  using type = AvgImpl<SizetList<Is...>, TypeList>;
 
-  static std::string ToDebugString() { return fmt::format("Avg<{}>", I); }
+  static std::string ToDebugString() {
+    return fmt::format("Avg<{}>", Join(Is...));
+  }
 };
 
 }  // namespace agg

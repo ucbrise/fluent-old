@@ -94,6 +94,8 @@ inline std::int64_t size_t_to_int64(std::size_t hash) {
 // Refer to `README.md` in the `fluent` directory for a description of (and the
 // schema of) the tables used to store a node's history and lineage. This class
 // issues SQL queries to create and populate those tables.
+//
+// TODO(mwhittaker): Document these functions better.
 template <typename Connection, typename Work, template <typename> class Hash,
           template <typename> class ToSql, typename Clock>
 class InjectablePqxxClient {
@@ -130,16 +132,16 @@ class InjectablePqxxClient {
                     "Lineage is a reserved collection name.");
     }
 
-    RETURN_IF_ERROR(ExecuteQuery(
-        "AddCollection",
-        fmt::format(
-            R"(
+    RETURN_IF_ERROR(ExecuteQuery("AddCollection",
+                                 fmt::format(
+                                     R"(
       INSERT INTO Collections (node_id, collection_name, collection_type,
-                               column_names)
+                               column_names, black_box_lineage)
       VALUES ({});
     )",
-            Join(SqlValues(std::make_tuple(id_, collection_name,
-                                           collection_type, column_names))))));
+                                     Join(SqlValues(std::make_tuple(
+                                         id_, collection_name, collection_type,
+                                         column_names, false))))));
 
     std::vector<std::string> types = SqlTypes<Ts...>();
     std::vector<std::string> columns;
@@ -252,8 +254,24 @@ class InjectablePqxxClient {
                 detail::size_t_to_int64(tuple_hash), time)))));
   }
 
-  WARN_UNUSED Status Exec(const std::string& query) {
-    return ExecuteQuery("Exec", query);
+  WARN_UNUSED Status
+  RegisterBlackBoxLineage(const std::string& collection_name,
+                          const std::vector<std::string>& lineage_commands) {
+    const std::string query_template = R"(
+      UPDATE Collections
+      SET black_box_lineage = true
+      WHERE node_id = {} AND collection_name = {};
+    )";
+    const std::string query =
+        fmt::format(query_template, SqlValue(detail::size_t_to_int64(id_)),
+                    SqlValue(collection_name));
+    RETURN_IF_ERROR(ExecuteQuery("SetBlackBoxLineageTrue", query));
+
+    for (const std::string& lineage_command : lineage_commands) {
+      RETURN_IF_ERROR(ExecuteQuery("LineageCommand", lineage_command));
+    }
+
+    return Status::OK;
   }
 
  protected:

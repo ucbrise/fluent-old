@@ -4,13 +4,14 @@ Fluent = [Bloom][bloom_paper] + C++.
 ## Getting Started
 There are a handful of things you'll have to install for yourself:
 
-1. A C++ compiler that supports C++14. If you're trying to install an
+1. Some miscellaneous dependencies: `libtool`.
+2. A C++ compiler that supports C++14. If you're trying to install an
    up-to-date g++ on linux, [this tutorial][gpp_tutorial] might be helpful. If
    you're tying to install an up-to-date clang++ on linux, [this
    site](http://apt.llvm.org/) might be useful.
-2. [CMake](https://cmake.org/download) version 3.0 or better.
-3. [PostgreSQL and libpq](https://www.postgresql.org/download/).
-4. [Redis](https://redis.io/topics/quickstart), libhiredis (`sudo apt-get
+3. [CMake](https://cmake.org/download) version 3.0 or better.
+4. [PostgreSQL and libpq](https://www.postgresql.org/download/).
+5. [Redis](https://redis.io/topics/quickstart), libhiredis (`sudo apt-get
    install libhiredis-dev`), and libev (`sudo apt-get install libev-dev`).
 
 Once you have these installed, then just build the code! The build process will

@@ -69,6 +69,7 @@ int main(int argc, char* argv[]) {
         return R"(
           SELECT *
           FROM (VALUES (CAST(NULL AS text),
+                        CAST(NULL AS text),
                         CAST(NULL as bigint),
                         CAST(NULL as integer))) AS T
           WHERE false;

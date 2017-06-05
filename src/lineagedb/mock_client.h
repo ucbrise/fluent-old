@@ -122,8 +122,10 @@ class MockClient {
     return Status::OK;
   }
 
-  WARN_UNUSED Status Exec(const std::string& query) {
-    exec_.push_back(query);
+  WARN_UNUSED Status
+  RegisterBlackBoxLineage(const std::string& collection_name,
+                          const std::vector<std::string>& lineage_commands) {
+    register_black_box_lineage_.push_back({collection_name, lineage_commands});
     return Status::OK;
   }
 
@@ -151,7 +153,8 @@ class MockClient {
       std::tuple<std::string, std::size_t, int, bool,
                  std::chrono::time_point<Clock>, std::string, std::size_t, int>;
   // query
-  using ExecTuple = std::tuple<std::string>;
+  using RegisterBlackBoxLineageTuple =
+      std::tuple<std::string, std::vector<std::string>>;
 
   const std::vector<AddCollectionTuple>& GetAddCollection() const {
     return add_collection_;
@@ -169,7 +172,10 @@ class MockClient {
   const std::vector<AddDerivedLineageTuple>& GetAddDerivedLineage() const {
     return add_derived_lineage_;
   }
-  const std::vector<ExecTuple>& GetExec() const { return exec_; }
+  const std::vector<RegisterBlackBoxLineageTuple>& GetRegisterBlackBoxLineage()
+      const {
+    return register_black_box_lineage_;
+  }
 
  private:
   template <typename T>
@@ -193,7 +199,7 @@ class MockClient {
   std::vector<DeleteTupleTuple> delete_tuple_;
   std::vector<AddNetworkedLineageTuple> add_networked_lineage_;
   std::vector<AddDerivedLineageTuple> add_derived_lineage_;
-  std::vector<ExecTuple> exec_;
+  std::vector<RegisterBlackBoxLineageTuple> register_black_box_lineage_;
 };
 
 }  // namespace lineagedb

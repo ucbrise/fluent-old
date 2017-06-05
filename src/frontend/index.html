@@ -100,15 +100,18 @@
                 </tr>
                 <tr v-for="tuple in collection.tuples"
                     v-bind:class="{clicked_tuple: tuple[0] === node.clicked_hash}">
-                  <!--
-                  The first five columns of a relation are hash, logical time
-                  inserted, logical time deleted, physical time inserted, and
-                  physical time deleted. We do not include those in the UI.
-                  -->
+                  <!-- The first five columns of a relation are -->
+                  <!--   1. hash, -->
+                  <!--   2. logical time inserted,-->
+                  <!--   3. logical time deleted, -->
+                  <!--   4. physical time inserted, and -->
+                  <!--   5. physical time deleted.-->
+                  <!-- We do not include those in the UI.-->
                   <td
                       v-for="x in tuple.slice(5)"
-                      v-on:click="get_lineage(node.name, collection.name,
-                                              tuple[0], tuple[1])">
+                      v-on:click="backwards_lineage(node, collection, tuple)">
+                      <!--collection.black_box_lineage,-->
+                      <!--node.name, collection.name, tuple[0], tuple[1])">-->
                     {{x}}
                   </td>
                 </tr>

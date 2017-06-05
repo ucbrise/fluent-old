@@ -134,57 +134,67 @@ Information about this program, its collections, and its rules are found in the
 
 The postgres database also has a relation for every collection of every
 program. For a program `p` and collection `c`, the relation is named `p_c`. The
-schema of the relation is the same as the schema of `c` with three additional
-columns prepended: the hash of the tuple, the logical time at which the tuple
-was inserted, and the logical time at which the tuple was deleted.
+schema of the relation is the same as the schema of `c` with five additional
+columns prepended:
+
+1. the hash of the tuple,
+2. the logical time at which the tuple was inserted,
+3. the logical time at which the tuple was deleted.
+4. the physical time at which the tuple was inserted, and
+5. the physical time at which the tuple was deleted.
 
 ```
 > \d my_program_my_table
-+---------------+---------+-----------+
-| Column        | Type    | Modifiers |
-+---------------+---------+-----------+
-| hash          | bigint  | not null  |
-| time_inserted | integer | not null  |
-| time_deleted  | integer |           |
-| col_0         | integer | not null  |
-| col_1         | char(1) | not null  |
-+---------------+---------+-----------+
++------------------------+--------------------------+-----------+
+| Column                 | Type                     | Modifiers |
++------------------------+--------------------------+-----------+
+| hash                   | bigint                   | not null  |
+| time_inserted          | integer                  | not null  |
+| time_deleted           | integer                  |           |
+| physical_time_inserted | timestamp with time zone | not null  |
+| physical_time_deleted  | timestamp with time zone |           |
+| x                      | integer                  | not null  |
+| y                      | char(1)                  | not null  |
++------------------------+--------------------------+-----------+
 
 > \d my_program_my_scratch
-+---------------+---------+-----------+
-| Column        | Type    | Modifiers |
-+---------------+---------+-----------+
-| hash          | bigint  | not null  |
-| time_inserted | integer | not null  |
-| time_deleted  | integer |           |
-| col_0         | integer | not null  |
-+---------------+---------+-----------+
++------------------------+--------------------------+-----------+
+| Column                 | Type                     | Modifiers |
++------------------------+--------------------------+-----------+
+| hash                   | bigint                   | not null  |
+| time_inserted          | integer                  | not null  |
+| time_deleted           | integer                  |           |
+| physical_time_inserted | timestamp with time zone | not null  |
+| physical_time_deleted  | timestamp with time zone |           |
+| x                      | integer                  | not null  |
++------------------------+--------------------------+-----------+
 ```
 
 Additionally, for each program `p`, we generate a `p_lineage` table:
 
 ```
 > \d my_program_lineage
-+---------------------+---------+-----------+
-| Column              | Type    | Modifiers |
-+---------------------+---------+-----------+
-| dep_node_id         | bigint  | not null  |
-| dep_collection_name | text    | not null  |
-| dep_tuple_hash      | bigint  | not null  |
-| dep_time            | integer |           |
-| rule number         | integer |           |
-| inserted            | boolean | not null  |
-| collection_name     | text    | not null  |
-| tuple_hash          | bigint  | not null  |
-| time                | integer | not null  |
-+---------------------+---------+-----------+
++---------------------+--------------------------+-----------+
+| Column              | Type                     | Modifiers |
++---------------------+--------------------------+-----------+
+| dep_node_id         | bigint                   | not null  |
+| dep_collection_name | text                     | not null  |
+| dep_tuple_hash      | bigint                   | not null  |
+| dep_time            | integer                  |           |
+| rule number         | integer                  |           |
+| inserted            | boolean                  | not null  |
+| physical_time       | timestamp with time zone | not null  |
+| collection_name     | text                     | not null  |
+| tuple_hash          | bigint                   | not null  |
+| time                | integer                  | not null  |
++---------------------+--------------------------+-----------+
 ```
 
-where a tuple `(dn, dc, dt, r, i, c, t, time)` represents that the tuple `dt`
-in collection `dc` on node `dn` was used by rule `r` to insert (if `i` is true)
-or delete (if `i` is false) the tuple `t` into collection `c` at time `time`.
-`dep_time` is left null for local derivations, and rule number is left null for
-networked derivations.
+where a tuple `(dn, dc, dt, r, i, pt, c, t, time)` represents that the tuple
+`dt` in collection `dc` on node `dn` was used by rule `r` to insert (if `i` is
+true) or delete (if `i` is false) the tuple `t` into collection `c` at time
+`time` (physical time `pt`).  `dep_time` is left null for local derivations,
+and rule number is left null for networked derivations.
 
 [lamport_clocks]: https://scholar.google.com/scholar?cluster=4892527405117123487
 [libpqxx_site]: http://pqxx.org/development/libpqxx/

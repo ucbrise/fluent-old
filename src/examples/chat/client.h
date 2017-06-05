@@ -20,8 +20,8 @@ struct ClientArgs {
   std::string nickname;
 };
 
-template <template <template <typename> class, template <typename> class>
-          class LineageDbClient>
+template <template <template <typename> class, template <typename> class,
+                    typename> class LineageDbClient>
 int ClientMain(const ClientArgs& args,
                const fluent::lineagedb::ConnectionConfig& connection_config) {
   using connect_tuple_t = std::tuple<std::string, std::string, std::string>;

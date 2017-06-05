@@ -4,6 +4,7 @@
 #include <cstddef>
 
 #include <array>
+#include <chrono>
 #include <string>
 
 #include "common/macros.h"
@@ -18,7 +19,8 @@ namespace lineagedb {
 // nothing at all. A NoopClient can be used in place of a PqxxClient when you
 // don't really want to connect to a lineagedb database and don't really care
 // about history or lineage. For example, it is useful in unit tests.
-template <template <typename> class Hash, template <typename> class ToSql>
+template <template <typename> class Hash, template <typename> class ToSql,
+          typename Clock>
 class NoopClient {
  public:
   DISALLOW_COPY_AND_ASSIGN(NoopClient);
@@ -43,12 +45,14 @@ class NoopClient {
 
   template <typename... Ts>
   WARN_UNUSED Status InsertTuple(const std::string&, int,
+                                 const std::chrono::time_point<Clock>&,
                                  const std::tuple<Ts...>&) {
     return Status::OK;
   }
 
   template <typename... Ts>
   WARN_UNUSED Status DeleteTuple(const std::string&, int,
+                                 const std::chrono::time_point<Clock>&,
                                  const std::tuple<Ts...>&) {
     return Status::OK;
   }
@@ -59,8 +63,9 @@ class NoopClient {
   }
 
   WARN_UNUSED Status AddDerivedLineage(const std::string&, std::size_t, int,
-                                       bool, const std::string&, std::size_t,
-                                       int) {
+                                       bool,
+                                       const std::chrono::time_point<Clock>&,
+                                       const std::string&, std::size_t, int) {
     return Status::OK;
   }
 

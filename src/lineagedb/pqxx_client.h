@@ -3,6 +3,7 @@
 
 #include <cstdint>
 
+#include <chrono>
 #include <memory>
 
 #include "fmt/format.h"
@@ -33,12 +34,16 @@ inline std::int64_t size_t_to_int64(std::size_t hash) {
 // Ignore the Connection and Work template arguments for now and pretend the
 // InjectablePqxxClient class template really looks like this:
 //
-//   template <template <typename> class Hash, tempalte <typename> class ToSql>
+//   template <
+//    template <typename> class Hash,
+//    template <typename> class ToSql,
+//    typename Clock
+//   >
 //   class PqxxClient { ... }
 //
-// A `PqxxClient<Hash, ToSql>` object can be used to shuttle tuples and lineage
-// information from a fluent node to a lineagedb database. It's best explained
-// through an example:
+// A `PqxxClient<Hash, ToSql, Clock>` object can be used to shuttle tuples and
+// lineage information from a fluent node to a lineagedb database. It's best
+// explained through an example:
 //
 //   // Construct a `ConnectionConfig` which tells our client to which lineagedb
 //   // database it should connect and which credentials it should use to do
@@ -52,7 +57,7 @@ inline std::int64_t size_t_to_int64(std::size_t hash) {
 //   }
 //
 //   // Construct a client which will connect to the lineagedb database.
-//   using Client = PqxxClient<Hash, ToSql>;
+//   using Client = PqxxClient<Hash, ToSql, system_clock>;
 //   std::string name = "seanconnery";
 //   std::size_t id = 42;
 //   std::string address = "inproc://zardoz";
@@ -70,9 +75,9 @@ inline std::int64_t size_t_to_int64(std::size_t hash) {
 //   client.AddRule(1, false, t -= (c.Iterable() | ra::filter(f)));
 //
 //   // Add and delete some tuples.
-//   client.InsertTuple("t", 0 /* time_inserted */, make_tuple("hi",  42.0));
-//   client.InsertTuple("t", 1 /* time_inserted */, make_tuple("bye", 14.0));
-//   client.DeleteTuple("t", 2 /* time_deleted */,  make_tuple("bye", 14.0));
+//   client.InsertTuple("t", 0, system_clock::now(), make_tuple("hi",  42.0));
+//   client.InsertTuple("t", 1, system_clock::now(), make_tuple("bye", 14.0));
+//   client.DeleteTuple("t", 2, system_clock::now(), make_tuple("bye", 14.0));
 //
 // Cool! But what about those Connection and Work template arguments? And why
 // is it called InjectablePqxxClient? In short, InjectablePqxxClient is a
@@ -90,7 +95,7 @@ inline std::int64_t size_t_to_int64(std::size_t hash) {
 // schema of) the tables used to store a node's history and lineage. This class
 // issues SQL queries to create and populate those tables.
 template <typename Connection, typename Work, template <typename> class Hash,
-          template <typename> class ToSql>
+          template <typename> class ToSql, typename Clock>
 class InjectablePqxxClient {
  public:
   DISALLOW_COPY_AND_ASSIGN(InjectablePqxxClient);
@@ -145,9 +150,11 @@ class InjectablePqxxClient {
     return ExecuteQuery("AddCollectionTable",
                         fmt::format(R"(
       CREATE TABLE {}_{} (
-        hash          bigint  NOT NULL,
-        time_inserted integer NOT NULL,
-        time_deleted  integer,
+        hash                   bigint                   NOT NULL,
+        time_inserted          integer                  NOT NULL,
+        time_deleted           integer,
+        physical_time_inserted timestamp with time zone NOT NULL,
+        physical_time_deleted  timestamp with time zone,
         {},
         PRIMARY KEY (hash, time_inserted)
       );
@@ -168,32 +175,39 @@ class InjectablePqxxClient {
   }
 
   template <typename... Ts>
-  WARN_UNUSED Status InsertTuple(const std::string& collection_name,
-                                 int time_inserted,
-                                 const std::tuple<Ts...>& t) {
-    static_assert(sizeof...(Ts) > 0, "Collections should have >=1 column.");
-    std::int64_t hash = detail::size_t_to_int64(Hash<std::tuple<Ts...>>()(t));
-    return ExecuteQuery("InsertTuple",
-                        fmt::format(R"(
-      INSERT INTO {}_{}
-      VALUES ({}, {}, NULL, {});
-    )",
-                                    name_, collection_name, hash, time_inserted,
-                                    Join(SqlValues(t))));
-  }
-
-  template <typename... Ts>
-  WARN_UNUSED Status DeleteTuple(const std::string& collection_name,
-                                 int time_deleted, const std::tuple<Ts...>& t) {
+  WARN_UNUSED Status
+  InsertTuple(const std::string& collection_name, int time_inserted,
+              const std::chrono::time_point<Clock>& physical_time_inserted,
+              const std::tuple<Ts...>& t) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >=1 column.");
     std::int64_t hash = detail::size_t_to_int64(Hash<std::tuple<Ts...>>()(t));
     return ExecuteQuery(
-        "DeleteTuple", fmt::format(R"(
-      UPDATE {}_{}
-      SET time_deleted = {}
-      WHERE hash={} AND time_deleted IS NULL;
+        "InsertTuple",
+        fmt::format(R"(
+      INSERT INTO {}_{}
+      VALUES ({}, {}, NULL, {}, NULL, {});
     )",
-                                   name_, collection_name, time_deleted, hash));
+                    name_, collection_name, SqlValue(hash),
+                    SqlValue(time_inserted), SqlValue(physical_time_inserted),
+                    Join(SqlValues(t))));
+  }
+
+  template <typename... Ts>
+  WARN_UNUSED Status
+  DeleteTuple(const std::string& collection_name, int time_deleted,
+              const std::chrono::time_point<Clock>& physical_time_deleted,
+              const std::tuple<Ts...>& t) {
+    static_assert(sizeof...(Ts) > 0, "Collections should have >=1 column.");
+    std::int64_t hash = detail::size_t_to_int64(Hash<std::tuple<Ts...>>()(t));
+    return ExecuteQuery(
+        "DeleteTuple",
+        fmt::format(R"(
+      UPDATE {}_{}
+      SET time_deleted = {}, physical_time_deleted = {}
+      WHERE hash = {} AND time_deleted IS NULL;
+    )",
+                    name_, collection_name, SqlValue(time_deleted),
+                    SqlValue(physical_time_deleted), SqlValue(hash)));
   }
 
   WARN_UNUSED Status AddNetworkedLineage(std::size_t dep_node_id, int dep_time,
@@ -216,26 +230,26 @@ class InjectablePqxxClient {
                                            time)))));
   }
 
-  WARN_UNUSED Status AddDerivedLineage(const std::string& dep_collection_name,
-                                       std::size_t dep_tuple_hash,
-                                       int rule_number, bool inserted,
-                                       const std::string& collection_name,
-                                       std::size_t tuple_hash, int time) {
+  WARN_UNUSED Status AddDerivedLineage(
+      const std::string& dep_collection_name, std::size_t dep_tuple_hash,
+      int rule_number, bool inserted,
+      const std::chrono::time_point<Clock>& physical_time,
+      const std::string& collection_name, std::size_t tuple_hash, int time) {
     return ExecuteQuery(
         "AddLineage",
         fmt::format(
             R"(
       INSERT INTO {}_lineage (dep_node_id, dep_collection_name, dep_tuple_hash,
-                              dep_time, rule_number, inserted, collection_name,
-                              tuple_hash, time)
+                              dep_time, rule_number, inserted, physical_time,
+                              collection_name, tuple_hash, time)
       VALUES ({}, NULL, {});
     )",
             name_, Join(SqlValues(std::make_tuple(
                        detail::size_t_to_int64(id_), dep_collection_name,
                        detail::size_t_to_int64(dep_tuple_hash)))),
-            Join(SqlValues(
-                std::make_tuple(rule_number, inserted, collection_name,
-                                detail::size_t_to_int64(tuple_hash), time)))));
+            Join(SqlValues(std::make_tuple(
+                rule_number, inserted, physical_time, collection_name,
+                detail::size_t_to_int64(tuple_hash), time)))));
   }
 
   WARN_UNUSED Status Exec(const std::string& query) {
@@ -266,15 +280,16 @@ class InjectablePqxxClient {
 
     return ExecuteQuery("CreateLineageTable", fmt::format(R"(
       CREATE TABLE {}_lineage (
-        dep_node_id          bigint   NOT NULL,
-        dep_collection_name  text     NOT NULL,
-        dep_tuple_hash       bigint   NOT NULL,
+        dep_node_id          bigint                    NOT NULL,
+        dep_collection_name  text                      NOT NULL,
+        dep_tuple_hash       bigint                    NOT NULL,
         dep_time             bigint,
         rule_number          integer,
-        inserted             boolean  NOT NULL,
-        collection_name      text     NOT NULL,
-        tuple_hash           bigint   NOT NULL,
-        time                 integer  NOT NULL
+        inserted             boolean                   NOT NULL,
+        physical_time        timestamp with time zone,
+        collection_name      text                      NOT NULL,
+        tuple_hash           bigint                    NOT NULL,
+        time                 integer                   NOT NULL
       );
     )",
                                                           name_));
@@ -305,13 +320,17 @@ class InjectablePqxxClient {
     return TupleToVector(TypeListMapToTuple<TypeList<Ts...>, Type>()());
   }
 
-  // SqlValues((x1: T1, ..., xn: Tn)) returns the vector
-  // [ToSql<T1>().Value(x1), ..., ToSql<Tn>().Value(xn)].
+  // SqlValue(x: t) is a shorthand for ToSql<t>().Value(x);
+  template <typename T>
+  std::string SqlValue(const T& x) {
+    return ToSql<typename std::decay<decltype(x)>::type>().Value(x);
+  }
+
+  // SqlValues((a, ..., z)) returns the vector [SqlValue(a), ..., SqlValue(z)].
   template <typename... Ts>
   std::vector<std::string> SqlValues(const std::tuple<Ts...>& t) {
-    return TupleToVector(TupleMap(t, [](const auto& x) {
-      return ToSql<typename std::decay<decltype(x)>::type>().Value(x);
-    }));
+    return TupleToVector(
+        TupleMap(t, [this](const auto& x) { return SqlValue(x); }));
   }
 
   // A connection to lineage database. Note that we'd like InjectablePqxxClient
@@ -332,9 +351,10 @@ class InjectablePqxxClient {
 };
 
 // See InjectablePqxxClient documentation above.
-template <template <typename> class Hash, template <typename> class ToSql>
+template <template <typename> class Hash, template <typename> class ToSql,
+          typename Clock>
 using PqxxClient =
-    InjectablePqxxClient<pqxx::connection, pqxx::work, Hash, ToSql>;
+    InjectablePqxxClient<pqxx::connection, pqxx::work, Hash, ToSql, Clock>;
 
 }  // namespace lineagedb
 }  // namespace fluent

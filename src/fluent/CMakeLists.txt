@@ -8,7 +8,7 @@ TARGET_LINK_LIBRARIES(fluent glog zmq_util lineagedb ${FMT_LINK_DIRS}/libfmt.a)
 
 MACRO(CREATE_FLUENT_TEST NAME)
     CREATE_NAMED_TEST(fluent_${NAME} ${NAME})
-    TARGET_LINK_LIBRARIES(fluent_${NAME} fluent)
+    TARGET_LINK_LIBRARIES(fluent_${NAME} fluent testing)
 ENDMACRO(CREATE_FLUENT_TEST)
 
 CREATE_FLUENT_TEST(channel_test)

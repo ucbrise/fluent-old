@@ -4,6 +4,7 @@
 #include <cstddef>
 
 #include <array>
+#include <chrono>
 #include <string>
 #include <utility>
 
@@ -29,7 +30,8 @@ struct ToSqlType {
 // constructing SQL queries and issuing them to a postgres database, a
 // MockClient simply records invocations of its methods. MockClient is
 // primarily for testing.
-template <template <typename> class Hash, template <typename> class ToSql>
+template <template <typename> class Hash, template <typename> class ToSql,
+          typename Clock>
 class MockClient {
  public:
   DISALLOW_COPY_AND_ASSIGN(MockClient);
@@ -70,31 +72,34 @@ class MockClient {
   }
 
   template <typename... Ts>
-  WARN_UNUSED Status InsertTuple(const std::string& collection_name,
-                                 int time_inserted,
-                                 const std::tuple<Ts...>& t) {
+  WARN_UNUSED Status
+  InsertTuple(const std::string& collection_name, int time_inserted,
+              const std::chrono::time_point<Clock>& physical_time_inserted,
+              const std::tuple<Ts...>& t) {
     auto strings_tuple = TupleMap(t, [](const auto& x) {
       return ToSql<typename std::decay<decltype(x)>::type>().Value(x);
     });
     std::vector<std::string> strings_vec;
     TupleIter(strings_tuple,
               [&strings_vec](const auto& s) { strings_vec.push_back(s); });
-    insert_tuple_.push_back(
-        std::make_tuple(collection_name, time_inserted, strings_vec));
+    insert_tuple_.push_back(std::make_tuple(
+        collection_name, time_inserted, physical_time_inserted, strings_vec));
     return Status::OK;
   }
 
   template <typename... Ts>
-  WARN_UNUSED Status DeleteTuple(const std::string& collection_name,
-                                 int time_deleted, const std::tuple<Ts...>& t) {
+  WARN_UNUSED Status
+  DeleteTuple(const std::string& collection_name, int time_deleted,
+              const std::chrono::time_point<Clock>& physical_time_deleted,
+              const std::tuple<Ts...>& t) {
     auto strings_tuple = TupleMap(t, [](const auto& x) {
       return ToSql<typename std::decay<decltype(x)>::type>().Value(x);
     });
     std::vector<std::string> strings_vec;
     TupleIter(strings_tuple,
               [&strings_vec](const auto& s) { strings_vec.push_back(s); });
-    delete_tuple_.push_back(
-        std::make_tuple(collection_name, time_deleted, strings_vec));
+    delete_tuple_.push_back(std::make_tuple(
+        collection_name, time_deleted, physical_time_deleted, strings_vec));
     return Status::OK;
   }
 
@@ -106,14 +111,14 @@ class MockClient {
     return Status::OK;
   }
 
-  WARN_UNUSED Status AddDerivedLineage(const std::string& dep_collection_name,
-                                       std::size_t dep_tuple_hash,
-                                       int rule_number, bool inserted,
-                                       const std::string& collection_name,
-                                       std::size_t tuple_hash, int time) {
-    add_derived_lineage_.push_back(
-        std::make_tuple(dep_collection_name, dep_tuple_hash, rule_number,
-                        inserted, collection_name, tuple_hash, time));
+  WARN_UNUSED Status AddDerivedLineage(
+      const std::string& dep_collection_name, std::size_t dep_tuple_hash,
+      int rule_number, bool inserted,
+      const std::chrono::time_point<Clock>& physical_time,
+      const std::string& collection_name, std::size_t tuple_hash, int time) {
+    add_derived_lineage_.push_back(std::make_tuple(
+        dep_collection_name, dep_tuple_hash, rule_number, inserted,
+        physical_time, collection_name, tuple_hash, time));
     return Status::OK;
   }
 
@@ -131,17 +136,20 @@ class MockClient {
   using AddRuleTuple = std::tuple<std::size_t, bool, std::string>;
   // collection name, time inserted, tuple
   using InsertTupleTuple =
-      std::tuple<std::string, int, std::vector<std::string>>;
+      std::tuple<std::string, int, std::chrono::time_point<Clock>,
+                 std::vector<std::string>>;
   // collection name, time deleted, tuple
   using DeleteTupleTuple =
-      std::tuple<std::string, int, std::vector<std::string>>;
+      std::tuple<std::string, int, std::chrono::time_point<Clock>,
+                 std::vector<std::string>>;
   // dep_node_id, dep_time, collection_name, tuple_hash, time
   using AddNetworkedLineageTuple =
       std::tuple<std::size_t, int, std::string, std::size_t, int>;
-  // dep_collection_name, dep_tuple_hash, rule_number, inserted,
+  // dep_collection_name, dep_tuple_hash, rule_number, inserted, physical_time,
   // collection_name, tuple_hash, time
-  using AddDerivedLineageTuple = std::tuple<std::string, std::size_t, int, bool,
-                                            std::string, std::size_t, int>;
+  using AddDerivedLineageTuple =
+      std::tuple<std::string, std::size_t, int, bool,
+                 std::chrono::time_point<Clock>, std::string, std::size_t, int>;
   // query
   using ExecTuple = std::tuple<std::string>;
 

@@ -11,7 +11,9 @@
 #include "gtest/gtest.h"
 
 #include "common/hash_util.h"
+#include "lineagedb/mock_to_sql.h"
 #include "lineagedb/to_sql.h"
+#include "testing/mock_clock.h"
 #include "testing/test_util.h"
 
 // These unit tests are all whitebox tests that you will probably have to change
@@ -22,7 +24,7 @@ namespace fluent {
 namespace lineagedb {
 
 TEST(MockPqxxClient, Init) {
-  using Client = MockPqxxClient<Hash, ToSql>;
+  using Client = MockPqxxClient<Hash, ToSql, MockClock>;
 
   ConnectionConfig c;
   StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
@@ -37,21 +39,22 @@ TEST(MockPqxxClient, Init) {
   )");
   ExpectStringsEqualIgnoreWhiteSpace(queries[1].second, R"(
     CREATE TABLE name_lineage (
-      dep_node_id          bigint   NOT NULL,
-      dep_collection_name  text     NOT NULL,
-      dep_tuple_hash       bigint   NOT NULL,
+      dep_node_id          bigint                    NOT NULL,
+      dep_collection_name  text                      NOT NULL,
+      dep_tuple_hash       bigint                    NOT NULL,
       dep_time             bigint,
       rule_number          integer,
-      inserted             boolean  NOT NULL,
-      collection_name      text     NOT NULL,
-      tuple_hash           bigint   NOT NULL,
-      time                 integer  NOT NULL
+      inserted             boolean                   NOT NULL,
+      physical_time        timestamp with time zone,
+      collection_name      text                      NOT NULL,
+      tuple_hash           bigint                    NOT NULL,
+      time                 integer                   NOT NULL
     );
   )");
 }
 
 TEST(MockPqxxClient, AddCollection) {
-  using Client = MockPqxxClient<Hash, ToSql>;
+  using Client = MockPqxxClient<Hash, ToSql, MockClock>;
 
   ConnectionConfig c;
   StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
@@ -69,9 +72,11 @@ TEST(MockPqxxClient, AddCollection) {
   )");
   ExpectStringsEqualIgnoreWhiteSpace(queries[3].second, R"(
     CREATE TABLE name_t (
-      hash          bigint  NOT NULL,
+      hash bigint  NOT NULL,
       time_inserted integer NOT NULL,
-      time_deleted  integer,
+      time_deleted integer,
+      physical_time_inserted timestamp with time zone NOT NULL,
+      physical_time_deleted timestamp with time zone,
       x integer NOT NULL,
       c char(1) NOT NULL,
       b boolean NOT NULL,
@@ -81,7 +86,7 @@ TEST(MockPqxxClient, AddCollection) {
 }
 
 TEST(MockPqxxClient, AddRule) {
-  using Client = MockPqxxClient<Hash, ToSql>;
+  using Client = MockPqxxClient<Hash, ToSql, MockClock>;
 
   ConnectionConfig c;
   StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
@@ -98,7 +103,8 @@ TEST(MockPqxxClient, AddRule) {
 }
 
 TEST(MockPqxxClient, InsertTuple) {
-  using Client = MockPqxxClient<Hash, ToSql>;
+  using Client = MockPqxxClient<Hash, MockToSql, MockClock>;
+  using time_point = std::chrono::time_point<MockClock>;
   using tuple_t = std::tuple<int, bool, char>;
 
   ConnectionConfig c;
@@ -107,7 +113,8 @@ TEST(MockPqxxClient, InsertTuple) {
   StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
   ASSERT_EQ(Status::OK, client_or.status());
   Client client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, client.InsertTuple("t", 42, t));
+  ASSERT_EQ(Status::OK, client.InsertTuple(
+                            "t", 42, time_point(std::chrono::seconds(43)), t));
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
   std::int64_t hash = detail::size_t_to_int64(Hash<tuple_t>()(t));
@@ -115,13 +122,14 @@ TEST(MockPqxxClient, InsertTuple) {
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(3));
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, fmt::format(R"(
     INSERT INTO name_t
-    VALUES ({}, 42, NULL, 1, true, 'a');
+    VALUES ({}, 42, NULL, epoch + 43 seconds, NULL, 1, true, a);
   )",
                                                                     hash));
 }
 
 TEST(MockPqxxClient, DeleteTuple) {
-  using Client = MockPqxxClient<Hash, ToSql>;
+  using Client = MockPqxxClient<Hash, MockToSql, MockClock>;
+  using time_point = std::chrono::time_point<MockClock>;
   using tuple_t = std::tuple<int, bool, char>;
 
   ConnectionConfig c;
@@ -130,7 +138,8 @@ TEST(MockPqxxClient, DeleteTuple) {
   StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
   ASSERT_EQ(Status::OK, client_or.status());
   Client client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, client.DeleteTuple("t", 42, t));
+  ASSERT_EQ(Status::OK, client.DeleteTuple(
+                            "t", 42, time_point(std::chrono::seconds(43)), t));
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
   std::int64_t hash = detail::size_t_to_int64(Hash<tuple_t>()(t));
@@ -138,14 +147,14 @@ TEST(MockPqxxClient, DeleteTuple) {
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(3));
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, fmt::format(R"(
     UPDATE name_t
-    SET time_deleted = 42
-    WHERE hash={} AND time_deleted IS NULL;
+    SET time_deleted = 42, physical_time_deleted = epoch + 43 seconds
+    WHERE hash = {} AND time_deleted IS NULL;
   )",
                                                                     hash));
 }
 
 TEST(MockPqxxClient, AddNetworkedLineage) {
-  using Client = MockPqxxClient<Hash, ToSql>;
+  using Client = MockPqxxClient<Hash, ToSql, MockClock>;
   using tuple_t = std::tuple<int, bool, char>;
 
   ConnectionConfig c;
@@ -168,7 +177,7 @@ TEST(MockPqxxClient, AddNetworkedLineage) {
 }
 
 TEST(MockPqxxClient, AddDerivedLineage) {
-  using Client = MockPqxxClient<Hash, ToSql>;
+  using Client = MockPqxxClient<Hash, MockToSql, MockClock>;
   using tuple_t = std::tuple<int, bool, char>;
 
   ConnectionConfig c;
@@ -177,22 +186,23 @@ TEST(MockPqxxClient, AddDerivedLineage) {
   StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
   ASSERT_EQ(Status::OK, client_or.status());
   Client client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK,
-            client.AddDerivedLineage("foo", 1, 2, true, "bar", 3, 4));
+  ASSERT_EQ(Status::OK, client.AddDerivedLineage(
+                            "foo", 1, 2, true,
+                            std::chrono::time_point<MockClock>(), "bar", 3, 4));
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
 
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(3));
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, fmt::format(R"(
     INSERT INTO name_lineage (dep_node_id, dep_collection_name, dep_tuple_hash,
-                              dep_time, rule_number, inserted, collection_name,
-                              tuple_hash, time)
-    VALUES (9001, 'foo', 1, NULL, 2, true, 'bar', 3, 4);
+                              dep_time, rule_number, inserted, physical_time,
+                              collection_name, tuple_hash, time)
+    VALUES (9001, foo, 1, NULL, 2, true, epoch + 0 seconds, bar, 3, 4);
   )"));
 }
 
 TEST(MockPqxxClient, Exec) {
-  using Client = MockPqxxClient<Hash, ToSql>;
+  using Client = MockPqxxClient<Hash, ToSql, MockClock>;
 
   ConnectionConfig c;
   StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);

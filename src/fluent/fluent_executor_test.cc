@@ -24,6 +24,7 @@
 #include "lineagedb/noop_client.h"
 #include "ra/all.h"
 #include "testing/captured_stdout.h"
+#include "testing/mock_clock.h"
 
 namespace ldb = fluent::lineagedb;
 
@@ -35,8 +36,8 @@ namespace {
 auto noopfluent(const std::string& name, const std::string& address,
                 zmq::context_t* context,
                 const ldb::ConnectionConfig& connection_config) {
-  return fluent<ldb::NoopClient, Hash, ldb::ToSql>(name, address, context,
-                                                   connection_config);
+  return fluent<ldb::NoopClient, Hash, ldb::ToSql, MockClock>(
+      name, address, context, connection_config);
 }
 
 }  // namespace
@@ -257,7 +258,7 @@ TEST(FluentExecutor, SimpleCommunication) {
 TEST(FluentExecutor, SimpleProgramWithLineage) {
   zmq::context_t context(1);
   lineagedb::ConnectionConfig connection_config;
-  auto fb_or = fluent<ldb::MockClient, Hash, ldb::MockToSql>(
+  auto fb_or = fluent<ldb::MockClient, Hash, ldb::MockToSql, MockClock>(
       "name", "inproc://yolo", &context, connection_config);
   ASSERT_EQ(Status::OK, fb_or.status());
   auto fe_or = fb_or.ConsumeValueOrDie()
@@ -272,19 +273,23 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
                    });
   ASSERT_EQ(Status::OK, fe_or.status());
   auto f = fe_or.ConsumeValueOrDie();
-  const ldb::MockClient<Hash, ldb::MockToSql>& client = f.GetLineageDbClient();
+  const ldb::MockClient<Hash, ldb::MockToSql, MockClock>& client =
+      f.GetLineageDbClient();
   Hash<std::tuple<std::size_t>> hash;
 
   using T = std::set<std::tuple<int>>;
   using S = std::set<std::tuple<std::size_t>>;
   using C = std::set<std::tuple<std::string, float, char>>;
 
-  using MockClient = ldb::MockClient<Hash, ldb::MockToSql>;
+  using MockClient = ldb::MockClient<Hash, ldb::MockToSql, MockClock>;
   using AddCollectionTuple = MockClient::AddCollectionTuple;
   using AddRuleTuple = MockClient::AddRuleTuple;
   using InsertTupleTuple = MockClient::InsertTupleTuple;
   using DeleteTupleTuple = MockClient::DeleteTupleTuple;
   using AddDerivedLineageTuple = MockClient::AddDerivedLineageTuple;
+
+  using time_point = std::chrono::time_point<MockClock>;
+  using std::chrono::seconds;
 
   ASSERT_EQ(client.GetAddRule().size(), static_cast<std::size_t>(3));
   EXPECT_EQ(client.GetAddCollection()[0],
@@ -307,15 +312,20 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
   ASSERT_EQ(client.GetAddRule().size(), static_cast<std::size_t>(3));
   ASSERT_EQ(client.GetAddCollection().size(), static_cast<std::size_t>(3));
   ASSERT_EQ(client.GetInsertTuple().size(), static_cast<std::size_t>(3));
-  EXPECT_EQ(client.GetInsertTuple()[0], InsertTupleTuple("t", 1, {"0"}));
-  EXPECT_EQ(client.GetInsertTuple()[1], InsertTupleTuple("t", 2, {"0"}));
-  EXPECT_EQ(client.GetInsertTuple()[2], InsertTupleTuple("s", 3, {"0"}));
+  EXPECT_EQ(client.GetInsertTuple()[0],
+            InsertTupleTuple("t", 1, time_point(), {"0"}));
+  EXPECT_EQ(client.GetInsertTuple()[1],
+            InsertTupleTuple("t", 2, time_point(), {"0"}));
+  EXPECT_EQ(client.GetInsertTuple()[2],
+            InsertTupleTuple("s", 3, time_point(), {"0"}));
   ASSERT_EQ(client.GetDeleteTuple().size(), static_cast<std::size_t>(1));
-  EXPECT_EQ(client.GetDeleteTuple()[0], DeleteTupleTuple("s", 4, {"0"}));
+  EXPECT_EQ(client.GetDeleteTuple()[0],
+            DeleteTupleTuple("s", 4, time_point(), {"0"}));
   ASSERT_EQ(client.GetAddNetworkedLineage().size(),
             static_cast<std::size_t>(0));
   ASSERT_EQ(client.GetAddDerivedLineage().size(), static_cast<std::size_t>(0));
 
+  MockClock::Advance(seconds(1));
   ASSERT_EQ(Status::OK, f.Tick());
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}, {1}}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
@@ -324,17 +334,23 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
   ASSERT_EQ(client.GetAddRule().size(), static_cast<std::size_t>(3));
   ASSERT_EQ(client.GetAddCollection().size(), static_cast<std::size_t>(3));
   ASSERT_EQ(client.GetInsertTuple().size(), static_cast<std::size_t>(6));
-  EXPECT_EQ(client.GetInsertTuple()[3], InsertTupleTuple("t", 5, {"1"}));
-  EXPECT_EQ(client.GetInsertTuple()[4], InsertTupleTuple("t", 6, {"0"}));
-  EXPECT_EQ(client.GetInsertTuple()[5], InsertTupleTuple("s", 7, {"0"}));
+  EXPECT_EQ(client.GetInsertTuple()[3],
+            InsertTupleTuple("t", 5, time_point(seconds(1)), {"1"}));
+  EXPECT_EQ(client.GetInsertTuple()[4],
+            InsertTupleTuple("t", 6, time_point(seconds(1)), {"0"}));
+  EXPECT_EQ(client.GetInsertTuple()[5],
+            InsertTupleTuple("s", 7, time_point(seconds(1)), {"0"}));
   ASSERT_EQ(client.GetDeleteTuple().size(), static_cast<std::size_t>(2));
-  EXPECT_EQ(client.GetDeleteTuple()[1], DeleteTupleTuple("s", 8, {"0"}));
+  EXPECT_EQ(client.GetDeleteTuple()[1],
+            DeleteTupleTuple("s", 8, time_point(seconds(1)), {"0"}));
   ASSERT_EQ(client.GetAddNetworkedLineage().size(),
             static_cast<std::size_t>(0));
   ASSERT_EQ(client.GetAddDerivedLineage().size(), static_cast<std::size_t>(1));
   EXPECT_EQ(client.GetAddDerivedLineage()[0],
-            AddDerivedLineageTuple("t", hash({0}), 0, true, "t", hash({1}), 5));
+            AddDerivedLineageTuple("t", hash({0}), 0, true,
+                                   time_point(seconds(1)), "t", hash({1}), 5));
 
+  MockClock::Advance(seconds(1));
   ASSERT_EQ(Status::OK, f.Tick());
   EXPECT_THAT(f.Get<0>().Get(), UnorderedElementsAreArray(T{{0}, {1}, {2}}));
   EXPECT_THAT(f.Get<1>().Get(), UnorderedElementsAreArray(S{}));
@@ -343,25 +359,30 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
   ASSERT_EQ(client.GetAddRule().size(), static_cast<std::size_t>(3));
   ASSERT_EQ(client.GetAddCollection().size(), static_cast<std::size_t>(3));
   ASSERT_EQ(client.GetInsertTuple().size(), static_cast<std::size_t>(9));
-  EXPECT_EQ(client.GetInsertTuple()[6], InsertTupleTuple("t", 9, {"2"}));
-  EXPECT_EQ(client.GetInsertTuple()[7], InsertTupleTuple("t", 10, {"0"}));
-  EXPECT_EQ(client.GetInsertTuple()[8], InsertTupleTuple("s", 11, {"0"}));
+  EXPECT_EQ(client.GetInsertTuple()[6],
+            InsertTupleTuple("t", 9, time_point(seconds(2)), {"2"}));
+  EXPECT_EQ(client.GetInsertTuple()[7],
+            InsertTupleTuple("t", 10, time_point(seconds(2)), {"0"}));
+  EXPECT_EQ(client.GetInsertTuple()[8],
+            InsertTupleTuple("s", 11, time_point(seconds(2)), {"0"}));
   ASSERT_EQ(client.GetDeleteTuple().size(), static_cast<std::size_t>(3));
-  EXPECT_EQ(client.GetDeleteTuple()[2], DeleteTupleTuple("s", 12, {"0"}));
+  EXPECT_EQ(client.GetDeleteTuple()[2],
+            DeleteTupleTuple("s", 12, time_point(seconds(2)), {"0"}));
   ASSERT_EQ(client.GetAddNetworkedLineage().size(),
             static_cast<std::size_t>(0));
-  EXPECT_THAT(client.GetAddDerivedLineage(),
-              UnorderedElementsAreArray(std::set<AddDerivedLineageTuple>{
-                  {"t", hash({0}), 0, true, "t", hash({1}), 5},
-                  {"t", hash({0}), 0, true, "t", hash({2}), 9},
-                  {"t", hash({1}), 0, true, "t", hash({2}), 9},
-              }));
+  EXPECT_THAT(
+      client.GetAddDerivedLineage(),
+      UnorderedElementsAreArray(std::set<AddDerivedLineageTuple>{
+          {"t", hash({0}), 0, true, time_point(seconds(1)), "t", hash({1}), 5},
+          {"t", hash({0}), 0, true, time_point(seconds(2)), "t", hash({2}), 9},
+          {"t", hash({1}), 0, true, time_point(seconds(2)), "t", hash({2}), 9},
+      }));
 }
 
 TEST(FluentExecutor, BlackBoxLineage) {
   zmq::context_t context(1);
   lineagedb::ConnectionConfig connection_config;
-  auto fb_or = fluent<ldb::MockClient, Hash, ldb::MockToSql>(
+  auto fb_or = fluent<ldb::MockClient, Hash, ldb::MockToSql, MockClock>(
       "name", "inproc://yolo", &context, connection_config);
   ASSERT_EQ(Status::OK, fb_or.status());
   auto fe_or =
@@ -382,7 +403,8 @@ TEST(FluentExecutor, BlackBoxLineage) {
                               return "hello world";
                             })));
 
-  const ldb::MockClient<Hash, ldb::MockToSql>& client = f.GetLineageDbClient();
+  const ldb::MockClient<Hash, ldb::MockToSql, MockClock>& client =
+      f.GetLineageDbClient();
   ASSERT_EQ(client.GetExec().size(), static_cast<std::size_t>(2));
   EXPECT_EQ(CrunchWhitespace(std::get<0>(client.GetExec()[0])),
             CrunchWhitespace(R"(

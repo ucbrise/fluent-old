@@ -3,6 +3,9 @@ sudo: required
 dist: trusty
 install:
 - ./scripts/install_dependencies.sh
+before_script:
+- export PATH="/usr/bin:$PATH"
+- ./scripts/print_diagnostics.sh
 script:
 - rm -rf build && ./scripts/build.sh Debug   1 && (cd build && make test)
 - rm -rf build && ./scripts/build.sh Release 1 && (cd build && make test)

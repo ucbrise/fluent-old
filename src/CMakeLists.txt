@@ -44,16 +44,29 @@ SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # Note that some sanitizers are mutually exclusive. For example, clang will
 # reject using -fsanitize=address and -fsanitize=thread simultaneously
 # simultaneously.
-SET(CMAKE_CXX_FLAGS_COMMON
-    "-std=c++14 \
-     -O0 \
-     -Wall \
-     -Wextra \
-     -Werror \
-     -pedantic \
-     -g \
-     -fsanitize=address \
-     -fsanitize=undefined")
+#
+# TODO(mwhittaker): Change compiler flags based on Debug or Release.
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    SET(CMAKE_CXX_FLAGS_COMMON
+        "-std=c++14 \
+         -O0 \
+         -Wall \
+         -Wextra \
+         -Werror \
+         -pedantic \
+         -g \
+         -fsanitize=address \
+         -fsanitize=undefined")
+else ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    SET(CMAKE_CXX_FLAGS_COMMON
+        "-std=c++14 \
+         -O0 \
+         -Wall \
+         -Wextra \
+         -Werror \
+         -pedantic \
+         -g")
+endif()
 SET(CMAKE_CXX_FLAGS_DEBUG
     "${CMAKE_CXX_FLAGS_DEBUG} \
      ${CMAKE_CXX_FLAGS_COMMON}")

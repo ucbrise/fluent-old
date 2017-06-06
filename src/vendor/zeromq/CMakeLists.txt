@@ -9,8 +9,6 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 include(ExternalProject)
 
-SET(CXX "clang++ -stdlib=c++")
-
 ExternalProject_Add(zeromq
     URL "https://github.com/zeromq/zeromq4-1/releases/download/v4.1.5/zeromq-4.1.5.tar.gz"
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}

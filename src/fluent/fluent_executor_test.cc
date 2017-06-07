@@ -515,11 +515,13 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
             static_cast<std::size_t>(0));
   ASSERT_EQ(client.GetAddDerivedLineage().size(), static_cast<std::size_t>(2));
   EXPECT_EQ(client.GetAddDerivedLineage()[0],
-            AddDerivedLineageTuple("t", hash({0}), 0, true,
-                                   time_point(seconds(1)), "s", hash({1}), 3));
+            AddDerivedLineageTuple(LocalTupleId{"t", hash({0}), 1}, 0, true,
+                                   time_point(seconds(1)),
+                                   LocalTupleId{"s", hash({1}), 3}));
   EXPECT_EQ(client.GetAddDerivedLineage()[1],
-            AddDerivedLineageTuple("s", hash({1}), 1, true,
-                                   time_point(seconds(1)), "t", hash({1}), 4));
+            AddDerivedLineageTuple(LocalTupleId{"s", hash({1}), 3}, 1, true,
+                                   time_point(seconds(1)),
+                                   LocalTupleId{"t", hash({1}), 4}));
 
   MockClock::Advance(seconds(1));
   ASSERT_EQ(Status::OK, f.Tick());
@@ -550,17 +552,21 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
             static_cast<std::size_t>(0));
   ASSERT_EQ(client.GetAddDerivedLineage().size(), static_cast<std::size_t>(6));
   EXPECT_EQ(client.GetAddDerivedLineage()[2],
-            AddDerivedLineageTuple("t", hash({0}), 0, true,
-                                   time_point(seconds(2)), "s", hash({1}), 6));
+            AddDerivedLineageTuple(LocalTupleId{"t", hash({0}), 1}, 0, true,
+                                   time_point(seconds(2)),
+                                   LocalTupleId{"s", hash({1}), 6}));
   EXPECT_EQ(client.GetAddDerivedLineage()[3],
-            AddDerivedLineageTuple("t", hash({1}), 0, true,
-                                   time_point(seconds(2)), "s", hash({2}), 6));
+            AddDerivedLineageTuple(LocalTupleId{"t", hash({1}), 4}, 0, true,
+                                   time_point(seconds(2)),
+                                   LocalTupleId{"s", hash({2}), 6}));
   EXPECT_EQ(client.GetAddDerivedLineage()[4],
-            AddDerivedLineageTuple("s", hash({1}), 1, true,
-                                   time_point(seconds(2)), "t", hash({1}), 7));
+            AddDerivedLineageTuple(LocalTupleId{"s", hash({1}), 6}, 1, true,
+                                   time_point(seconds(2)),
+                                   LocalTupleId{"t", hash({1}), 7}));
   EXPECT_EQ(client.GetAddDerivedLineage()[5],
-            AddDerivedLineageTuple("s", hash({2}), 1, true,
-                                   time_point(seconds(2)), "t", hash({2}), 7));
+            AddDerivedLineageTuple(LocalTupleId{"s", hash({2}), 6}, 1, true,
+                                   time_point(seconds(2)),
+                                   LocalTupleId{"t", hash({2}), 7}));
 }
 
 TEST(FluentExecutor, BlackBoxLineage) {

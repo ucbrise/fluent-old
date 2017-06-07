@@ -145,23 +145,34 @@ TEST(MockClient, AddDerivedLineage) {
   ASSERT_EQ(Status::OK, client_or.status());
   Client client = client_or.ConsumeValueOrDie();
   ASSERT_EQ(Status::OK,
-            (client.AddDerivedLineage("0", 1, 2, true, time_point(seconds(1)),
-                                      "3", 4, 5)));
+            (client.AddDerivedLineage(LocalTupleId{"0", 1, 2},          //
+                                      3, true, time_point(seconds(1)),  //
+                                      LocalTupleId{"4", 5, 6})));
   ASSERT_EQ(Status::OK,
-            (client.AddDerivedLineage("10", 11, 12, true,
-                                      time_point(seconds(2)), "13", 14, 15)));
+            (client.AddDerivedLineage(LocalTupleId{"10", 11, 12},  //
+                                      13, true,
+                                      time_point(seconds(2)),  //
+                                      LocalTupleId{"14", 15, 16})));
   ASSERT_EQ(Status::OK,
-            (client.AddDerivedLineage("20", 21, 22, true,
-                                      time_point(seconds(3)), "23", 24, 25)));
+            (client.AddDerivedLineage(LocalTupleId{"20", 21, 22},  //
+                                      23, true,
+                                      time_point(seconds(3)),  //
+                                      LocalTupleId{"24", 25, 26})));
 
   using Tuple = MockClient<Hash, MockToSql, MockClock>::AddDerivedLineageTuple;
   ASSERT_EQ(client.GetAddDerivedLineage().size(), static_cast<std::size_t>(3));
   EXPECT_EQ(client.GetAddDerivedLineage()[0],
-            Tuple("0", 1, 2, true, time_point(seconds(1)), "3", 4, 5));
+            Tuple(LocalTupleId{"0", 1, 2},          //
+                  3, true, time_point(seconds(1)),  //
+                  LocalTupleId{"4", 5, 6}));
   EXPECT_EQ(client.GetAddDerivedLineage()[1],
-            Tuple("10", 11, 12, true, time_point(seconds(2)), "13", 14, 15));
+            Tuple(LocalTupleId{"10", 11, 12},        //
+                  13, true, time_point(seconds(2)),  //
+                  LocalTupleId{"14", 15, 16}));
   EXPECT_EQ(client.GetAddDerivedLineage()[2],
-            Tuple("20", 21, 22, true, time_point(seconds(3)), "23", 24, 25));
+            Tuple(LocalTupleId{"20", 21, 22},        //
+                  23, true, time_point(seconds(3)),  //
+                  LocalTupleId{"24", 25, 26}));
 }
 
 TEST(MockClient, RegisterBlackBoxLineage) {

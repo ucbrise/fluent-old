@@ -10,6 +10,7 @@
 #include "common/macros.h"
 #include "common/status.h"
 #include "common/status_or.h"
+#include "fluent/local_tuple_id.h"
 #include "lineagedb/connection_config.h"
 
 namespace fluent {
@@ -62,10 +63,9 @@ class NoopClient {
     return Status::OK;
   }
 
-  WARN_UNUSED Status AddDerivedLineage(const std::string&, std::size_t, int,
-                                       bool,
+  WARN_UNUSED Status AddDerivedLineage(const LocalTupleId&, int, bool,
                                        const std::chrono::time_point<Clock>&,
-                                       const std::string&, std::size_t, int) {
+                                       const LocalTupleId&) {
     return Status::OK;
   }
 

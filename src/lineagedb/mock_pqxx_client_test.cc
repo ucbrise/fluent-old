@@ -155,11 +155,8 @@ TEST(MockPqxxClient, DeleteTuple) {
 
 TEST(MockPqxxClient, AddNetworkedLineage) {
   using Client = MockPqxxClient<Hash, ToSql, MockClock>;
-  using tuple_t = std::tuple<int, bool, char>;
 
   ConnectionConfig c;
-  tuple_t t = {1, true, 'a'};
-
   StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
   ASSERT_EQ(Status::OK, client_or.status());
   Client client = client_or.ConsumeValueOrDie();
@@ -178,11 +175,8 @@ TEST(MockPqxxClient, AddNetworkedLineage) {
 
 TEST(MockPqxxClient, AddDerivedLineage) {
   using Client = MockPqxxClient<Hash, MockToSql, MockClock>;
-  using tuple_t = std::tuple<int, bool, char>;
 
   ConnectionConfig c;
-  tuple_t t = {1, true, 'a'};
-
   StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
   ASSERT_EQ(Status::OK, client_or.status());
   Client client = client_or.ConsumeValueOrDie();

@@ -1,5 +1,7 @@
 #include "common/error_code.h"
 
+#include "glog/logging.h"
+
 namespace fluent {
 
 std::string ErrorCodeToString(ErrorCode error) {
@@ -36,6 +38,10 @@ std::string ErrorCodeToString(ErrorCode error) {
       return "UNAVAILABLE";
     case ErrorCode::DATA_LOSS:
       return "DATA_LOSS";
+    default: {
+      CHECK(false) << "Unreachable code.";
+      return "";
+    }
   }
 }
 

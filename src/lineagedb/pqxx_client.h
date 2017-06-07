@@ -348,7 +348,7 @@ class InjectablePqxxClient {
   template <typename... Ts>
   std::vector<std::string> SqlValues(const std::tuple<Ts...>& t) {
     return TupleToVector(
-        TupleMap(t, [this](const auto& x) { return SqlValue(x); }));
+        TupleMap(t, [this](const auto& x) { return this->SqlValue(x); }));
   }
 
   // A connection to lineage database. Note that we'd like InjectablePqxxClient

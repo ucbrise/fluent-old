@@ -83,7 +83,7 @@ class Channel : public Collection {
     msgs.push_back(string_to_message(ToString(name_)));
     msgs.push_back(string_to_message(ToString(logical_time_inserted)));
 
-    auto to_string = [this](const auto& x) { return ToString(x); };
+    auto to_string = [this](const auto& x) { return this->ToString(x); };
     const auto strings = TupleMap(t, to_string);
     TupleIter(strings, [&msgs](const std::string& s) {
       msgs.push_back(zmq_util::string_to_message(s));

@@ -83,10 +83,10 @@ struct ProcessChannelImpl {
   }
 };
 
-template <template <typename> class Pickler, typename... Ts>
-struct ProcessChannelImpl<Channel<Pickler, Ts...>> {
+template <template <typename> class Pickler, typename T, typename... Ts>
+struct ProcessChannelImpl<Channel<Pickler, T, Ts...>> {
   template <typename F>
-  Status operator()(Channel<Pickler, Ts...>* c, F f) {
+  Status operator()(Channel<Pickler, T, Ts...>* c, F f) {
     return f(c);
   }
 };
@@ -376,11 +376,12 @@ class FluentExecutor<
 
     RETURN_IF_ERROR(TupleIteriStatus(
         bootstrap_rules_, [this](std::size_t rule_number, auto& rule) {
-          return ExecuteRule(rule_number, &rule);
+          return this->ExecuteRule(rule_number, &rule);
         }));
     time_++;
-    return TupleIterStatus(collections_,
-                           [this](auto& c) { return TickCollection(c.get()); });
+    return TupleIterStatus(collections_, [this](auto& c) {
+      return this->TickCollection(c.get());
+    });
   }
 
   // Sequentially execute each registered query and then invoke the `Tick`
@@ -388,11 +389,12 @@ class FluentExecutor<
   WARN_UNUSED Status Tick() {
     RETURN_IF_ERROR(
         TupleIteriStatus(rules_, [this](std::size_t rule_number, auto& rule) {
-          return ExecuteRule(rule_number, &rule);
+          return this->ExecuteRule(rule_number, &rule);
         }));
     time_++;
-    return TupleIterStatus(collections_,
-                           [this](auto& c) { return TickCollection(c.get()); });
+    return TupleIterStatus(collections_, [this](auto& c) {
+      return this->TickCollection(c.get());
+    });
   }
 
   // (Potentially) block and receive messages sent by other Fluent nodes.
@@ -434,23 +436,27 @@ class FluentExecutor<
           Pickler<std::string>().Load(channel_name_str);
       const int dep_time = Pickler<int>().Load(dep_time_str);
 
-      RETURN_IF_ERROR(TupleIterStatus(collections_, [&](auto& collection_ptr) {
-        return detail::ProcessChannel(collection_ptr.get(), [&](auto* channel) {
-          if (channel->Name() != channel_name) {
-            return Status::OK;
-          }
+      RETURN_IF_ERROR(TupleIterStatus(
+          collections_,  //
+          [&, dep_node_id, dep_time](auto& collection_ptr) {
+            return detail::ProcessChannel(
+                collection_ptr.get(),
+                [&, dep_node_id, dep_time](auto* channel) {
+                  if (channel->Name() != channel_name) {
+                    return Status::OK;
+                  }
 
-          const auto t = channel->Parse(strings);
-          Hash<typename std::decay<decltype(t)>::type> hash;
-          channel->Receive(t, hash(t), time_);
-          RETURN_IF_ERROR(lineagedb_client_->InsertTuple(channel->Name(), time_,
-                                                         Clock::now(), t));
-          RETURN_IF_ERROR(lineagedb_client_->AddNetworkedLineage(
-              dep_node_id, dep_time, channel->Name(), hash(t), time_));
-          return Status::OK;
+                  const auto t = channel->Parse(strings);
+                  Hash<typename std::decay<decltype(t)>::type> hash;
+                  channel->Receive(t, hash(t), time_);
+                  RETURN_IF_ERROR(lineagedb_client_->InsertTuple(
+                      channel->Name(), time_, Clock::now(), t));
+                  RETURN_IF_ERROR(lineagedb_client_->AddNetworkedLineage(
+                      dep_node_id, dep_time, channel->Name(), hash(t), time_));
+                  return Status::OK;
 
-        });
-      }));
+                });
+          }));
     }
 
     // Read from stdin.
@@ -493,7 +499,7 @@ class FluentExecutor<
           // collection is of type `const unique_ptr<collection_type>&`.
           using collection_type = typename Unwrap<
               typename std::decay<decltype(collection)>::type>::type;
-          return AddCollection(
+          return this->AddCollection(
               collection, typename CollectionTypes<collection_type>::type{});
         }));
 

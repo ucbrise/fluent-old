@@ -22,7 +22,7 @@ class Scratch : public Collection {
   Scratch(std::string name, std::array<std::string, sizeof...(Ts)> column_names)
       : name_(std::move(name)), column_names_(std::move(column_names)) {}
   DISALLOW_COPY_AND_ASSIGN(Scratch);
-  DEFAULT_MOVE_AND_ASSIGN(Scratch)
+  DEFAULT_MOVE_AND_ASSIGN(Scratch);
 
   const std::string& Name() const { return name_; }
 

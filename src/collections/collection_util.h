@@ -29,9 +29,9 @@ struct CollectionTypes<Scratch<Ts...>> {
   using type = TypeList<Ts...>;
 };
 
-template <template <typename> class Pickler, typename... Ts>
-struct CollectionTypes<Channel<Pickler, Ts...>> {
-  using type = TypeList<Ts...>;
+template <template <typename> class Pickler, typename T, typename... Ts>
+struct CollectionTypes<Channel<Pickler, T, Ts...>> {
+  using type = TypeList<T, Ts...>;
 };
 
 template <>
@@ -91,8 +91,8 @@ template <typename... Ts>
 struct GetCollectionType<Scratch<Ts...>>
     : public std::integral_constant<CollectionType, CollectionType::SCRATCH> {};
 
-template <template <typename> class Pickler, typename... Ts>
-struct GetCollectionType<Channel<Pickler, Ts...>>
+template <template <typename> class Pickler, typename T, typename... Ts>
+struct GetCollectionType<Channel<Pickler, T, Ts...>>
     : public std::integral_constant<CollectionType, CollectionType::CHANNEL> {};
 
 template <>

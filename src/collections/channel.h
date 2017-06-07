@@ -19,7 +19,6 @@
 #include "common/status.h"
 #include "common/tuple_util.h"
 #include "common/type_traits.h"
-// #include "fluent/mock_pickler.h"
 #include "zmq_util/socket_cache.h"
 #include "zmq_util/zmq_util.h"
 

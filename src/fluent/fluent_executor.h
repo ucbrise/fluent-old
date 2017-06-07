@@ -768,48 +768,6 @@ class FluentExecutor<
     return Status::OK;
   }
 
-#if 0
-  template <template <typename> class Pickler_, typename... Ts, typename Ra>
-  WARN_UNUSED Status ExecuteRule(int rule_number,
-                                 Channel<Pickler_, Ts...>* collection, MergeTag,
-                                 const Ra& ra) {
-    return ExecuteRule(
-        rule_number, collection, ra, true,
-        [this](Channel<Pickler_, Ts...>& c,
-               const std::set<std::tuple<Ts...>>& ts) { c.Merge(ts, time_); });
-  }
-
-  template <typename Collection, typename Ra>
-  WARN_UNUSED Status ExecuteRule(int rule_number, Collection* collection,
-                                 MergeTag, const Ra& ra) {
-    return ExecuteRule(rule_number, collection, ra, true,
-                       std::mem_fn(&Collection::Merge));
-  }
-
-  template <typename Collection, typename Ra>
-  WARN_UNUSED Status ExecuteRule(int rule_number, Collection* collection,
-                                 DeferredMergeTag, const Ra& ra) {
-    return ExecuteRule(rule_number, collection, ra, true,
-                       std::mem_fn(&Collection::DeferredMerge));
-  }
-
-  template <typename Collection, typename Ra>
-  WARN_UNUSED Status ExecuteRule(int rule_number, Collection* collection,
-                                 DeferredDeleteTag, const Ra& ra) {
-    return ExecuteRule(rule_number, collection, ra, false,
-                       std::mem_fn(&Collection::DeferredDelete));
-  }
-
-  template <typename Collection, typename RuleTag, typename Ra>
-  WARN_UNUSED Status ExecuteRule(std::size_t rule_number,
-                                 Rule<Collection, RuleTag, Ra>* rule) {
-    time_++;
-    return ExecuteRule(static_cast<int>(rule_number),
-                       CHECK_NOTNULL(rule->collection), rule->rule_tag,
-                       rule->ra);
-  }
-#endif
-
   // The logical time of the fluent program. The logical time begins at 0 and
   // is ticked before every rule execution and before every round of receiving
   // tuples. More concretely, grep for `time_++`.

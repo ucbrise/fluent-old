@@ -319,16 +319,6 @@ class FluentBuilder<
   // See class documentation above.
   BootstrapRulesTuple boostrap_rules_;
 
-#if 0
-  // `parsers_`  maps channel names to parsing functions that can parse a
-  // packet (represented as a vector of strings) into a tuple and insert it
-  // into the appropriate channel. For example, imagine we had a
-  // `Channel<std::string, int, float>` channel named `"c"`. `parsers_` would
-  // contain an entry for key `"c"` and `parsers_["c"]({"foo", "1", "2.0"})`
-  // would insert the tuple ("foo", 1, 2.0) into `"c"`.
-  std::map<std::string, Parser> parsers_;
-#endif
-
   // Each fluent program sends tuples to other fluent nodes over the network
   // and receives tuples from other fluent nodes over the network. This is the
   // networking state needed to perform that networking.

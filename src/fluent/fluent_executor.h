@@ -753,10 +753,10 @@ class FluentExecutor<
             rule->collection->Name(), time_, Clock::now(), tuple));
       }
 
-      for (const LocalTupleId& id : ids) {
+      for (const LocalTupleId& dep_id : ids) {
         RETURN_IF_ERROR(lineagedb_client_->AddDerivedLineage(
-            id.collection_name, id.hash, rule_number, is_insert, physical_time,
-            rule->collection->Name(), hash(tuple), time_));
+            dep_id, rule_number, is_insert, physical_time,
+            LocalTupleId{rule->collection->Name(), hash(tuple), time_}));
       }
 
       physical_time = Clock::now();

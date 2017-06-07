@@ -17,6 +17,7 @@
 #include "common/string_util.h"
 #include "common/tuple_util.h"
 #include "common/type_list.h"
+#include "fluent/local_tuple_id.h"
 #include "lineagedb/connection_config.h"
 #include "lineagedb/to_sql.h"
 
@@ -212,6 +213,7 @@ class InjectablePqxxClient {
                     SqlValue(physical_time_deleted), SqlValue(hash)));
   }
 
+  // TODO(mwhittaker): Add physical time to network lineage.
   WARN_UNUSED Status AddNetworkedLineage(std::size_t dep_node_id, int dep_time,
                                          const std::string& collection_name,
                                          std::size_t tuple_hash, int time) {
@@ -232,26 +234,23 @@ class InjectablePqxxClient {
                                            time)))));
   }
 
-  WARN_UNUSED Status AddDerivedLineage(
-      const std::string& dep_collection_name, std::size_t dep_tuple_hash,
-      int rule_number, bool inserted,
-      const std::chrono::time_point<Clock>& physical_time,
-      const std::string& collection_name, std::size_t tuple_hash, int time) {
-    return ExecuteQuery(
-        "AddLineage",
-        fmt::format(
-            R"(
+  WARN_UNUSED Status
+  AddDerivedLineage(const LocalTupleId& dep_id, int rule_number, bool inserted,
+                    const std::chrono::time_point<Clock>& physical_time,
+                    const LocalTupleId& id) {
+    auto values = std::make_tuple(
+        detail::size_t_to_int64(id_), dep_id.collection_name,
+        detail::size_t_to_int64(dep_id.hash), dep_id.logical_time_inserted,
+        rule_number, inserted, physical_time, id.collection_name,
+        detail::size_t_to_int64(id.hash), id.logical_time_inserted);
+    return ExecuteQuery("AddLineage",
+                        fmt::format(R"(
       INSERT INTO {}_lineage (dep_node_id, dep_collection_name, dep_tuple_hash,
                               dep_time, rule_number, inserted, physical_time,
                               collection_name, tuple_hash, time)
-      VALUES ({}, NULL, {});
+      VALUES ({});
     )",
-            name_, Join(SqlValues(std::make_tuple(
-                       detail::size_t_to_int64(id_), dep_collection_name,
-                       detail::size_t_to_int64(dep_tuple_hash)))),
-            Join(SqlValues(std::make_tuple(
-                rule_number, inserted, physical_time, collection_name,
-                detail::size_t_to_int64(tuple_hash), time)))));
+                                    name_, Join(SqlValues(std::move(values)))));
   }
 
   WARN_UNUSED Status
@@ -301,7 +300,7 @@ class InjectablePqxxClient {
         dep_node_id          bigint                    NOT NULL,
         dep_collection_name  text                      NOT NULL,
         dep_tuple_hash       bigint                    NOT NULL,
-        dep_time             bigint,
+        dep_time             bigint                    NOT NULL,
         rule_number          integer,
         inserted             boolean                   NOT NULL,
         physical_time        timestamp with time zone,

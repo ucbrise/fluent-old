@@ -11,6 +11,7 @@
 #include "gtest/gtest.h"
 
 #include "common/hash_util.h"
+#include "fluent/local_tuple_id.h"
 #include "lineagedb/mock_to_sql.h"
 #include "lineagedb/to_sql.h"
 #include "testing/mock_clock.h"
@@ -42,7 +43,7 @@ TEST(MockPqxxClient, Init) {
       dep_node_id          bigint                    NOT NULL,
       dep_collection_name  text                      NOT NULL,
       dep_tuple_hash       bigint                    NOT NULL,
-      dep_time             bigint,
+      dep_time             bigint                    NOT NULL,
       rule_number          integer,
       inserted             boolean                   NOT NULL,
       physical_time        timestamp with time zone,
@@ -180,9 +181,10 @@ TEST(MockPqxxClient, AddDerivedLineage) {
   StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
   ASSERT_EQ(Status::OK, client_or.status());
   Client client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, client.AddDerivedLineage(
-                            "foo", 1, 2, true,
-                            std::chrono::time_point<MockClock>(), "bar", 3, 4));
+  ASSERT_EQ(Status::OK,
+            client.AddDerivedLineage(LocalTupleId{"foo", 1, 2}, 3, true,
+                                     std::chrono::time_point<MockClock>(),
+                                     LocalTupleId{"bar", 4, 5}));
 
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
 
@@ -191,7 +193,7 @@ TEST(MockPqxxClient, AddDerivedLineage) {
     INSERT INTO name_lineage (dep_node_id, dep_collection_name, dep_tuple_hash,
                               dep_time, rule_number, inserted, physical_time,
                               collection_name, tuple_hash, time)
-    VALUES (9001, foo, 1, NULL, 2, true, epoch + 0 seconds, bar, 3, 4);
+    VALUES (9001, foo, 1, 2, 3, true, epoch + 0 seconds, bar, 4, 5);
   )"));
 }
 

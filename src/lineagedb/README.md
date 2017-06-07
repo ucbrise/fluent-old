@@ -180,7 +180,7 @@ Additionally, for each program `p`, we generate a `p_lineage` table:
 | dep_node_id         | bigint                   | not null  |
 | dep_collection_name | text                     | not null  |
 | dep_tuple_hash      | bigint                   | not null  |
-| dep_time            | integer                  |           |
+| dep_time            | integer                  | not null  |
 | rule number         | integer                  |           |
 | inserted            | boolean                  | not null  |
 | physical_time       | timestamp with time zone | not null  |

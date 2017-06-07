@@ -1,6 +1,12 @@
 language: cpp
 sudo: required
 dist: trusty
+compiler:
+- clang
+- gcc
+env:
+- TEST_TYPE=Debug
+- TEST_TYPE=Release
 install:
 - ./scripts/install_dependencies.sh
 before_script:
@@ -8,8 +14,3 @@ before_script:
 - ./scripts/print_diagnostics.sh
 script:
 - rm -rf build && ./scripts/build.sh "$TEST_TYPE" 1 && (cd build && make test)
-env:
-- TEST_TYPE=Debug   CC=clang CXX=clang++
-- TEST_TYPE=Release CC=clang CXX=clang++
-- TEST_TYPE=Debug   CC=gcc   CXX=g++
-- TEST_TYPE=Release CC=gcc   CXX=g++

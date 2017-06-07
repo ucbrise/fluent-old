@@ -1,4 +1,4 @@
-# Fluent
+# Fluent [![Build Status](https://travis-ci.org/ucbrise/fluent.svg?branch=master)](https://travis-ci.org/ucbrise/fluent)
 Fluent = [Bloom][bloom_paper] + C++.
 
 ## Getting Started

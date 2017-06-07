@@ -71,9 +71,10 @@ operator-=(Table<Ts...>& t, LogicalRa&& rhs) {
 }
 
 // Channel <=
-template <template <typename> class Pickler, typename... Ts, typename LogicalRa>
-Rule<Channel<Pickler, Ts...>, MergeTag, typename std::decay<LogicalRa>::type>
-operator<=(Channel<Pickler, Ts...>& c, LogicalRa&& rhs) {
+template <template <typename> class Pickler, typename T, typename... Ts,
+          typename LogicalRa>
+Rule<Channel<Pickler, T, Ts...>, MergeTag, typename std::decay<LogicalRa>::type>
+operator<=(Channel<Pickler, T, Ts...>& c, LogicalRa&& rhs) {
   return {&c, MergeTag(), std::forward<LogicalRa>(rhs)};
 }
 

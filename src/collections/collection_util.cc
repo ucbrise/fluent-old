@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include "glog/logging.h"
+
 namespace fluent {
 
 std::string CollectionTypeToString(CollectionType type) {
@@ -18,6 +20,10 @@ std::string CollectionTypeToString(CollectionType type) {
       return "Stdout";
     case CollectionType::PERIODIC:
       return "Periodic";
+    default: {
+      CHECK(false) << "Unreachable code.";
+      return "";
+    }
   }
 }
 

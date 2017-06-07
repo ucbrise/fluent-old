@@ -142,7 +142,7 @@ struct IsInvocable {
   static constexpr std::false_type check(...);
 
  public:
-  static constexpr bool value = decltype(check<F, Args...>(0)){};
+  static constexpr bool value = decltype(check<F, Args...>(0))();
 };
 
 }  // namespace fluent

@@ -37,11 +37,11 @@ class GroupBy<Ra, Keys<Ks...>, KeyColumnTuple, AggregateImplTuple>
 
     ranges::for_each(child_.ToRange(), [this](const auto& t) {
       auto& group = groups_[TupleProject<Ks...>(t)];
-      TupleIter(group, [this, &t](auto& agg) { UpdateAgg(&agg, t); });
+      TupleIter(group, [this, &t](auto& agg) { this->UpdateAgg(&agg, t); });
     });
 
     return ranges::view::all(groups_) |
-           ranges::view::transform([this](const auto& pair) {
+           ranges::view::transform([](const auto& pair) {
              const auto& keys = pair.first;
              auto groups = TupleMap(pair.second,
                                     [](const auto& agg) { return agg.Get(); });

@@ -34,7 +34,7 @@ namespace fluent {
 //   };
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
   TypeName(const TypeName&) = delete;      \
-  void operator=(const TypeName&) = delete;
+  void operator=(const TypeName&) = delete
 
 // DEFAULT_MOVE_AND_ASSIGN is a macro you can use to add a default move
 // constructor and default move assignment operator to a class. Now, you might
@@ -78,7 +78,7 @@ namespace fluent {
 //   Foo f3(std::move(f1)); // default move constructor
 #define DEFAULT_MOVE_AND_ASSIGN(TypeName) \
   TypeName(TypeName&&) = default;         \
-  TypeName& operator=(TypeName&&) = default;
+  TypeName& operator=(TypeName&&) = default
 
 // The following code produces an unused variable warning:
 //

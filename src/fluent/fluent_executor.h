@@ -573,7 +573,6 @@ class FluentExecutor<
 
       // TODO(mwhittaker): Make Periodic templated on Clock.
       PeriodicId id = timeout.periodic->GetAndIncrementId();
-      Time now = Clock::now();
       std::tuple<PeriodicId, Time> t(id, now);
       Hash<std::tuple<PeriodicId, Time>> hash;
       timeout.periodic->Merge(t, hash(t), time_);

@@ -32,9 +32,11 @@ struct Hash<std::chrono::time_point<Clock>> {
   // The hash of a time point is the hash of the number of nanoseconds it
   // represents since the epoch.
   std::size_t operator()(const std::chrono::time_point<Clock>& time) {
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(
-               time.time_since_epoch())
-        .count();
+    using namespace std::chrono;
+    auto time_since_epoch = duration_cast<nanoseconds>(time.time_since_epoch());
+    auto count = time_since_epoch.count();
+    Hash<decltype(count)> h;
+    return h(count);
   }
 };
 

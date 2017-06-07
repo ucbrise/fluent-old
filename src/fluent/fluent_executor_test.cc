@@ -18,6 +18,7 @@
 #include "common/status.h"
 #include "common/status_or.h"
 #include "common/string_util.h"
+#include "common/time_util.h"
 #include "fluent/fluent_builder.h"
 #include "fluent/infix.h"
 #include "fluent/local_tuple_id.h"
@@ -313,6 +314,97 @@ TEST(FluentExecutor, SimpleCommunication) {
   ASSERT_EQ(pong.Get<0>().Get(), expected);
 }
 
+TEST(FluentExecutor, SimplePeriodic) {
+  zmq::context_t context(1);
+  lineagedb::ConnectionConfig conn_config;
+
+  using id = Periodic<MockClock>::id;
+  using time = std::chrono::time_point<MockClock>;
+  using milliseconds = std::chrono::milliseconds;
+  time one_msec = time(milliseconds(1));
+  time two_msec = time(milliseconds(2));
+  time five_msec = time(milliseconds(5));
+  std::map<std::tuple<id, time>, CollectionTupleIds> expected;
+  Hash<std::tuple<id, time>> hash;
+
+  auto fb = noopfluent("name", "inproc://a", &context, conn_config);
+  ASSERT_EQ(Status::OK, fb.status());
+  auto fe_or = fb.ConsumeValueOrDie()
+                   .periodic("p", milliseconds(1))
+                   .RegisterRules([](auto&) { return std::tuple<>(); });
+  ASSERT_EQ(Status::OK, fe_or.status());
+  auto f = fe_or.ConsumeValueOrDie();
+
+  // | time | action  | delta p |
+  // | ---- | ------  | ------- |
+  // | 1    | receive |         |
+  // | 2    | receive |         |
+  // increment clock 1
+  // | 3    | receive | +(0,1)  |
+  // | 4    | receive |         |
+  // | 5    | tick    | -(0,1)  |
+  // increment clock 1
+  // | 6    | receive | +(1,2)  |
+  // | 7    | receive |         |
+  // | 8    | tick    | -(1,2)  |
+  // increment clock 3
+  // | 9    | receive | +(2,5)  |
+  // | 10   | receive |         |
+  // | 11   | tick    | -(2,5)  |
+
+  MockClock::Reset();
+
+  ASSERT_EQ(Status::OK, f.Receive());
+  expected = {};
+  EXPECT_EQ(f.Get<0>().Get(), expected);
+
+  ASSERT_EQ(Status::OK, f.Receive());
+  expected = {};
+  EXPECT_EQ(f.Get<0>().Get(), expected);
+
+  MockClock::Advance(milliseconds(1));
+
+  ASSERT_EQ(Status::OK, f.Receive());
+  expected = {{{0, one_msec}, {hash({0, one_msec}), {3}}}};
+  EXPECT_EQ(f.Get<0>().Get(), expected);
+
+  ASSERT_EQ(Status::OK, f.Receive());
+  expected = {{{0, one_msec}, {hash({0, one_msec}), {3}}}};
+  EXPECT_EQ(f.Get<0>().Get(), expected);
+
+  ASSERT_EQ(Status::OK, f.Tick());
+  expected = {};
+  EXPECT_EQ(f.Get<0>().Get(), expected);
+
+  MockClock::Advance(milliseconds(1));
+
+  ASSERT_EQ(Status::OK, f.Receive());
+  expected = {{{1, two_msec}, {hash({1, two_msec}), {6}}}};
+  EXPECT_EQ(f.Get<0>().Get(), expected);
+
+  ASSERT_EQ(Status::OK, f.Receive());
+  expected = {{{1, two_msec}, {hash({1, two_msec}), {6}}}};
+  EXPECT_EQ(f.Get<0>().Get(), expected);
+
+  ASSERT_EQ(Status::OK, f.Tick());
+  expected = {};
+  EXPECT_EQ(f.Get<0>().Get(), expected);
+
+  MockClock::Advance(milliseconds(3));
+
+  ASSERT_EQ(Status::OK, f.Receive());
+  expected = {{{2, five_msec}, {hash({2, five_msec}), {9}}}};
+  EXPECT_EQ(f.Get<0>().Get(), expected);
+
+  ASSERT_EQ(Status::OK, f.Receive());
+  expected = {{{2, five_msec}, {hash({2, five_msec}), {9}}}};
+  EXPECT_EQ(f.Get<0>().Get(), expected);
+
+  ASSERT_EQ(Status::OK, f.Tick());
+  expected = {};
+  EXPECT_EQ(f.Get<0>().Get(), expected);
+}
+
 TEST(FluentExecutor, SimpleProgramWithLineage) {
   zmq::context_t context(1);
   lineagedb::ConnectionConfig connection_config;
@@ -367,6 +459,8 @@ TEST(FluentExecutor, SimpleProgramWithLineage) {
   // | 6    | rule1  |         | +1,2    |
   // | 7    | rule2  | +1,2    |         |
   // | 8    | tick   |         | -1,2    |
+
+  MockClock::Reset();
 
   ASSERT_EQ(client.GetAddCollection().size(), static_cast<std::size_t>(2));
   EXPECT_EQ(client.GetAddCollection()[0],

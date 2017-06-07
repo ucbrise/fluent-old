@@ -65,7 +65,11 @@ class Periodic : public Collection {
     return ts_;
   }
 
-  id GetAndIncrementId() { return id_++; }
+  id GetAndIncrementId() {
+    id i = id_;
+    id_++;
+    return i;
+  }
 
   void Merge(const std::tuple<id, time>& t, std::size_t hash,
              int logical_time_inserted) {

@@ -1,11 +1,13 @@
 #include "common/hash_util.h"
 
+#include <chrono>
 #include <cstddef>
-
 #include <functional>
 
 #include "glog/logging.h"
 #include "gtest/gtest.h"
+
+#include "testing/mock_clock.h"
 
 namespace fluent {
 
@@ -13,6 +15,19 @@ TEST(Hash, HashBuiltins) {
   EXPECT_EQ(Hash<bool>()(true), std::hash<bool>()(true));
   EXPECT_EQ(Hash<char>()('a'), std::hash<char>()('a'));
   EXPECT_EQ(Hash<int>()(42), std::hash<int>()(42));
+}
+
+TEST(Hash, TimePointHash) {
+  Hash<std::chrono::time_point<MockClock>> hash;
+  std::chrono::time_point<MockClock> x(std::chrono::seconds(1));
+  std::chrono::time_point<MockClock> y(std::chrono::seconds(2));
+  std::chrono::time_point<MockClock> z(std::chrono::milliseconds(1000));
+
+  EXPECT_EQ(hash(x), hash(x));
+  EXPECT_EQ(hash(y), hash(y));
+  EXPECT_EQ(hash(z), hash(z));
+  EXPECT_EQ(hash(x), hash(z));
+  EXPECT_NE(hash(x), hash(y));
 }
 
 TEST(Hash, VectorHash) {

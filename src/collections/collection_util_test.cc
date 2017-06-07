@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 
 #include "common/mock_pickler.h"
+#include "testing/mock_clock.h"
 
 namespace fluent {
 
@@ -69,9 +70,10 @@ TEST(CollectionUtil, CollectionTypes) {
                 "");
 
   // Periodic.
-  static_assert(std::is_same<                                        //
-                    CollectionTypes<Periodic>::type,                 //
-                    TypeList<Periodic::id, Periodic::time>>::value,  //
+  static_assert(std::is_same<                                    //
+                    CollectionTypes<Periodic<MockClock>>::type,  //
+                    TypeList<Periodic<MockClock>::id,
+                             Periodic<MockClock>::time>>::value,  //
                 "");
 }
 
@@ -92,7 +94,8 @@ TEST(CollectionUtil, GetCollectionType) {
 
   EXPECT_EQ(CollectionType::STDIN, (GetCollectionType<Stdin>::value));
   EXPECT_EQ(CollectionType::STDOUT, (GetCollectionType<Stdout>::value));
-  EXPECT_EQ(CollectionType::PERIODIC, (GetCollectionType<Periodic>::value));
+  EXPECT_EQ(CollectionType::PERIODIC,
+            (GetCollectionType<Periodic<MockClock>>::value));
 }
 
 TEST(CollectionUtil, CollectionTypeToString) {

@@ -126,6 +126,8 @@ class FluentExecutor<
   using Rules = TypeList<Rule<RuleCollections, RuleTags, Ras>...>;
   using BootstrapRulesTuple = typename TypeListToTuple<BootstrapRules>::type;
   using RulesTuple = typename TypeListToTuple<Rules>::type;
+  using Time = std::chrono::time_point<Clock>;
+  using PeriodicId = typename Periodic<Clock>::id;
 
   static WARN_UNUSED StatusOr<FluentExecutor> Make(
       std::string name, std::size_t id,
@@ -133,7 +135,7 @@ class FluentExecutor<
       BootstrapRulesTuple bootstrap_rules,
       // std::map<std::string, Parser> parsers,
       std::unique_ptr<NetworkState> network_state, Stdin* stdin,
-      std::vector<Periodic*> periodics,
+      std::vector<Periodic<Clock>*> periodics,
       std::unique_ptr<LineageDbClient<Hash, ToSql, Clock>> lineagedb_client,
       RulesTuple rules) {
     FluentExecutor f(std::move(name), id, std::move(collections),
@@ -151,7 +153,7 @@ class FluentExecutor<
       BootstrapRulesTuple bootstrap_rules,
       // std::map<std::string, Parser> parsers,
       std::unique_ptr<NetworkState> network_state, Stdin* stdin,
-      std::vector<Periodic*> periodics,
+      std::vector<Periodic<Clock>*> periodics,
       std::unique_ptr<LineageDbClient<Hash, ToSql, Clock>> lineagedb_client,
       RulesTuple rules)
       : name_(std::move(name)),
@@ -166,8 +168,8 @@ class FluentExecutor<
         rules_(rules) {
     // Initialize periodic timeouts. See the comment above `PeriodicTimeout`
     // below for more information.
-    Periodic::time now = Periodic::clock::now();
-    for (Periodic* p : periodics_) {
+    Time now = Clock::now();
+    for (Periodic<Clock>* p : periodics_) {
       timeout_queue_.push(PeriodicTimeout{now + p->Period(), p});
     }
   }
@@ -557,26 +559,26 @@ class FluentExecutor<
     // [1]: http://bit.ly/2n3SqEx
     std::chrono::milliseconds timeout =
         std::chrono::duration_cast<std::chrono::milliseconds>(
-            timeout_queue_.top().timeout - Periodic::clock::now());
+            timeout_queue_.top().timeout - Clock::now());
     return std::max<long>(0, timeout.count());
   }
 
   // Call `Tock` on every Periodic that's ready to be tocked. See the comment
   // on `PeriodicTimeout` down below for more information.
   WARN_UNUSED Status TockPeriodics() {
-    Periodic::time now = Periodic::clock::now();
+    Time now = Clock::now();
     while (timeout_queue_.size() != 0 && timeout_queue_.top().timeout <= now) {
       PeriodicTimeout timeout = timeout_queue_.top();
       timeout_queue_.pop();
 
       // TODO(mwhittaker): Make Periodic templated on Clock.
-      Periodic::id id = timeout.periodic->GetAndIncrementId();
-      std::chrono::time_point<Periodic::clock> now = Periodic::clock::now();
-      std::tuple<Periodic::id, Periodic::time> t(id, now);
-      Hash<std::tuple<Periodic::id, Periodic::time>> hash;
+      PeriodicId id = timeout.periodic->GetAndIncrementId();
+      Time now = Clock::now();
+      std::tuple<PeriodicId, Time> t(id, now);
+      Hash<std::tuple<PeriodicId, Time>> hash;
       timeout.periodic->Merge(t, hash(t), time_);
       RETURN_IF_ERROR(lineagedb_client_->InsertTuple(timeout.periodic->Name(),
-                                                     time_, Clock::now(), t));
+                                                     time_, now, t));
       timeout.timeout = now + timeout.periodic->Period();
       timeout_queue_.push(timeout);
     }
@@ -781,7 +783,7 @@ class FluentExecutor<
   // std::map<std::string, Parser> parsers_;
   std::unique_ptr<NetworkState> network_state_;
   Stdin* const stdin_;
-  std::vector<Periodic*> periodics_;
+  std::vector<Periodic<Clock>*> periodics_;
   std::unique_ptr<LineageDbClient<Hash, ToSql, Clock>> lineagedb_client_;
 
   // A collection of rules (lhs, type, rhs) where
@@ -849,8 +851,8 @@ class FluentExecutor<
   //           | periodic: &x | periodic: &y | periodic: &z |
   //           +--------------+--------------+--------------+
   struct PeriodicTimeout {
-    Periodic::time timeout;
-    Periodic* periodic;
+    Time timeout;
+    Periodic<Clock>* periodic;
   };
 
   // See `PeriodicTimeout`.

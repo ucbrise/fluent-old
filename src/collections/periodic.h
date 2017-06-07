@@ -40,11 +40,11 @@ namespace fluent {
 // period `period` (e.g. 1 second). Then, every `period` (e.g. every 1 second),
 // a new tuple is inserted into the table with a unique id and the current
 // time. After every tick, the Periodic is cleared.
+template <typename Clock>
 class Periodic : public Collection {
  public:
   using id = std::size_t;
-  using clock = std::chrono::system_clock;
-  using time = std::chrono::time_point<clock>;
+  using time = std::chrono::time_point<Clock>;
   using period = std::chrono::milliseconds;
 
   Periodic(std::string name, period period)

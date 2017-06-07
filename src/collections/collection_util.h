@@ -1,6 +1,7 @@
 #ifndef COLLECTIONS_COLLECTION_UTIL_H_
 #define COLLECTIONS_COLLECTION_UTIL_H_
 
+#include <chrono>
 #include <string>
 
 #include "collections/all.h"
@@ -10,12 +11,12 @@ namespace fluent {
 
 // `CollectionTypes` returns the types of the columns of a collection.
 //
-//   - CollectionTypes<Table<Ts...>> == TypeList<Ts...>
-//   - CollectionTypes<Scratch<Ts...>> == TypeList<Ts...>
-//   - CollectionTypes<Channel<Pickler, Ts...>> == TypeList<Ts...>
-//   - CollectionTypes<Stdin> == TypeList<std::string>
-//   - CollectionTypes<Stdout> == TypeList<std::string>
-//   - CollectionTypes<Periodic> == TypeList<Periodic::id, Periodic::time>
+//   CollectionTypes<Table<Ts...>> == <Ts...>
+//   CollectionTypes<Scratch<Ts...>> == <Ts...>
+//   CollectionTypes<Channel<Pickler, Ts...>> == <Ts...>
+//   CollectionTypes<Periodic<C>> == <Periodic<C>::id, time_point<C>>
+//   CollectionTypes<Stdin> == <std::string>
+//   CollectionTypes<Stdout> == <std::string>
 template <typename Collection>
 struct CollectionTypes;
 
@@ -44,9 +45,11 @@ struct CollectionTypes<Stdout> {
   using type = TypeList<std::string>;
 };
 
-template <>
-struct CollectionTypes<Periodic> {
-  using type = TypeList<Periodic::id, Periodic::time>;
+template <typename Clock>
+struct CollectionTypes<Periodic<Clock>> {
+  using id = typename Periodic<Clock>::id;
+  using time = std::chrono::time_point<Clock>;
+  using type = TypeList<id, time>;
 };
 
 // Sometimes we want to be able to write code like this:
@@ -103,8 +106,8 @@ template <>
 struct GetCollectionType<Stdout>
     : public std::integral_constant<CollectionType, CollectionType::STDOUT> {};
 
-template <>
-struct GetCollectionType<Periodic>
+template <typename Clock>
+struct GetCollectionType<Periodic<Clock>>
     : public std::integral_constant<CollectionType, CollectionType::PERIODIC> {
 };
 

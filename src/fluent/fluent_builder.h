@@ -142,10 +142,11 @@ class FluentBuilder<
     return AddCollection(std::make_unique<Stdout>());
   }
 
-  WithCollection<Periodic> periodic(const std::string& name,
-                                    const Periodic::period& period) && {
+  WithCollection<Periodic<Clock>> periodic(
+      const std::string& name,
+      const typename Periodic<Clock>::period& period) && {
     LOG(INFO) << "Adding Periodic named " << name << ".";
-    auto p = std::make_unique<Periodic>(name, period);
+    auto p = std::make_unique<Periodic<Clock>>(name, period);
     periodics_.push_back(p.get());
     return AddCollection(std::move(p));
   }
@@ -240,7 +241,7 @@ class FluentBuilder<
       BootstrapRulesTuple boostrap_rules,
       // std::map<std::string, Parser> parsers,
       std::unique_ptr<NetworkState> network_state, Stdin* stdin,
-      std::vector<Periodic*> periodics,
+      std::vector<Periodic<Clock>*> periodics,
       std::unique_ptr<LineageDbClient<Hash, ToSql, Clock>> lineagedb_client)
       : name_(std::move(name)),
         id_(id),
@@ -331,7 +332,7 @@ class FluentBuilder<
 
   // A vector of the Periodics inside of `collections_`, in no particular
   // order.
-  std::vector<Periodic*> periodics_;
+  std::vector<Periodic<Clock>*> periodics_;
 
   // A lineagedb client used to record history and lineage information.
   std::unique_ptr<LineageDbClient<Hash, ToSql, Clock>> lineagedb_client_;

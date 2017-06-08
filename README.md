@@ -27,7 +27,11 @@ install and build the rest of the dependencies for you!
 # Testing
 ./build/bin/ra_logical_cross_test # run a test
 ./build/bin/common_macros_test    # run another test
-(cd build && make test)           # run all the tests
+(cd build && ctest -L UNITTEST)   # run all the tests
+
+# Benchmarking
+./build/bin/ra_physical_iterable_bench # run a benchmark
+(cd build && ctest -L BENCHMARK)       # run all the benchmarks
 
 # Generating Tags
 ./scripts/generate_tags.sh

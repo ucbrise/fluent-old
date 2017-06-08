@@ -13,4 +13,4 @@ before_script:
 - export PATH="/usr/bin:$PATH"
 - ./scripts/print_diagnostics.sh
 script:
-- rm -rf build && ./scripts/build.sh "$TEST_TYPE" 1 && (cd build && make test)
+- ./scripts/travis.sh

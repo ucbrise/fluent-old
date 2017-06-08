@@ -9,7 +9,7 @@ include(ExternalProject)
 
 ExternalProject_Add(googlebenchmark
     GIT_REPOSITORY "https://github.com/google/benchmark"
-    GIT_TAG "v1.0.0"
+    GIT_TAG "v1.1.0"
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}
     INSTALL_COMMAND ""
 )

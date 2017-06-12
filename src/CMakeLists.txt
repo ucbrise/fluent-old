@@ -59,7 +59,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     if(NOT CMAKE_GENERATOR STREQUAL Xcode)
         SET(CMAKE_CXX_FLAGS_COMMON
             "${CMAKE_CXX_FLAGS_COMMON} \
-            -fsanitize=address \ 
+            -fsanitize=address \
             -fsanitize=undefined")
     endif()
 endif()

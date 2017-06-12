@@ -124,7 +124,8 @@ class MockClient {
   WARN_UNUSED Status
   RegisterBlackBoxLineage(const std::string& collection_name,
                           const std::vector<std::string>& lineage_commands) {
-    register_black_box_lineage_.push_back(make_tuple(collection_name, lineage_commands));
+    register_black_box_lineage_.push_back(
+        make_tuple(collection_name, lineage_commands));
     return Status::OK;
   }
 

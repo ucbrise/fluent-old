@@ -111,10 +111,12 @@ TEST(GroupBy, VariadicAvg) {
 
 TEST(GroupBy, SimpleUnion) {
   std::set<std::tuple<int, std::set<int>>> xs = {
-    std::make_tuple(0, std::set<int>({0})), std::make_tuple(0, std::set<int>({1})),
-    std::make_tuple(1, std::set<int>({2})), std::make_tuple(1, std::set<int>({3})),
-    std::make_tuple(1, std::set<int>({4})), std::make_tuple(2, std::set<int>({5}))
-    };
+      std::make_tuple(0, std::set<int>({0})),
+      std::make_tuple(0, std::set<int>({1})),
+      std::make_tuple(1, std::set<int>({2})),
+      std::make_tuple(1, std::set<int>({3})),
+      std::make_tuple(1, std::set<int>({4})),
+      std::make_tuple(2, std::set<int>({5}))};
   auto it = pra::make_iterable(&xs);
   using keys = ra::Keys<0>;
   using key_tuple = std::tuple<int>;
@@ -124,8 +126,7 @@ TEST(GroupBy, SimpleUnion) {
   std::set<std::tuple<int, std::set<int>>> expected = {
       std::make_tuple(0, std::set<int>({0, 1})),
       std::make_tuple(1, std::set<int>({2, 3, 4})),
-      std::make_tuple(2, std::set<int>({5}))
-    };
+      std::make_tuple(2, std::set<int>({5}))};
   ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
 }
 
@@ -136,8 +137,7 @@ TEST(GroupBy, VariadicUnion) {
       std::make_tuple(1, std::set<int>({2}), std::set<int>({5})),
       std::make_tuple(1, std::set<int>({3}), std::set<int>({6})),
       std::make_tuple(1, std::set<int>({4}), std::set<int>({7})),
-      std::make_tuple(2, std::set<int>({5}), std::set<int>({5}))
-    };
+      std::make_tuple(2, std::set<int>({5}), std::set<int>({5}))};
   auto it = pra::make_iterable(&xs);
   using keys = ra::Keys<0>;
   using key_tuple = std::tuple<int>;
@@ -148,8 +148,7 @@ TEST(GroupBy, VariadicUnion) {
   std::set<std::tuple<int, std::set<int>>> expected = {
       std::make_tuple(0, std::set<int>({0, 1, 2, 3})),
       std::make_tuple(1, std::set<int>({2, 3, 4, 5, 6, 7})),
-      std::make_tuple(2, std::set<int>({5}))
-    };
+      std::make_tuple(2, std::set<int>({5}))};
   ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
 }
 

@@ -66,9 +66,12 @@ TEST(Hash, TupleHash) {
 }
 
 TEST(Hash, TupleTupleHash) {
-  std::tuple<std::tuple<int, char>, std::tuple<bool>> x = {std::make_tuple(0, '1'), std::make_tuple(true)};
-  std::tuple<std::tuple<int, char>, std::tuple<bool>> y = {std::make_tuple(0, '2'), std::make_tuple(true)};
-  std::tuple<std::tuple<int, char>, std::tuple<bool>> z = {std::make_tuple(0, '1'), std::make_tuple(true)};
+  std::tuple<std::tuple<int, char>, std::tuple<bool>> x = {
+      std::make_tuple(0, '1'), std::make_tuple(true)};
+  std::tuple<std::tuple<int, char>, std::tuple<bool>> y = {
+      std::make_tuple(0, '2'), std::make_tuple(true)};
+  std::tuple<std::tuple<int, char>, std::tuple<bool>> z = {
+      std::make_tuple(0, '1'), std::make_tuple(true)};
   std::size_t hash_x = Hash<decltype(x)>()(x);
   std::size_t hash_y = Hash<decltype(y)>()(y);
   std::size_t hash_z = Hash<decltype(z)>()(z);

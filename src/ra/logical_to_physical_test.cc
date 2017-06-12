@@ -74,8 +74,8 @@ TEST(LogicalToPhysical, Iterable) {
   auto physical = ra::LogicalToPhysical(logical);
   std::set<LocalTupleId> empty_tups = {};
   std::set<Lineaged<std::tuple<int>>> expected = {
-      std::make_tuple(std::make_tuple(1), empty_tups), 
-      std::make_tuple(std::make_tuple(2), empty_tups), 
+      std::make_tuple(std::make_tuple(1), empty_tups),
+      std::make_tuple(std::make_tuple(2), empty_tups),
       std::make_tuple(std::make_tuple(3), empty_tups)};
   ExpectRngsUnorderedEqual(physical.ToRange(), expected);
 }

@@ -30,8 +30,13 @@ TEST(LogicalToPhysical, Collection) {
   t.Merge({3}, 3, 42);
   auto logical = lra::make_collection(&t);
   auto physical = ra::LogicalToPhysical(logical);
+  std::set<LocalTupleId> tups1 = {LocalTupleId{"t", std::size_t(1), 42}};
+  std::set<LocalTupleId> tups2 = {LocalTupleId{"t", std::size_t(2), 42}};
+  std::set<LocalTupleId> tups3 = {LocalTupleId{"t", std::size_t(3), 42}};
   std::set<Lineaged<std::tuple<int>>> expected = {
-      {{1}, {{"t", 1, 42}}}, {{2}, {{"t", 2, 42}}}, {{3}, {{"t", 3, 42}}}};
+      std::make_tuple(std::make_tuple(1), tups1),
+      std::make_tuple(std::make_tuple(2), tups2),
+      std::make_tuple(std::make_tuple(3), tups3)};
   ExpectRngsUnorderedEqual(physical.ToRange(), expected);
 }
 
@@ -44,12 +49,22 @@ TEST(LogicalToPhysical, MetaCollection) {
   t.Merge({3}, 3, 44);
   auto logical = lra::make_meta_collection(&t);
   auto physical = ra::LogicalToPhysical(logical);
+  LocalTupleId tup1 = {"t", std::size_t(1), 42};
+  LocalTupleId tup2 = {"t", std::size_t(2), 42};
+  LocalTupleId tup3 = {"t", std::size_t(3), 42};
+  LocalTupleId tup4 = {"t", std::size_t(3), 43};
+  LocalTupleId tup5 = {"t", std::size_t(3), 44};
+  std::set<LocalTupleId> tups1 = {tup1};
+  std::set<LocalTupleId> tups2 = {tup2};
+  std::set<LocalTupleId> tups3 = {tup3};
+  std::set<LocalTupleId> tups4 = {tup4};
+  std::set<LocalTupleId> tups5 = {tup5};
   std::set<Lineaged<std::tuple<std::tuple<int>, LocalTupleId>>> expected = {
-      {{{1}, {"t", 1, 42}}, {{"t", 1, 42}}},
-      {{{2}, {"t", 2, 42}}, {{"t", 2, 42}}},
-      {{{3}, {"t", 3, 42}}, {{"t", 3, 42}}},
-      {{{3}, {"t", 3, 43}}, {{"t", 3, 43}}},
-      {{{3}, {"t", 3, 44}}, {{"t", 3, 44}}}};
+      std::make_tuple(std::make_tuple(std::make_tuple(1), tup1), tups1),
+      std::make_tuple(std::make_tuple(std::make_tuple(2), tup2), tups2),
+      std::make_tuple(std::make_tuple(std::make_tuple(3), tup3), tups3),
+      std::make_tuple(std::make_tuple(std::make_tuple(3), tup4), tups4),
+      std::make_tuple(std::make_tuple(std::make_tuple(3), tup5), tups5)};
   ExpectRngsUnorderedEqual(physical.ToRange(), expected);
 }
 
@@ -57,8 +72,11 @@ TEST(LogicalToPhysical, Iterable) {
   std::set<std::tuple<int>> xs = {{1}, {2}, {3}};
   auto logical = lra::make_iterable(&xs);
   auto physical = ra::LogicalToPhysical(logical);
+  std::set<LocalTupleId> empty_tups = {};
   std::set<Lineaged<std::tuple<int>>> expected = {
-      {{1}, {}}, {{2}, {}}, {{3}, {}}};
+      std::make_tuple(std::make_tuple(1), empty_tups), 
+      std::make_tuple(std::make_tuple(2), empty_tups), 
+      std::make_tuple(std::make_tuple(3), empty_tups)};
   ExpectRngsUnorderedEqual(physical.ToRange(), expected);
 }
 
@@ -70,10 +88,13 @@ TEST(LogicalToPhysical, Map) {
   auto logical = lra::make_collection(&t) |
                  lra::map([](const auto& t) { return std::tuple_cat(t, t); });
   auto physical = ra::LogicalToPhysical(logical);
+  std::set<LocalTupleId> tups1 = {LocalTupleId{"t", std::size_t(1), 42}};
+  std::set<LocalTupleId> tups2 = {LocalTupleId{"t", std::size_t(2), 42}};
+  std::set<LocalTupleId> tups3 = {LocalTupleId{"t", std::size_t(3), 42}};
   std::set<Lineaged<std::tuple<int, int>>> expected = {
-      {{1, 1}, {{"t", 1, 42}}},
-      {{2, 2}, {{"t", 2, 42}}},
-      {{3, 3}, {{"t", 3, 42}}}};
+      std::make_tuple(std::make_tuple(1, 1), tups1),
+      std::make_tuple(std::make_tuple(2, 2), tups2),
+      std::make_tuple(std::make_tuple(3, 3), tups3)};
   ExpectRngsUnorderedEqual(physical.ToRange(), expected);
 }
 
@@ -85,8 +106,13 @@ TEST(LogicalToPhysical, Filter) {
   auto logical =
       lra::make_collection(&t) | lra::filter([](const auto&) { return true; });
   auto physical = ra::LogicalToPhysical(logical);
+  std::set<LocalTupleId> tups1 = {LocalTupleId{"t", std::size_t(1), 42}};
+  std::set<LocalTupleId> tups2 = {LocalTupleId{"t", std::size_t(2), 42}};
+  std::set<LocalTupleId> tups3 = {LocalTupleId{"t", std::size_t(3), 42}};
   std::set<Lineaged<std::tuple<int>>> expected = {
-      {{1}, {{"t", 1, 42}}}, {{2}, {{"t", 2, 42}}}, {{3}, {{"t", 3, 42}}}};
+      std::make_tuple(std::make_tuple(1), tups1),
+      std::make_tuple(std::make_tuple(2), tups2),
+      std::make_tuple(std::make_tuple(3), tups3)};
   ExpectRngsUnorderedEqual(physical.ToRange(), expected);
 }
 
@@ -97,8 +123,13 @@ TEST(LogicalToPhysical, Project) {
   t.Merge({3, 30}, 3, 42);
   auto logical = lra::make_collection(&t) | lra::project<0>();
   auto physical = ra::LogicalToPhysical(logical);
+  std::set<LocalTupleId> tups1 = {LocalTupleId{"t", std::size_t(1), 42}};
+  std::set<LocalTupleId> tups2 = {LocalTupleId{"t", std::size_t(2), 42}};
+  std::set<LocalTupleId> tups3 = {LocalTupleId{"t", std::size_t(3), 42}};
   std::set<Lineaged<std::tuple<int>>> expected = {
-      {{1}, {{"t", 1, 42}}}, {{2}, {{"t", 2, 42}}}, {{3}, {{"t", 3, 42}}}};
+      std::make_tuple(std::make_tuple(1), tups1),
+      std::make_tuple(std::make_tuple(2), tups2),
+      std::make_tuple(std::make_tuple(3), tups3)};
   ExpectRngsUnorderedEqual(physical.ToRange(), expected);
 }
 
@@ -114,11 +145,19 @@ TEST(LogicalToPhysical, Cross) {
   auto logical =
       lra::make_cross(lra::make_collection(&t), lra::make_collection(&r));
   auto physical = ra::LogicalToPhysical(logical);
+  LocalTupleId tup1 = {"t", std::size_t(1), 42};
+  LocalTupleId tup2 = {"t", std::size_t(2), 42};
+  LocalTupleId tup3 = {"r", std::size_t(10), 9001};
+  LocalTupleId tup4 = {"r", std::size_t(20), 9001};
+  std::set<LocalTupleId> tups1 = {tup1, tup3};
+  std::set<LocalTupleId> tups2 = {tup1, tup4};
+  std::set<LocalTupleId> tups3 = {tup2, tup3};
+  std::set<LocalTupleId> tups4 = {tup2, tup4};
   std::set<Lineaged<std::tuple<int, int>>> expected = {
-      {{1, 1}, {{"t", 1, 42}, {"r", 10, 9001}}},
-      {{1, 2}, {{"t", 1, 42}, {"r", 20, 9001}}},
-      {{2, 1}, {{"t", 2, 42}, {"r", 10, 9001}}},
-      {{2, 2}, {{"t", 2, 42}, {"r", 20, 9001}}}};
+      std::make_tuple(std::make_tuple(1, 1), tups1),
+      std::make_tuple(std::make_tuple(1, 2), tups2),
+      std::make_tuple(std::make_tuple(2, 1), tups3),
+      std::make_tuple(std::make_tuple(2, 2), tups4)};
   ExpectRngsUnorderedEqual(physical.ToRange(), expected);
 }
 
@@ -136,10 +175,19 @@ TEST(LogicalToPhysical, HashJoin) {
   auto logical = lra::make_hash_join<ra::LeftKeys<0>, ra::RightKeys<0>>(
       lra::make_collection(&t), lra::make_collection(&r));
   auto physical = ra::LogicalToPhysical(logical);
+  LocalTupleId tup1 = {"t", std::size_t(1), 42};
+  LocalTupleId tup2 = {"t", std::size_t(2), 42};
+  LocalTupleId tup3 = {"t", std::size_t(3), 42};
+  LocalTupleId tup4 = {"r", std::size_t(10), 9001};
+  LocalTupleId tup5 = {"r", std::size_t(20), 9001};
+  LocalTupleId tup6 = {"r", std::size_t(30), 9001};
+  std::set<LocalTupleId> tups1 = {tup1, tup4};
+  std::set<LocalTupleId> tups2 = {tup2, tup5};
+  std::set<LocalTupleId> tups3 = {tup3, tup6};
   std::set<Lineaged<std::tuple<int, int>>> expected = {
-      {{1, 1}, {{"t", 1, 42}, {"r", 10, 9001}}},
-      {{2, 2}, {{"t", 2, 42}, {"r", 20, 9001}}},
-      {{3, 3}, {{"t", 3, 42}, {"r", 30, 9001}}}};
+      std::make_tuple(std::make_tuple(1, 1), tups1),
+      std::make_tuple(std::make_tuple(2, 2), tups2),
+      std::make_tuple(std::make_tuple(3, 3), tups3)};
   ExpectRngsUnorderedEqual(physical.ToRange(), expected);
 }
 
@@ -155,10 +203,19 @@ TEST(LogicalToPhysical, GroupBy) {
   auto logical =
       lra::make_collection(&t) | lra::group_by<ra::Keys<0>, ra::agg::Sum<1>>();
   auto physical = ra::LogicalToPhysical(logical);
+  LocalTupleId tup1 = {"t", std::size_t(100), 42};
+  LocalTupleId tup2 = {"t", std::size_t(200), 42};
+  LocalTupleId tup3 = {"t", std::size_t(300), 42};
+  LocalTupleId tup4 = {"t", std::size_t(400), 42};
+  LocalTupleId tup5 = {"t", std::size_t(500), 42};
+  LocalTupleId tup6 = {"t", std::size_t(600), 42};
+  std::set<LocalTupleId> tups1 = {tup1, tup2};
+  std::set<LocalTupleId> tups2 = {tup3, tup4, tup5};
+  std::set<LocalTupleId> tups3 = {tup6};
   std::set<Lineaged<std::tuple<int, int>>> expected = {
-      {{1, 30}, {{"t", 100, 42}, {"t", 200, 42}}},
-      {{2, 120}, {{"t", 300, 42}, {"t", 400, 42}, {"t", 500, 42}}},
-      {{3, 60}, {{"t", 600, 42}}}};
+      std::make_tuple(std::make_tuple(1, 30), tups1),
+      std::make_tuple(std::make_tuple(2, 120), tups2),
+      std::make_tuple(std::make_tuple(3, 60), tups3)};
   ExpectRngsUnorderedEqual(physical.ToRange(), expected);
 }
 

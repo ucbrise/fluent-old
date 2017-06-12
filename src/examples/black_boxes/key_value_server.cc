@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
                         lra::map([&kvs](const auto& t)
                                      -> std::tuple<std::string, std::int64_t> {
                           kvs[std::get<3>(t)] = std::get<4>(t);
-                          return {std::get<1>(t), std::get<2>(t)};
+                          return make_tuple(std::get<1>(t), std::get<2>(t));
                         }));
             auto get =
                 get_resp <=

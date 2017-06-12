@@ -36,37 +36,37 @@ INCLUDE(cmake/testing.cmake NO_POLICY_SCOPE)
 # [1]: http://stackoverflow.com/a/6595001/3187068
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# Clang provides four sanitizers. Add them with the following flags:
-#   -fsanitize=address
-#   -fsanitize=thread
-#   -fsanitize=memory
-#   -fsanitize=undefined
-# Note that some sanitizers are mutually exclusive. For example, clang will
-# reject using -fsanitize=address and -fsanitize=thread simultaneously
-# simultaneously.
-#
 # TODO(mwhittaker): Change compiler flags based on Debug or Release.
+SET(CMAKE_CXX_FLAGS_COMMON
+        "-std=c++14 \
+         -Wall \
+         -Wextra \
+         -Werror \
+         -pedantic")
+
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    SET(CMAKE_CXX_FLAGS_COMMON
-        "-std=c++14 \
-         -O0 \
-         -Wall \
-         -Wextra \
-         -Werror \
-         -pedantic \
-         -g \
-         -fsanitize=address \
-         -fsanitize=undefined")
-else ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    SET(CMAKE_CXX_FLAGS_COMMON
-        "-std=c++14 \
-         -O0 \
-         -Wall \
-         -Wextra \
-         -Werror \
-         -pedantic \
-         -g")
+    # Clang provides four sanitizers. Add them with the following flags:
+    #   -fsanitize=address
+    #   -fsanitize=thread
+    #   -fsanitize=memory
+    #   -fsanitize=undefined
+    # Note that some sanitizers are mutually exclusive. For example, clang will
+    # reject using -fsanitize=address and -fsanitize=thread simultaneously
+    # simultaneously.
+    #
+    # Current CMAKE bug prevents using sanitizers under Xcode
+    # https://gitlab.kitware.com/cmake/cmake/issues/16010
+    if(NOT CMAKE_GENERATOR STREQUAL Xcode)
+        SET(CMAKE_CXX_FLAGS_COMMON
+            "${CMAKE_CXX_FLAGS_COMMON} \
+            -fsanitize=address \ 
+            -fsanitize=undefined")
+    endif()
 endif()
+
+SET(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
+SET(CMAKE_CXX_FLAGS_RELEASE "-O2")
+
 SET(CMAKE_CXX_FLAGS_DEBUG
     "${CMAKE_CXX_FLAGS_DEBUG} \
      ${CMAKE_CXX_FLAGS_COMMON}")

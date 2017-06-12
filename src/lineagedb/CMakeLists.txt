@@ -6,7 +6,7 @@ TARGET_LINK_LIBRARIES(lineagedb
     ${FMT_LINK_DIRS}/libfmt.a
     ${LIBPQXX_LINK_DIRS}/libpqxx.a
     common
-    glog
+    ${GLOG_LINK_DIRS}/libglog.a
     pq
 )
 

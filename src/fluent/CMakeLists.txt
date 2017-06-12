@@ -1,10 +1,10 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
-ADD_LIBRARY(fluent)
-TARGET_LINK_LIBRARIES(fluent
+ADD_LIBRARY(fluent INTERFACE)
+TARGET_LINK_LIBRARIES(fluent INTERFACE
     ${FMT_LINK_DIRS}/libfmt.a
     collections
-    glog
+    ${GLOG_LINK_DIRS}/libglog.a
     lineagedb
     zmq_util)
 

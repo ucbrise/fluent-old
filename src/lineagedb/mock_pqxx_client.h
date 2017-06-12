@@ -56,7 +56,7 @@ class MockPqxxClient : public InjectablePqxxClient<MockConnection, MockWork,
     MockPqxxClient mock_client(std::move(name), id, std::move(address),
                                connection_config);
     RETURN_IF_ERROR(mock_client.Init());
-    return mock_client;
+    return std::move(mock_client);
   }
 
   WARN_UNUSED Status ExecuteQuery(const std::string& name,

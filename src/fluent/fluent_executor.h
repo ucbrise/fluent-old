@@ -142,7 +142,7 @@ class FluentExecutor<
                      stdin, std::move(periodics), std::move(lineagedb_client),
                      std::move(rules));
     RETURN_IF_ERROR(f.InitLineageDbClient());
-    return f;
+    return std::move(f);
   }
 
   FluentExecutor(

@@ -24,7 +24,7 @@ void ProjectBaselineBench(benchmark::State& state) {
 
   while (state.KeepRunning()) {
     for (const std::tuple<std::size_t, std::size_t>& t : ts) {
-      std::tuple<std::size_t> projected = {std::get<0>(t)};
+      std::tuple<std::size_t> projected = std::make_tuple(std::get<0>(t));
       benchmark::DoNotOptimize(projected);
     }
   }

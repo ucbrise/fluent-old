@@ -8,12 +8,12 @@ ADD_LIBRARY(common
 
 TARGET_LINK_LIBRARIES(common
     ${FMT_LINK_DIRS}/libfmt.a
-    glog
+    ${GLOG_LINK_DIRS}/libglog.a
 )
 
 MACRO(CREATE_COMMON_TEST NAME)
     CREATE_NAMED_TEST(common_${NAME} ${NAME})
-    TARGET_LINK_LIBRARIES(common_${NAME} common glog)
+    TARGET_LINK_LIBRARIES(common_${NAME} common ${GLOG_LINK_DIRS}/libglog.a)
 ENDMACRO(CREATE_COMMON_TEST)
 
 CREATE_COMMON_TEST(collection_util_test)

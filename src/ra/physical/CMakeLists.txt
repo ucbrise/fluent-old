@@ -5,7 +5,7 @@ MACRO(CREATE_RA_PHYSICAL_TEST NAME)
     TARGET_LINK_LIBRARIES(ra_physical_${NAME}
         ${FMT_LINK_DIRS}/libfmt.a
         common
-        glog)
+        ${GLOG_LINK_DIRS}/libglog.a)
 ENDMACRO(CREATE_RA_PHYSICAL_TEST)
 
 CREATE_RA_PHYSICAL_TEST(cross_test)
@@ -22,7 +22,7 @@ MACRO(CREATE_RA_PHYSICAL_BENCHMARK NAME)
     TARGET_LINK_LIBRARIES(ra_physical_${NAME}
         ${FMT_LINK_DIRS}/libfmt.a
         common
-        glog)
+        ${GLOG_LINK_DIRS}/libglog.a)
 ENDMACRO(CREATE_RA_PHYSICAL_BENCHMARK)
 
 CREATE_RA_PHYSICAL_BENCHMARK(cross_bench)

@@ -3,7 +3,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 ADD_LIBRARY(collections
     collection_util.cc)
 TARGET_LINK_LIBRARIES(collections
-    glog
+    ${GLOG_LINK_DIRS}/libglog.a
     zmq
     zmq_util)
 

@@ -4,7 +4,7 @@ MACRO(CREATE_RA_LOGICAL_TEST NAME)
     CREATE_NAMED_TEST(ra_logical_${NAME} ${NAME})
     TARGET_LINK_LIBRARIES(ra_logical_${NAME}
         ${FMT_LINK_DIRS}/libfmt.a
-        glog)
+        ${GLOG_LINK_DIRS}/libglog.a)
 ENDMACRO(CREATE_RA_LOGICAL_TEST)
 
 CREATE_RA_LOGICAL_TEST(collection_test)

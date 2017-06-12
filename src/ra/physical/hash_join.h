@@ -44,8 +44,8 @@ class HashJoin<Left, LeftKeys<LeftKs...>, Right, RightKeys<RightKs...>,
       const auto keys = TupleProject<LeftKs...>(t);
       using column = typename std::decay<decltype(t)>::type;
       using key = typename std::decay<decltype(keys)>::type;
-      using column_matches = std::is_same<LeftColumnTuple, column>;
-      using key_matches = std::is_same<LeftKeyColumnTuple, key>;
+      using column_matches = std::is_convertible<column, LeftColumnTuple>;
+      using key_matches = std::is_convertible<key, LeftKeyColumnTuple>;
       static_assert(StaticAssert<column_matches>::value, "");
       static_assert(StaticAssert<key_matches>::value, "");
       left_hash_[std::move(keys)].push_back(t);

@@ -1,13 +1,11 @@
+#include "ra/physical/group_by.h"
+
 #include <cstddef>
 
 #include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
-#include <map>
-
-#include "ra/physical/group_by.h"
-
 
 #include "benchmark/benchmark.h"
 #include "glog/logging.h"

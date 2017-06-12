@@ -133,16 +133,14 @@ class FluentExecutor<
       std::string name, std::size_t id,
       std::tuple<std::unique_ptr<Collections>...> collections,
       BootstrapRulesTuple bootstrap_rules,
-      // std::map<std::string, Parser> parsers,
       std::unique_ptr<NetworkState> network_state, Stdin* stdin,
       std::vector<Periodic<Clock>*> periodics,
       std::unique_ptr<LineageDbClient<Hash, ToSql, Clock>> lineagedb_client,
       RulesTuple rules) {
     FluentExecutor f(std::move(name), id, std::move(collections),
-                     std::move(bootstrap_rules),
-                     // std::move(parsers),
-                     std::move(network_state), stdin, std::move(periodics),
-                     std::move(lineagedb_client), std::move(rules));
+                     std::move(bootstrap_rules), std::move(network_state),
+                     stdin, std::move(periodics), std::move(lineagedb_client),
+                     std::move(rules));
     RETURN_IF_ERROR(f.InitLineageDbClient());
     return f;
   }
@@ -151,7 +149,6 @@ class FluentExecutor<
       std::string name, std::size_t id,
       std::tuple<std::unique_ptr<Collections>...> collections,
       BootstrapRulesTuple bootstrap_rules,
-      // std::map<std::string, Parser> parsers,
       std::unique_ptr<NetworkState> network_state, Stdin* stdin,
       std::vector<Periodic<Clock>*> periodics,
       std::unique_ptr<LineageDbClient<Hash, ToSql, Clock>> lineagedb_client,
@@ -160,7 +157,6 @@ class FluentExecutor<
         id_(id),
         collections_(std::move(collections)),
         bootstrap_rules_(std::move(bootstrap_rules)),
-        // parsers_(std::move(parsers)),
         network_state_(std::move(network_state)),
         stdin_(stdin),
         periodics_(std::move(periodics)),
@@ -779,7 +775,6 @@ class FluentExecutor<
   const std::size_t id_;
   std::tuple<std::unique_ptr<Collections>...> collections_;
   BootstrapRulesTuple bootstrap_rules_;
-  // std::map<std::string, Parser> parsers_;
   std::unique_ptr<NetworkState> network_state_;
   Stdin* const stdin_;
   std::vector<Periodic<Clock>*> periodics_;

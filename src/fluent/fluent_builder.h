@@ -239,7 +239,6 @@ class FluentBuilder<
       std::string name, std::size_t id,
       std::tuple<std::unique_ptr<Collections>...> collections,
       BootstrapRulesTuple boostrap_rules,
-      // std::map<std::string, Parser> parsers,
       std::unique_ptr<NetworkState> network_state, Stdin* stdin,
       std::vector<Periodic<Clock>*> periodics,
       std::unique_ptr<LineageDbClient<Hash, ToSql, Clock>> lineagedb_client)
@@ -247,7 +246,6 @@ class FluentBuilder<
         id_(id),
         collections_(std::move(collections)),
         boostrap_rules_(std::move(boostrap_rules)),
-        // parsers_(std::move(parsers)),
         network_state_(std::move(network_state)),
         stdin_(stdin),
         periodics_(std::move(periodics)),
@@ -259,11 +257,10 @@ class FluentBuilder<
     std::tuple<std::unique_ptr<Collections>..., std::unique_ptr<Collection>>
         collections = std::tuple_cat(std::move(collections_),
                                      std::make_tuple(std::move(c)));
-    return {std::move(name_), id_, std::move(collections),
-            std::move(boostrap_rules_),
-            // std::move(parsers_),
-            std::move(network_state_), stdin_, std::move(periodics_),
-            std::move(lineagedb_client_)};
+    return {std::move(name_),          id_,
+            std::move(collections),    std::move(boostrap_rules_),
+            std::move(network_state_), stdin_,
+            std::move(periodics_),     std::move(lineagedb_client_)};
   }
 
   // See `RegisterBootstrapRules`.
@@ -277,11 +274,10 @@ class FluentBuilder<
     TupleIter(boostrap_rules, [](const auto& rule) {
       LOG(INFO) << "Registering bootstrap rule: " << rule.ToDebugString();
     });
-    return {std::move(name_), id_, std::move(collections_),
-            std::move(boostrap_rules),
-            // std::move(parsers_),
-            std::move(network_state_), stdin_, std::move(periodics_),
-            std::move(lineagedb_client_)};
+    return {std::move(name_),          id_,
+            std::move(collections_),   std::move(boostrap_rules),
+            std::move(network_state_), stdin_,
+            std::move(periodics_),     std::move(lineagedb_client_)};
   }
 
   // See `RegisterRules`.
@@ -297,10 +293,9 @@ class FluentBuilder<
       LOG(INFO) << "Registering rule: " << rule.ToDebugString();
     });
     return Executor::Make(std::move(name_), id_, std::move(collections_),
-                          std::move(boostrap_rules_),  //  std::move(parsers_),
-                          std::move(network_state_), stdin_,
-                          std::move(periodics_), std::move(lineagedb_client_),
-                          std::move(rules));
+                          std::move(boostrap_rules_), std::move(network_state_),
+                          stdin_, std::move(periodics_),
+                          std::move(lineagedb_client_), std::move(rules));
   }
 
   // The name of the fluent program.

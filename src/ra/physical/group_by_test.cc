@@ -1,8 +1,7 @@
+#include "ra/physical/group_by.h"
+
 #include <set>
 #include <tuple>
-#include <map>
-
-#include "ra/physical/group_by.h"
 
 #include "glog/logging.h"
 #include "gtest/gtest.h"

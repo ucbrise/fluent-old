@@ -2,6 +2,7 @@
 #define RA_PHYSICAL_GROUP_BY_H_
 
 #include <type_traits>
+#include <map>
 
 #include "range/v3/all.hpp"
 

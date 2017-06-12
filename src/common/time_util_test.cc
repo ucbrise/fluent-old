@@ -21,10 +21,10 @@ std::string ToString(const std::chrono::time_point<Clock>& t) {
 
 TEST(TimeUtil, TimePointToString) {
   using time = std::chrono::time_point<std::chrono::system_clock>;
-  using ns = std::chrono::nanoseconds;
-  EXPECT_EQ("time(1 ns)", ToString(time(ns(1))));
-  EXPECT_EQ("time(2 ns)", ToString(time(ns(2))));
-  EXPECT_EQ("time(3 ns)", ToString(time(ns(3))));
+  using ms = std::chrono::microseconds;
+  EXPECT_EQ("time(1000 ns)", ToString(time(ms(1))));
+  EXPECT_EQ("time(2000 ns)", ToString(time(ms(2))));
+  EXPECT_EQ("time(3000 ns)", ToString(time(ms(3))));
 }
 
 }  // namespace fluent

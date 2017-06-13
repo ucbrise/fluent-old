@@ -400,7 +400,7 @@ class FluentExecutor<
   WARN_UNUSED Status Receive() {
     time_++;
 
-    zmq::pollitem_t sock_pollitem = {network_state_->socket, 0, ZMQ_POLLIN, 0};
+    zmq::pollitem_t sock_pollitem = {static_cast<void *>(network_state_->socket), 0, ZMQ_POLLIN, 0};
     std::vector<zmq::pollitem_t> pollitems = {sock_pollitem};
     if (stdin_ != nullptr) {
       pollitems.push_back(stdin_->Pollitem());

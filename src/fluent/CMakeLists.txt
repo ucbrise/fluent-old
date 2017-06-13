@@ -3,7 +3,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 ADD_LIBRARY(fluent
     $<TARGET_OBJECTS:collections_object>
     $<TARGET_OBJECTS:common_object>
-    $<TARGET_OBJECTS:common_object>
+    $<TARGET_OBJECTS:zmq_util_object>
     $<TARGET_OBJECTS:lineagedb_object>)
 
 TARGET_LINK_LIBRARIES(fluent

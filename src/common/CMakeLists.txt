@@ -17,6 +17,10 @@ ADD_DEPENDENCIES(common
     fmt
     googlelog)
 
+ADD_DEPENDENCIES(common_object
+    fmt
+    googlelog)
+
 MACRO(CREATE_COMMON_TEST NAME)
     CREATE_NAMED_TEST(common_${NAME} ${NAME})
     TARGET_LINK_LIBRARIES(common_${NAME} common)

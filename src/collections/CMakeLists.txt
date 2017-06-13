@@ -15,6 +15,10 @@ ADD_DEPENDENCIES(collections
     googlelog
     zmq_util)
 
+ADD_DEPENDENCIES(collections_object
+    googlelog
+    zmq_util)
+
 MACRO(CREATE_COLLECTIONS_TEST NAME)
     CREATE_NAMED_TEST(collections_${NAME} ${NAME})
     TARGET_LINK_LIBRARIES(collections_${NAME} collections)

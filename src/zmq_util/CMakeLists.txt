@@ -14,3 +14,8 @@ ADD_DEPENDENCIES(zmq_util
     googlelog
     zeromq
     zeromqcpp)
+
+ADD_DEPENDENCIES(zmq_util_object
+    googlelog
+    zeromq
+    zeromqcpp)

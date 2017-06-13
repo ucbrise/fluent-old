@@ -19,6 +19,12 @@ ADD_DEPENDENCIES(lineagedb
     googlelog
     libpqxx)
 
+ADD_DEPENDENCIES(lineagedb_object
+    common
+    fmt
+    googlelog
+    libpqxx)
+
 MACRO(CREATE_LINEAGEDB_TEST NAME)
     CREATE_NAMED_TEST(lineagedb_${NAME} ${NAME})
     TARGET_LINK_LIBRARIES(lineagedb_${NAME} lineagedb testing)

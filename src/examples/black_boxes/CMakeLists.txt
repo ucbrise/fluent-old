@@ -1,8 +1,9 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
 MACRO(CREATE_BLACK_BOX_EXECUTABLE NAME)
-    ADD_EXECUTABLE(examples_black_boxes_${NAME} ${NAME}.cc)
+    ADD_EXECUTABLE(examples_black_boxes_${NAME} ${NAME})
     TARGET_LINK_LIBRARIES(examples_black_boxes_${NAME} fluent)
+    ADD_DEPENDENCIES(examples_black_boxes_${NAME} fluent)
 ENDMACRO(CREATE_BLACK_BOX_EXECUTABLE)
 
 CREATE_BLACK_BOX_EXECUTABLE(key_value_client)
@@ -13,3 +14,4 @@ CREATE_BLACK_BOX_EXECUTABLE(redis_client)
 CREATE_BLACK_BOX_EXECUTABLE(redis_server)
 
 TARGET_LINK_LIBRARIES(examples_black_boxes_redis_server redox ev hiredis)
+ADD_DEPENDENCIES(examples_black_boxes_redis_server redoxlib)

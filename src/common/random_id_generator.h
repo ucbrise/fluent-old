@@ -1,5 +1,5 @@
-#ifndef EXAMPLES_BLACK_BOXES_RANDOM_ID_GENERATOR_H_
-#define EXAMPLES_BLACK_BOXES_RANDOM_ID_GENERATOR_H_
+#ifndef COMMON_RANDOM_ID_GENERATOR_H_
+#define COMMON_RANDOM_ID_GENERATOR_H_
 
 #include <cstdint>
 
@@ -27,4 +27,4 @@ class RandomIdGenerator {
   std::uniform_int_distribution<std::int64_t> distribution_;
 };
 
-#endif  // EXAMPLES_BLACK_BOXES_RANDOM_ID_GENERATOR_H_
+#endif  // COMMON_RANDOM_ID_GENERATOR_H_

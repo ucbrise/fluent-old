@@ -1,5 +1,5 @@
-#ifndef EXAMPLES_BLACK_BOXES_KEY_VALUE_H_
-#define EXAMPLES_BLACK_BOXES_KEY_VALUE_H_
+#ifndef EXAMPLES_KEY_VALUE_STORE_KEY_VALUE_H_
+#define EXAMPLES_KEY_VALUE_STORE_KEY_VALUE_H_
 
 template <typename FluentBuilder>
 auto AddKeyValueApi(FluentBuilder f) {
@@ -15,4 +15,4 @@ auto AddKeyValueApi(FluentBuilder f) {
           "get_response", {{"addr", "id", "value"}});
 }
 
-#endif  // EXAMPLES_BLACK_BOXES_KEY_VALUE_H_
+#endif  // EXAMPLES_KEY_VALUE_STORE_KEY_VALUE_H_

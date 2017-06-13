@@ -1,5 +1,5 @@
-#ifndef EXAMPLES_BLACK_BOXES_REDIS_H_
-#define EXAMPLES_BLACK_BOXES_REDIS_H_
+#ifndef EXAMPLES_REDIS_REDIS_H_
+#define EXAMPLES_REDIS_REDIS_H_
 
 template <typename FluentBuilder>
 auto AddRedisApi(FluentBuilder f) {
@@ -19,4 +19,4 @@ auto AddRedisApi(FluentBuilder f) {
           "get_response", {{"addr", "id", "value"}});
 }
 
-#endif  // EXAMPLES_BLACK_BOXES_REDIS_H_
+#endif  // EXAMPLES_REDIS_REDIS_H_

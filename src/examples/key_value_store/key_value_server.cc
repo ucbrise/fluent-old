@@ -7,7 +7,7 @@
 #include "zmq.hpp"
 
 #include "common/status.h"
-#include "examples/black_boxes/key_value.h"
+#include "examples/key_value_store/key_value.h"
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"

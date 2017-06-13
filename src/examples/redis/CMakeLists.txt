@@ -6,8 +6,8 @@ MACRO(CREATE_REDIS_EXECUTABLE NAME)
     ADD_DEPENDENCIES(examples_redis_${NAME} fluent)
 ENDMACRO(CREATE_REDIS_EXECUTABLE)
 
-CREATE_REDIS_EXECUTABLE(redis_client)
-CREATE_REDIS_EXECUTABLE(redis_server)
+CREATE_REDIS_EXECUTABLE(client)
+CREATE_REDIS_EXECUTABLE(server)
 
-TARGET_LINK_LIBRARIES(examples_redis_redis_server redox ev hiredis)
-ADD_DEPENDENCIES(examples_redis_redis_server redoxlib)
+TARGET_LINK_LIBRARIES(examples_redis_server redox ev hiredis)
+ADD_DEPENDENCIES(examples_redis_server redoxlib)

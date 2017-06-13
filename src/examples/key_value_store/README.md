@@ -10,8 +10,8 @@ CLIENT_ADDR="tcp://0.0.0.0:9001"
 REDIS_ADDR=localhost
 REDIS_PORT=6379
 
-GLOG_logtostderr=1 ./build/examples_key_value_store_key_value_server \
+GLOG_logtostderr=1 ./build/examples_key_value_store_server \
     $DB_USER $DB_PASS $DB_NAME $SERVER_ADDR
-GLOG_logtostderr=1 ./build/examples_key_value_store_key_value_client \
+GLOG_logtostderr=1 ./build/examples_key_value_store_client \
     $DB_USER $DB_PASS $DB_NAME $SERVER_ADDR $CLIENT_ADDR
 ```

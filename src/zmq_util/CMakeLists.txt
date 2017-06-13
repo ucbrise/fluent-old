@@ -1,7 +1,13 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
 ADD_LIBRARY(zmq_util socket_cache.cc zmq_util.cc)
+
 TARGET_LINK_LIBRARIES(zmq_util
     ${GLOG_LINK_DIRS}/libglog.a
     pthread
     zmq)
+
+ADD_DEPENDENCIES(zmq_util
+    googlelog
+    zeromq
+    zeromqcpp)

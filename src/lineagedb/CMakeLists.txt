@@ -8,12 +8,18 @@ TARGET_LINK_LIBRARIES(lineagedb
     ${LIBPQXX_LINK_DIRS}/libpqxx.a
     common
     pthread
-    pq
-)
+    pq)
+
+ADD_DEPENDENCIES(lineagedb
+    common
+    fmt
+    googlelog
+    libpqxx)
 
 MACRO(CREATE_LINEAGEDB_TEST NAME)
     CREATE_NAMED_TEST(lineagedb_${NAME} ${NAME})
     TARGET_LINK_LIBRARIES(lineagedb_${NAME} lineagedb testing)
+    ADD_DEPENDENCIES(lineagedb_${NAME} lineagedb testing)
 ENDMACRO(CREATE_LINEAGEDB_TEST)
 
 CREATE_LINEAGEDB_TEST(mock_client_test)

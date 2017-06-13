@@ -11,9 +11,14 @@ TARGET_LINK_LIBRARIES(common
     ${GLOG_LINK_DIRS}/libglog.a
     pthread)
 
+ADD_DEPENDENCIES(common
+    fmt
+    googlelog)
+
 MACRO(CREATE_COMMON_TEST NAME)
     CREATE_NAMED_TEST(common_${NAME} ${NAME})
-    TARGET_LINK_LIBRARIES(common_${NAME} common ${GLOG_LINK_DIRS}/libglog.a)
+    TARGET_LINK_LIBRARIES(common_${NAME} common)
+    ADD_DEPENDENCIES(common_${NAME} common)
 ENDMACRO(CREATE_COMMON_TEST)
 
 CREATE_COMMON_TEST(collection_util_test)

@@ -8,7 +8,7 @@
 #include "zmq.hpp"
 
 #include "common/status.h"
-#include "examples/black_boxes/redis.h"
+#include "examples/redis/redis.h"
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"

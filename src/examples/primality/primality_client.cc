@@ -5,9 +5,9 @@
 #include "glog/logging.h"
 #include "zmq.hpp"
 
+#include "common/random_id_generator.h"
 #include "common/status.h"
-#include "examples/black_boxes/primality.h"
-#include "examples/black_boxes/random_id_generator.h"
+#include "examples/primality/primality.h"
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"

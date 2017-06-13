@@ -1,6 +1,9 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
-ADD_LIBRARY(lineagedb connection_config.cc)
+SET(LINEAGEDB_SOURCES connection_config.cc)
+
+ADD_LIBRARY(lineagedb ${LINEAGEDB_SOURCES})
+ADD_LIBRARY(lineagedb_object OBJECT ${LINEAGEDB_SOURCES})
 
 TARGET_LINK_LIBRARIES(lineagedb
     ${FMT_LINK_DIRS}/libfmt.a

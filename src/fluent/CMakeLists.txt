@@ -1,17 +1,23 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
-ADD_LIBRARY(fluent INTERFACE)
+ADD_LIBRARY(fluent
+    $<TARGET_OBJECTS:collections_object>
+    $<TARGET_OBJECTS:common_object>
+    $<TARGET_OBJECTS:common_object>
+    $<TARGET_OBJECTS:lineagedb_object>)
 
-TARGET_LINK_LIBRARIES(fluent INTERFACE
+TARGET_LINK_LIBRARIES(fluent
     ${FMT_LINK_DIRS}/libfmt.a
     ${GLOG_LINK_DIRS}/libglog.a
     collections
+    common
     lineagedb
     pthread
     zmq_util)
 
-ADD_DEPENDENCIES(fluent INTERFACE
+ADD_DEPENDENCIES(fluent
     collections
+    common
     fmt
     googlelog
     lineagedb

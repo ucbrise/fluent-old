@@ -1,10 +1,12 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
-ADD_LIBRARY(common
+SET(COMMON_SOURCES
     error_code.cc
     status.cc
-    string_util.cc
-)
+    string_util.cc)
+
+ADD_LIBRARY(common ${COMMON_SOURCES})
+ADD_LIBRARY(common_object OBJECT ${COMMON_SOURCES})
 
 TARGET_LINK_LIBRARIES(common
     ${FMT_LINK_DIRS}/libfmt.a

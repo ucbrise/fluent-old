@@ -113,7 +113,7 @@ class InjectablePqxxClient {
       InjectablePqxxClient client(std::move(name), id, std::move(address),
                                   connection_config);
       RETURN_IF_ERROR(client.Init());
-      return client;
+      return std::move(client);
     } catch (const pqxx::pqxx_exception& e) {
       return Status(ErrorCode::INVALID_ARGUMENT, e.base().what());
     }

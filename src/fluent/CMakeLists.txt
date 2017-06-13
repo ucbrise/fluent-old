@@ -3,9 +3,10 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 ADD_LIBRARY(fluent INTERFACE)
 TARGET_LINK_LIBRARIES(fluent INTERFACE
     ${FMT_LINK_DIRS}/libfmt.a
+    ${GLOG_LINK_DIRS}/libglog.a
     collections
-    glog
     lineagedb
+    pthread
     zmq_util)
 
 MACRO(CREATE_FLUENT_TEST NAME)

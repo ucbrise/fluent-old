@@ -110,8 +110,13 @@ TEST(GroupBy, VariadicAvg) {
 }
 
 TEST(GroupBy, SimpleUnion) {
-  std::set<std::tuple<int, std::set<int>>> xs = {{0, {0}}, {0, {1}}, {1, {2}},
-                                                 {1, {3}}, {1, {4}}, {2, {5}}};
+  std::set<std::tuple<int, std::set<int>>> xs = {
+      std::make_tuple(0, std::set<int>({0})),
+      std::make_tuple(0, std::set<int>({1})),
+      std::make_tuple(1, std::set<int>({2})),
+      std::make_tuple(1, std::set<int>({3})),
+      std::make_tuple(1, std::set<int>({4})),
+      std::make_tuple(2, std::set<int>({5}))};
   auto it = pra::make_iterable(&xs);
   using keys = ra::Keys<0>;
   using key_tuple = std::tuple<int>;
@@ -119,14 +124,20 @@ TEST(GroupBy, SimpleUnion) {
       std::tuple<ra::agg::UnionImpl<SizetList<1>, TypeList<std::set<int>>>>;
   auto group_by = pra::make_group_by<keys, key_tuple, agg_impls>(std::move(it));
   std::set<std::tuple<int, std::set<int>>> expected = {
-      {0, {0, 1}}, {1, {2, 3, 4}}, {2, {5}}};
+      std::make_tuple(0, std::set<int>({0, 1})),
+      std::make_tuple(1, std::set<int>({2, 3, 4})),
+      std::make_tuple(2, std::set<int>({5}))};
   ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
 }
 
 TEST(GroupBy, VariadicUnion) {
   std::set<std::tuple<int, std::set<int>, std::set<int>>> xs = {
-      {0, {0}, {2}}, {0, {1}, {3}}, {1, {2}, {5}},
-      {1, {3}, {6}}, {1, {4}, {7}}, {2, {5}, {5}}};
+      std::make_tuple(0, std::set<int>({0}), std::set<int>({2})),
+      std::make_tuple(0, std::set<int>({1}), std::set<int>({3})),
+      std::make_tuple(1, std::set<int>({2}), std::set<int>({5})),
+      std::make_tuple(1, std::set<int>({3}), std::set<int>({6})),
+      std::make_tuple(1, std::set<int>({4}), std::set<int>({7})),
+      std::make_tuple(2, std::set<int>({5}), std::set<int>({5}))};
   auto it = pra::make_iterable(&xs);
   using keys = ra::Keys<0>;
   using key_tuple = std::tuple<int>;
@@ -135,7 +146,9 @@ TEST(GroupBy, VariadicUnion) {
                                     TypeList<std::set<int>, std::set<int>>>>;
   auto group_by = pra::make_group_by<keys, key_tuple, agg_impls>(std::move(it));
   std::set<std::tuple<int, std::set<int>>> expected = {
-      {0, {0, 1, 2, 3}}, {1, {2, 3, 4, 5, 6, 7}}, {2, {5}}};
+      std::make_tuple(0, std::set<int>({0, 1, 2, 3})),
+      std::make_tuple(1, std::set<int>({2, 3, 4, 5, 6, 7})),
+      std::make_tuple(2, std::set<int>({5}))};
   ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
 }
 

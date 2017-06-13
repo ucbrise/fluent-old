@@ -19,7 +19,8 @@ namespace {
 
 std::tuple<std::size_t, const std::set<int>&> ToTuple(
     const CollectionTupleIds& ids) {
-  return {ids.hash, ids.logical_times_inserted};
+  return std::tuple<std::size_t, const std::set<int>&>(
+      ids.hash, ids.logical_times_inserted);
 }
 
 }  // namespace

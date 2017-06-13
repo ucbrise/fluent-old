@@ -20,7 +20,8 @@ namespace {
 
 std::tuple<const std::string&, std::size_t, int> ToTuple(
     const LocalTupleId& id) {
-  return {id.collection_name, id.hash, id.logical_time_inserted};
+  return std::tuple<const std::string&, std::size_t, int>(
+      id.collection_name, id.hash, id.logical_time_inserted);
 }
 
 }  // namespace

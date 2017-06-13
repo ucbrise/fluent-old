@@ -20,7 +20,7 @@ std::string ToString(const std::chrono::time_point<Clock>& t) {
 }  // namespace
 
 TEST(TimeUtil, TimePointToString) {
-  using time = std::chrono::time_point<std::chrono::system_clock>;
+  using time = std::chrono::time_point<std::chrono::high_resolution_clock>;
   using ns = std::chrono::nanoseconds;
   EXPECT_EQ("time(1 ns)", ToString(time(ns(1))));
   EXPECT_EQ("time(2 ns)", ToString(time(ns(2))));

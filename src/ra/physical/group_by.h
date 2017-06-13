@@ -1,6 +1,7 @@
 #ifndef RA_PHYSICAL_GROUP_BY_H_
 #define RA_PHYSICAL_GROUP_BY_H_
 
+#include <map>
 #include <type_traits>
 
 #include "range/v3/all.hpp"

@@ -4,9 +4,10 @@ ADD_LIBRARY(lineagedb connection_config.cc)
 
 TARGET_LINK_LIBRARIES(lineagedb
     ${FMT_LINK_DIRS}/libfmt.a
+    ${GLOG_LINK_DIRS}/libglog.a
     ${LIBPQXX_LINK_DIRS}/libpqxx.a
     common
-    glog
+    pthread
     pq
 )
 

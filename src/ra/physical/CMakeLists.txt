@@ -4,8 +4,9 @@ MACRO(CREATE_RA_PHYSICAL_TEST NAME)
     CREATE_NAMED_TEST(ra_physical_${NAME} ${NAME})
     TARGET_LINK_LIBRARIES(ra_physical_${NAME}
         ${FMT_LINK_DIRS}/libfmt.a
+        ${GLOG_LINK_DIRS}/libglog.a
         common
-        ${GLOG_LINK_DIRS}/libglog.a)
+        pthread)
 ENDMACRO(CREATE_RA_PHYSICAL_TEST)
 
 CREATE_RA_PHYSICAL_TEST(cross_test)

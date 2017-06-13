@@ -9,7 +9,7 @@ ADD_LIBRARY(common
 TARGET_LINK_LIBRARIES(common
     ${FMT_LINK_DIRS}/libfmt.a
     ${GLOG_LINK_DIRS}/libglog.a
-)
+    pthread)
 
 MACRO(CREATE_COMMON_TEST NAME)
     CREATE_NAMED_TEST(common_${NAME} ${NAME})

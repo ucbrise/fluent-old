@@ -4,6 +4,7 @@ ADD_LIBRARY(collections
     collection_util.cc)
 TARGET_LINK_LIBRARIES(collections
     ${GLOG_LINK_DIRS}/libglog.a
+    pthread
     zmq
     zmq_util)
 

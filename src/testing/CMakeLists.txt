@@ -6,7 +6,11 @@ ADD_LIBRARY(testing
 
 MACRO(CREATE_TESTING_TEST NAME)
     CREATE_NAMED_TEST(testing_${NAME} ${NAME})
-    TARGET_LINK_LIBRARIES(testing_${NAME} testing common ${GLOG_LINK_DIRS}/libglog.a)
+    TARGET_LINK_LIBRARIES(testing_${NAME}
+        ${GLOG_LINK_DIRS}/libglog.a
+        common
+        pthread
+        testing)
 ENDMACRO(CREATE_TESTING_TEST)
 
 CREATE_TESTING_TEST(captured_stdout_test)

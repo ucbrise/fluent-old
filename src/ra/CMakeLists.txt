@@ -2,11 +2,8 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
 MACRO(CREATE_RA_TEST NAME)
     CREATE_NAMED_TEST(ra_${NAME} ${NAME})
-    TARGET_LINK_LIBRARIES(ra_${NAME}
-        ${FMT_LINK_DIRS}/libfmt.a
-        ${GLOG_LINK_DIRS}/libglog.a
-        common
-        pthread)
+    TARGET_LINK_LIBRARIES(ra_${NAME} ${FMT_LINK_DIRS}/libfmt.a common)
+    ADD_DEPENDENCIES(ra_${NAME} common fmt)
 ENDMACRO(CREATE_RA_TEST)
 
 CREATE_RA_TEST(logical_to_physical_test)

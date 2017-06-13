@@ -9,8 +9,8 @@ MACRO(CREATE_NAMED_BENCHMARK NAME FILENAME)
     ADD_DEPENDENCIES(${NAME} googlebenchmark)
     TARGET_LINK_LIBRARIES(${NAME}
         ${GBENCH_LIBS_DIR}/libbenchmark.a
-        pthread
-    )
+        ${GLOG_LINK_DIRS}/libglog.a
+        pthread)
 ENDMACRO(CREATE_NAMED_BENCHMARK)
 
 # CREATE_BENCHMARK(foo) creates a benchmark named `foo` from the file `foo.cc`.

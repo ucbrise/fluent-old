@@ -1,6 +1,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
 ADD_LIBRARY(fluent INTERFACE)
+
 TARGET_LINK_LIBRARIES(fluent INTERFACE
     ${FMT_LINK_DIRS}/libfmt.a
     ${GLOG_LINK_DIRS}/libglog.a
@@ -9,9 +10,17 @@ TARGET_LINK_LIBRARIES(fluent INTERFACE
     pthread
     zmq_util)
 
+ADD_DEPENDENCIES(fluent INTERFACE
+    collections
+    fmt
+    googlelog
+    lineagedb
+    zmq_util)
+
 MACRO(CREATE_FLUENT_TEST NAME)
     CREATE_NAMED_TEST(fluent_${NAME} ${NAME})
     TARGET_LINK_LIBRARIES(fluent_${NAME} fluent testing)
+    ADD_DEPENDENCIES(fluent_${NAME} fluent testing)
 ENDMACRO(CREATE_FLUENT_TEST)
 
 CREATE_FLUENT_TEST(fluent_builder_test)

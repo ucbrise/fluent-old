@@ -12,8 +12,8 @@ env:
 - TEST_TYPE=Debug
 - TEST_TYPE=Release
 install:
-- if [[$" TRAVIS_OS_NAME" == "linux"]]; then ./scripts/install_dependencies.sh; fi
-- if [[$" TRAVIS_OS_NAME" == "osx"]]; then ./scripts/install_dependencies_osx.sh; fi
+- if [[$"TRAVIS_OS_NAME" == "linux"]]; then ./scripts/install_dependencies.sh; fi
+- if [[$"TRAVIS_OS_NAME" == "osx"]]; then ./scripts/install_dependencies_osx.sh; fi
 before_script:
 - export PATH="/usr/bin:$PATH"
 - ./scripts/print_diagnostics.sh

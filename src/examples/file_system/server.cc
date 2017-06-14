@@ -17,7 +17,7 @@ namespace zmq_util = fluent::zmq_util;
 // file server manages a single file which is actually just a string. Intially,
 // the string is of length zero. Its API has two functions:
 //
-//   1. void write(offset: int, bytes: string)
+//   1. void write(start: int, bytes: string)
 //   2. string read(start: int, stop: int)
 //
 // Writing to the string extends it with spaces. Reading from the string
@@ -47,10 +47,10 @@ void worker(zmq::context_t* context) {
     std::vector<std::string> parts = fluent::Split(msg);
 
     if (parts.size() == 3 && parts[0] == "write") {
-      const int offset = std::stoi(parts[1]);
+      const int start = std::stoi(parts[1]);
       const std::string& s = parts[2];
-      file.resize(std::max(file.size(), offset + s.size()), ' ');
-      file.insert(offset, s);
+      file.resize(std::max(file.size(), start + s.size()), ' ');
+      file.insert(start, s);
       zmq_util::send_string("OK", &socket);
     } else if (parts.size() == 3 && parts[0] == "read") {
       const int start = std::max(std::stoi(parts[1]), 0);

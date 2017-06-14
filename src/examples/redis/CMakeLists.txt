@@ -1,0 +1,13 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
+
+MACRO(CREATE_REDIS_EXECUTABLE NAME)
+    ADD_EXECUTABLE(examples_redis_${NAME} ${NAME})
+    TARGET_LINK_LIBRARIES(examples_redis_${NAME} fluent)
+    ADD_DEPENDENCIES(examples_redis_${NAME} fluent)
+ENDMACRO(CREATE_REDIS_EXECUTABLE)
+
+CREATE_REDIS_EXECUTABLE(client)
+CREATE_REDIS_EXECUTABLE(server)
+
+TARGET_LINK_LIBRARIES(examples_redis_server redox ev hiredis)
+ADD_DEPENDENCIES(examples_redis_server redoxlib)

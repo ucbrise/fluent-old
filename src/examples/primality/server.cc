@@ -5,7 +5,7 @@
 #include "zmq.hpp"
 
 #include "common/status.h"
-#include "examples/black_boxes/primality.h"
+#include "examples/primality/primality.h"
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"

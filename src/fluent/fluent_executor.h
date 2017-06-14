@@ -21,6 +21,7 @@
 #include "collections/all.h"
 #include "collections/collection_util.h"
 #include "common/macros.h"
+#include "common/static_assert.h"
 #include "common/status.h"
 #include "common/status_macros.h"
 #include "common/status_or.h"
@@ -344,10 +345,17 @@ class FluentExecutor<
   // [1]: https://goo.gl/yGmr78
   template <std::size_t RequestIndex, std::size_t ResponseIndex, typename F>
   WARN_UNUSED Status RegisterBlackBoxLineage(F f) {
-    static_assert(RequestIndex < sizeof...(Collections),
+    using num_collections = sizet_constant<sizeof...(Collections)>;
+    using req_index = sizet_constant<RequestIndex>;
+    using resp_index = sizet_constant<ResponseIndex>;
+    static_assert(StaticAssert<Lt<req_index, num_collections>>::value,
                   "RequestIndex out of bounds.");
-    static_assert(ResponseIndex < sizeof...(Collections),
+    static_assert(StaticAssert<Lt<resp_index, num_collections>>::value,
                   "ResponseIndex out of bounds.");
+    static_assert(StaticAssert<Ne<req_index, resp_index>>::value,
+                  "The same channel cannot be simultaneously a request and a "
+                  "response channel.");
+
     using RequestType =
         typename std::decay<decltype(Get<RequestIndex>())>::type;
     using ResponseType =
@@ -358,9 +366,6 @@ class FluentExecutor<
     static_assert(
         GetCollectionType<ResponseType>::value == CollectionType::CHANNEL,
         "Request collection is not a channel.");
-    static_assert(RequestIndex != ResponseIndex,
-                  "The same channel cannot be simultaneously a request and a "
-                  "response channel.");
     return RegisterBlackBoxLineageImpl(Get<RequestIndex>(),
                                        Get<ResponseIndex>(), f);
   }
@@ -400,7 +405,8 @@ class FluentExecutor<
   WARN_UNUSED Status Receive() {
     time_++;
 
-    zmq::pollitem_t sock_pollitem = {static_cast<void *>(network_state_->socket), 0, ZMQ_POLLIN, 0};
+    zmq::pollitem_t sock_pollitem = {static_cast<void*>(network_state_->socket),
+                                     0, ZMQ_POLLIN, 0};
     std::vector<zmq::pollitem_t> pollitems = {sock_pollitem};
     if (stdin_ != nullptr) {
       pollitems.push_back(stdin_->Pollitem());
@@ -611,9 +617,12 @@ class FluentExecutor<
     using RequestType0 = typename TypeListGet<RequestTypes, 0>::type;
     using RequestType1 = typename TypeListGet<RequestTypes, 1>::type;
     using RequestType2 = typename TypeListGet<RequestTypes, 2>::type;
-    static_assert(std::is_same<std::string, RequestType0>::value, "");
-    static_assert(std::is_same<std::string, RequestType1>::value, "");
-    static_assert(std::is_same<std::int64_t, RequestType2>::value, "");
+    using correct_req_type_0 = std::is_same<std::string, RequestType0>;
+    using correct_req_type_1 = std::is_same<std::string, RequestType1>;
+    using correct_req_type_2 = std::is_same<std::int64_t, RequestType2>;
+    static_assert(StaticAssert<correct_req_type_0>::value, "");
+    static_assert(StaticAssert<correct_req_type_1>::value, "");
+    static_assert(StaticAssert<correct_req_type_2>::value, "");
 
     // Validate response types.
     if (response.ColumnNames().size() < static_cast<std::size_t>(2) ||
@@ -628,8 +637,10 @@ class FluentExecutor<
     using ResponseTypes = TypeList<ResponseTs...>;
     using ResponseType0 = typename TypeListGet<ResponseTypes, 0>::type;
     using ResponseType1 = typename TypeListGet<ResponseTypes, 1>::type;
-    static_assert(std::is_same<std::string, ResponseType0>::value, "");
-    static_assert(std::is_same<std::int64_t, ResponseType1>::value, "");
+    using correct_resp_type_0 = std::is_same<std::string, ResponseType0>;
+    using correct_resp_type_1 = std::is_same<std::int64_t, ResponseType1>;
+    static_assert(StaticAssert<correct_resp_type_0>::value, "");
+    static_assert(StaticAssert<correct_resp_type_1>::value, "");
 
     // Collect argument and return types.
     using ArgTypes = typename TypeListDrop<RequestTypes, 3>::type;

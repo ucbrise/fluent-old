@@ -1,5 +1,5 @@
-#ifndef EXAMPLES_BLACK_BOXES_PRIMALITY_H_
-#define EXAMPLES_BLACK_BOXES_PRIMALITY_H_
+#ifndef EXAMPLES_PRIMALITY_PRIMALITY_H_
+#define EXAMPLES_PRIMALITY_PRIMALITY_H_
 
 template <typename FluentBuilder>
 auto AddPrimalityApi(FluentBuilder f) {
@@ -10,4 +10,4 @@ auto AddPrimalityApi(FluentBuilder f) {
           "is_prime_response", {{"addr", "id", "is_prime"}});
 }
 
-#endif  // EXAMPLES_BLACK_BOXES_PRIMALITY_H_
+#endif  // EXAMPLES_PRIMALITY_PRIMALITY_H_

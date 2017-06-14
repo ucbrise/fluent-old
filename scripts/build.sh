@@ -27,8 +27,8 @@ main() {
 
     cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
           -DCMAKE_BUILD_TYPE="$build_type" \
-          -Hsrc -Bbuild
-    cmake --build build -- -j "$j"
+          -Hsrc -Bbuild/${build_type}
+    cmake --build build/${build_type} -- -j "$j"
 }
 
 main "$@"

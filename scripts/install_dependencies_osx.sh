@@ -18,8 +18,6 @@ main() {
     set -x
     brew update
     install_misc
-    # install_clang
-    # install_gpp
     install_cmake
     install_redis
     set +x

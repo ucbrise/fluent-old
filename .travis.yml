@@ -1,13 +1,13 @@
 language: cpp
 sudo: required
 dist: trusty
+osx_image: xcode8.3
 compiler:
 - clang
 - gcc
 os: 
 - linux
 - osx
-  osx_image: xcode8.3
 env:
 - TEST_TYPE=Debug
 - TEST_TYPE=Release

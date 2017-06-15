@@ -51,6 +51,8 @@ install_redis() {
 
 main() {
     set -x
+    sudo apt-get -y update
+    sudo apt-get -y upgrade
     install_misc
     install_clang
     install_gpp

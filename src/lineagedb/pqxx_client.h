@@ -133,16 +133,17 @@ class InjectablePqxxClient {
                     "Lineage is a reserved collection name.");
     }
 
-    RETURN_IF_ERROR(ExecuteQuery("AddCollection",
-                                 fmt::format(
-                                     R"(
+    RETURN_IF_ERROR(ExecuteQuery(
+        "AddCollection",
+        fmt::format(
+            R"(
       INSERT INTO Collections (node_id, collection_name, collection_type,
-                               column_names, black_box_lineage)
-      VALUES ({});
+                               column_names, lineage_type,
+                               python_lineage_method)
+      VALUES ({}, 'regular', NULL);
     )",
-                                     Join(SqlValues(std::make_tuple(
-                                         id_, collection_name, collection_type,
-                                         column_names, false))))));
+            Join(SqlValues(std::make_tuple(id_, collection_name,
+                                           collection_type, column_names))))));
 
     std::vector<std::string> types = SqlTypes<Ts...>();
     std::vector<std::string> columns;
@@ -258,7 +259,7 @@ class InjectablePqxxClient {
                           const std::vector<std::string>& lineage_commands) {
     const std::string query_template = R"(
       UPDATE Collections
-      SET black_box_lineage = true
+      SET lineage_type = 'sql'
       WHERE node_id = {} AND collection_name = {};
     )";
     const std::string query =
@@ -270,6 +271,37 @@ class InjectablePqxxClient {
       RETURN_IF_ERROR(ExecuteQuery("LineageCommand", lineage_command));
     }
 
+    return Status::OK;
+  }
+
+  // TODO(mwhittaker): Escape python_file string.
+  WARN_UNUSED Status
+  RegisterBlackBoxPythonLineageScript(const std::string& script) {
+    // The 'E' makes the python_lineage_file an escaped string. See
+    // https://stackoverflow.com/a/26638775/3187068 for details.
+    const std::string query_template = R"(
+      UPDATE Nodes
+      SET python_lineage_script = E{}
+      WHERE node_id = {};
+    )";
+    const std::string query =
+        fmt::format(query_template, SqlValue(script),
+                    SqlValue(detail::size_t_to_int64(id_)));
+    RETURN_IF_ERROR(ExecuteQuery("SetBlackBoxPythonLineageScript", query));
+    return Status::OK;
+  }
+
+  WARN_UNUSED Status RegisterBlackBoxPythonLineage(
+      const std::string& collection_name, const std::string& method) {
+    const std::string query_template = R"(
+      UPDATE Collections
+      SET python_lineage_method = {}
+      WHERE node_id = {} AND collection_name = {};
+    )";
+    const std::string query = fmt::format(
+        query_template, SqlValue(method),
+        SqlValue(detail::size_t_to_int64(id_)), SqlValue(collection_name));
+    RETURN_IF_ERROR(ExecuteQuery("SetBlackBoxPythonLineage", query));
     return Status::OK;
   }
 
@@ -290,8 +322,8 @@ class InjectablePqxxClient {
     RETURN_IF_ERROR(ExecuteQuery(
         "Init",
         fmt::format(R"(
-      INSERT INTO Nodes (id, name, address)
-      VALUES ({});
+      INSERT INTO Nodes (id, name, address, python_lineage_script)
+      VALUES ({}, NULL);
     )",
                     Join(SqlValues(std::make_tuple(id_, name_, address_))))));
 

@@ -52,7 +52,7 @@ install_redis() {
 main() {
     set -x
     sudo apt-get -y update
-    sudo apt-get -y upgrade
+    sudo apt-get -y upgrade libc-bin libc-dev-bin libc6 libc6-dev linux-libc-dev
     install_misc
     install_clang
     install_gpp

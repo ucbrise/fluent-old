@@ -3,6 +3,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 SET(COMMON_SOURCES
     error_code.cc
     file_util.cc
+    rand_util.cc
     status.cc
     string_util.cc)
 

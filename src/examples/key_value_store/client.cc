@@ -7,7 +7,7 @@
 #include "glog/logging.h"
 #include "zmq.hpp"
 
-#include "common/random_id_generator.h"
+#include "common/rand_util.h"
 #include "common/status.h"
 #include "common/string_util.h"
 #include "examples/key_value_store/key_value.h"
@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
 
   const std::string server_address = argv[4];
   const std::string client_address = argv[5];
-  RandomIdGenerator id_gen;
+  fluent::RandomIdGenerator id_gen;
 
   zmq::context_t context(1);
   ldb::ConnectionConfig config{"localhost", 5432, argv[1], argv[2], argv[3]};

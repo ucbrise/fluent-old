@@ -1,10 +1,21 @@
-#ifndef COMMON_RANDOM_ID_GENERATOR_H_
-#define COMMON_RANDOM_ID_GENERATOR_H_
+#ifndef COMMON_RAND_UTIL_H_
+#define COMMON_RAND_UTIL_H_
 
 #include <cstdint>
 
 #include <limits>
 #include <random>
+#include <string>
+
+namespace fluent {
+
+// Returns a random string `xs` of length `len` where each character in `x` is
+// one of the following characters:
+//
+// abcdefghijklmnopqrstuvwxyz
+// ABCDEFGHIJKLMNOPQRSTUVWXYZ
+// 0123456789
+std::string RandomAlphanum(int len);
 
 // A struct which randomly generates 64 bit unique ids uniformally at random.
 //
@@ -27,4 +38,6 @@ class RandomIdGenerator {
   std::uniform_int_distribution<std::int64_t> distribution_;
 };
 
-#endif  // COMMON_RANDOM_ID_GENERATOR_H_
+}  // namespace fluent
+
+#endif  // COMMON_RAND_UTIL_H_

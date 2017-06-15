@@ -27,6 +27,7 @@ main() {
             "$bench" --benchmark_format=csv 2>/dev/null | tail -n +2
         fi
     done
+  fi
 }
 
 main "$@"

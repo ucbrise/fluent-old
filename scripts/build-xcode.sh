@@ -7,4 +7,4 @@ main() {
           -Hsrc -Bbuild/xcode -G Xcode
 }
 
-main "$@"
+main

@@ -99,29 +99,22 @@ This fluent program has three collections---
 Information about this program, its collections, and its rules are found in the
 `Nodes`, `Collections`, and `Rules` tables within the postgres database.
 
-- The `Nodes(id, name, address)` relation holds the name, id (the hash of the
-  name), and address for every fluent program.
-- The `Collections(node_id, collection_name, collection_type, column_names)`
-  relation holds the name and type of every collection of every fluent program.
-- The `Rules(node_id, rule_number, is_bootstrap, rule)` relation holds every
-  rule of every fluent program.
-
 ```
 > SELECT * FROM Nodes;
-+----+------------+-----------+
-| id | name       | address   |
-|----+------------+-----------+
-| 42 | my_program | 127.0.0.1 |
-+----+------------+-----------+
++----+------------+-----------+-----------------------+
+| id | name       | address   | python_lineage_script |
+|----+------------+-----------+-----------------------+
+| 42 | my_program | 127.0.0.1 | NULL                  |
++----+------------+-----------+-----------------------+
 
 > SELECT * FROM Collections;
-+---------+-----------------+-----------------+---------------+
-| node_id | collection_name | collection_type | column_names  |
-|---------+-----------------+-----------------+---------------+
-| 42      | my_table        | Table           | ['x', 'y']    |
-| 42      | my_sratch       | Scratch         | ['x']         |
-| 42      | my_channel      | Channel         | ['addr', 'x'] |
-+---------+-----------------+-----------------+---------------+
++---------+-----------------+-----------------+---------------+--------------+-----------------------+
+| node_id | collection_name | collection_type | column_names  | lineage_type | python_lineage_method |
+|---------+-----------------+-----------------+---------------+--------------+-----------------------+
+| 42      | my_table        | Table           | ['x', 'y']    | regular      | NULL                  |
+| 42      | my_sratch       | Scratch         | ['x']         | regular      | NULL                  |
+| 42      | my_channel      | Channel         | ['addr', 'x'] | regular      | NULL                  |
++---------+-----------------+-----------------+---------------+--------------+-----------------------+
 
 > SELECT * FROM Rules;
 +---------+-------------+--------------+--------+

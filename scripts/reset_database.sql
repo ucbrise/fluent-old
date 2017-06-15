@@ -4,18 +4,22 @@
 DROP SCHEMA PUBLIC CASCADE;
 CREATE SCHEMA PUBLIC;
 
+CREATE TYPE lineage_type AS ENUM ('regular', 'sql', 'python');
+
 CREATE TABLE Nodes (
-    id      bigint PRIMARY KEY,
-    name    text   NOT NULL,
-    address text   NOT NULL
+    id                    bigint PRIMARY KEY,
+    name                  text   NOT NULL,
+    address               text   NOT NULL,
+    python_lineage_script text
 );
 
 CREATE TABLE Collections (
-    node_id           bigint  NOT NULL,
-    collection_name   text    NOT NULL,
-    collection_type   text    NOT NULL,
-    column_names      text[]  NOT NULL,
-    black_box_lineage boolean NOT NULL,
+    node_id               bigint       NOT NULL,
+    collection_name       text         NOT NULL,
+    collection_type       text         NOT NULL,
+    column_names          text[]       NOT NULL,
+    lineage_type          lineage_type NOT NULL,
+    python_lineage_method text,
     PRIMARY KEY (node_id, collection_name)
 );
 

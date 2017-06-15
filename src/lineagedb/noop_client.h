@@ -74,6 +74,15 @@ class NoopClient {
     return Status::OK;
   }
 
+  WARN_UNUSED Status RegisterBlackBoxPythonLineageScript(const std::string&) {
+    return Status::OK;
+  }
+
+  WARN_UNUSED Status RegisterBlackBoxPythonLineage(const std::string&,
+                                                   const std::string&) {
+    return Status::OK;
+  }
+
  private:
   NoopClient() = default;
 };

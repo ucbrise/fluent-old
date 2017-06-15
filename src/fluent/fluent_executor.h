@@ -345,29 +345,22 @@ class FluentExecutor<
   // [1]: https://goo.gl/yGmr78
   template <std::size_t RequestIndex, std::size_t ResponseIndex, typename F>
   WARN_UNUSED Status RegisterBlackBoxLineage(F f) {
-    using num_collections = sizet_constant<sizeof...(Collections)>;
-    using req_index = sizet_constant<RequestIndex>;
-    using resp_index = sizet_constant<ResponseIndex>;
-    static_assert(StaticAssert<Lt<req_index, num_collections>>::value,
-                  "RequestIndex out of bounds.");
-    static_assert(StaticAssert<Lt<resp_index, num_collections>>::value,
-                  "ResponseIndex out of bounds.");
-    static_assert(StaticAssert<Ne<req_index, resp_index>>::value,
-                  "The same channel cannot be simultaneously a request and a "
-                  "response channel.");
-
-    using RequestType =
-        typename std::decay<decltype(Get<RequestIndex>())>::type;
-    using ResponseType =
-        typename std::decay<decltype(Get<ResponseIndex>())>::type;
-    static_assert(
-        GetCollectionType<RequestType>::value == CollectionType::CHANNEL,
-        "Request collection is not a channel.");
-    static_assert(
-        GetCollectionType<ResponseType>::value == CollectionType::CHANNEL,
-        "Request collection is not a channel.");
+    ValidateBlackBoxIndexes<RequestIndex, ResponseIndex>();
     return RegisterBlackBoxLineageImpl(Get<RequestIndex>(),
                                        Get<ResponseIndex>(), f);
+  }
+
+  WARN_UNUSED Status
+  RegisterBlackBoxPythonLineageScript(const std::string& script) {
+    return lineagedb_client_->RegisterBlackBoxPythonLineageScript(script);
+  }
+
+  template <std::size_t RequestIndex, std::size_t ResponseIndex>
+  WARN_UNUSED Status RegisterBlackBoxPythonLineage(const std::string& method) {
+    ValidateBlackBoxIndexes<RequestIndex, ResponseIndex>();
+    const std::string collection_name = Get<ResponseIndex>().Name();
+    return lineagedb_client_->RegisterBlackBoxPythonLineage(collection_name,
+                                                            method);
   }
 
   // Sequentially execute each registered bootstrap query and then invoke the
@@ -584,6 +577,31 @@ class FluentExecutor<
       timeout_queue_.push(timeout);
     }
     return Status::OK;
+  }
+
+  template <std::size_t RequestIndex, std::size_t ResponseIndex>
+  void ValidateBlackBoxIndexes() {
+    using num_collections = sizet_constant<sizeof...(Collections)>;
+    using req_index = sizet_constant<RequestIndex>;
+    using resp_index = sizet_constant<ResponseIndex>;
+    static_assert(StaticAssert<Lt<req_index, num_collections>>::value,
+                  "RequestIndex out of bounds.");
+    static_assert(StaticAssert<Lt<resp_index, num_collections>>::value,
+                  "ResponseIndex out of bounds.");
+    static_assert(StaticAssert<Ne<req_index, resp_index>>::value,
+                  "The same channel cannot be simultaneously a request and a "
+                  "response channel.");
+
+    using RequestType =
+        typename std::decay<decltype(Get<RequestIndex>())>::type;
+    using ResponseType =
+        typename std::decay<decltype(Get<ResponseIndex>())>::type;
+    static_assert(
+        GetCollectionType<RequestType>::value == CollectionType::CHANNEL,
+        "Request collection is not a channel.");
+    static_assert(
+        GetCollectionType<ResponseType>::value == CollectionType::CHANNEL,
+        "Request collection is not a channel.");
   }
 
   // See RegisterBlackBoxLineage.

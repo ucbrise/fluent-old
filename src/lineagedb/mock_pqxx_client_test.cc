@@ -35,8 +35,8 @@ TEST(MockPqxxClient, Init) {
   std::vector<std::pair<std::string, std::string>> queries = client.Queries();
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(2));
   ExpectStringsEqualIgnoreWhiteSpace(queries[0].second, R"(
-    INSERT INTO Nodes (id, name, address)
-    VALUES (9001, 'name', '127.0.0.1');
+    INSERT INTO Nodes (id, name, address, python_lineage_script)
+    VALUES (9001, 'name', '127.0.0.1', NULL);
   )");
   ExpectStringsEqualIgnoreWhiteSpace(queries[1].second, R"(
     CREATE TABLE name_lineage (
@@ -68,8 +68,8 @@ TEST(MockPqxxClient, AddCollection) {
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(4));
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, R"(
     INSERT INTO Collections (node_id, collection_name, collection_type,
-                             column_names, black_box_lineage)
-    VALUES (9001, 't', 'Table', ARRAY['x', 'c', 'b'], false);
+                             column_names, lineage_type, python_lineage_method)
+    VALUES (9001, 't', 'Table', ARRAY['x', 'c', 'b'], 'regular', NULL);
   )");
   ExpectStringsEqualIgnoreWhiteSpace(queries[3].second, R"(
     CREATE TABLE name_t (
@@ -215,22 +215,74 @@ TEST(MockPqxxClient, RegisterBlackBoxLineage) {
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(8));
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, R"(
     UPDATE Collections
-    SET black_box_lineage = true
+    SET lineage_type = 'sql'
     WHERE node_id = 9001 AND collection_name = bar;
   )");
   ExpectStringsEqualIgnoreWhiteSpace(queries[3].second, R"(
     UPDATE Collections
-    SET black_box_lineage = true
+    SET lineage_type = 'sql'
     WHERE node_id = 9001 AND collection_name = baz;
   )");
   ExpectStringsEqualIgnoreWhiteSpace(queries[4].second, "query1");
   ExpectStringsEqualIgnoreWhiteSpace(queries[5].second, R"(
     UPDATE Collections
-    SET black_box_lineage = true
+    SET lineage_type = 'sql'
     WHERE node_id = 9001 AND collection_name = zardoz;
   )");
   ExpectStringsEqualIgnoreWhiteSpace(queries[6].second, "query2");
   ExpectStringsEqualIgnoreWhiteSpace(queries[7].second, "query3");
+}
+
+TEST(MockPqxxClient, RegisterBlackBoxPythonLineageScript) {
+  using Client = MockPqxxClient<Hash, MockToSql, MockClock>;
+  ConnectionConfig c;
+  StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
+  ASSERT_EQ(Status::OK, client_or.status());
+  Client client = client_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK,
+            client.RegisterBlackBoxPythonLineageScript("rick\nand\nmorty"));
+  ASSERT_EQ(Status::OK, client.RegisterBlackBoxPythonLineageScript(
+                            "beevis\nand\nbutthead"));
+  std::vector<std::pair<std::string, std::string>> queries = client.Queries();
+
+  ASSERT_EQ(queries.size(), static_cast<std::size_t>(4));
+  ExpectStringsEqualIgnoreWhiteSpace(queries[2].second,
+                                     fmt::format(R"(
+    UPDATE Nodes
+    SET python_lineage_script = E{}
+    WHERE node_id = 9001;
+  )",
+                                                 "rick\nand\nmorty"));
+  ExpectStringsEqualIgnoreWhiteSpace(queries[3].second,
+                                     fmt::format(R"(
+    UPDATE Nodes
+    SET python_lineage_script = E{}
+    WHERE node_id = 9001;
+  )",
+                                                 "beevis\nand\nbutthead"));
+}
+
+TEST(MockPqxxClient, RegisterBlackBoxPythonLineage) {
+  using Client = MockPqxxClient<Hash, MockToSql, MockClock>;
+  ConnectionConfig c;
+  StatusOr<Client> client_or = Client::Make("name", 9001, "127.0.0.1", c);
+  ASSERT_EQ(Status::OK, client_or.status());
+  Client client = client_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK, client.RegisterBlackBoxPythonLineage("foo", "get"));
+  ASSERT_EQ(Status::OK, client.RegisterBlackBoxPythonLineage("bar", "set"));
+  std::vector<std::pair<std::string, std::string>> queries = client.Queries();
+
+  ASSERT_EQ(queries.size(), static_cast<std::size_t>(4));
+  ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, R"(
+    UPDATE Collections
+    SET python_lineage_method = get
+    WHERE node_id = 9001 AND collection_name = foo;
+  )");
+  ExpectStringsEqualIgnoreWhiteSpace(queries[3].second, R"(
+    UPDATE Collections
+    SET python_lineage_method = set
+    WHERE node_id = 9001 AND collection_name = bar;
+  )");
 }
 
 }  // namespace lineagedb

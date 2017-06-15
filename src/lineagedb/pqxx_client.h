@@ -282,7 +282,7 @@ class InjectablePqxxClient {
     const std::string query_template = R"(
       UPDATE Nodes
       SET python_lineage_script = E{}
-      WHERE node_id = {};
+      WHERE id = {};
     )";
     const std::string query =
         fmt::format(query_template, SqlValue(script),

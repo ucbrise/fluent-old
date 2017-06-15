@@ -4,6 +4,7 @@
 #include "glog/logging.h"
 #include "zmq.hpp"
 
+#include "common/file_util.h"
 #include "common/status.h"
 #include "examples/file_system/file_system.h"
 #include "fluent/fluent_builder.h"
@@ -21,13 +22,14 @@ namespace zmq_util = fluent::zmq_util;
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
 
-  if (argc != 6) {
+  if (argc != 7) {
     std::cerr << "usage: " << argv[0] << " \\" << std::endl  //
               << "  <db_user> \\" << std::endl               //
               << "  <db_password> \\" << std::endl           //
               << "  <db_dbname> \\" << std::endl             //
               << "  <file_system_address> \\" << std::endl   //
-              << "  <address> \\" << std::endl;
+              << "  <address> \\" << std::endl               //
+              << "  <lineage_file> \\" << std::endl;
     return 1;
   }
 
@@ -36,6 +38,7 @@ int main(int argc, char* argv[]) {
   const std::string db_dbname = argv[3];
   const std::string file_system_address = argv[4];
   const std::string address = argv[5];
+  const std::string lineage_file = argv[6];
 
   zmq::context_t context(1);
   zmq::socket_t socket(context, ZMQ_REQ);
@@ -83,5 +86,9 @@ int main(int argc, char* argv[]) {
             return std::make_tuple(write, read);
           })
           .ConsumeValueOrDie();
+  const std::string script = fluent::Slurp(lineage_file).ConsumeValueOrDie();
+  CHECK_EQ(fluent::Status::OK, fe.RegisterBlackBoxPythonLineageScript(script));
+  CHECK_EQ(fluent::Status::OK,
+           (fe.RegisterBlackBoxPythonLineage<2, 3>("read_lineage")));
   CHECK_EQ(fluent::Status::OK, fe.Run());
 }

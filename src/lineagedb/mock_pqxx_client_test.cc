@@ -250,14 +250,14 @@ TEST(MockPqxxClient, RegisterBlackBoxPythonLineageScript) {
                                      fmt::format(R"(
     UPDATE Nodes
     SET python_lineage_script = E{}
-    WHERE node_id = 9001;
+    WHERE id = 9001;
   )",
                                                  "rick\nand\nmorty"));
   ExpectStringsEqualIgnoreWhiteSpace(queries[3].second,
                                      fmt::format(R"(
     UPDATE Nodes
     SET python_lineage_script = E{}
-    WHERE node_id = 9001;
+    WHERE id = 9001;
   )",
                                                  "beevis\nand\nbutthead"));
 }

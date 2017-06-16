@@ -10,7 +10,7 @@ main() {
     fi
 
     session="$(tmux display-message -p '#S')"
-    tmux new-window -t "$session" -n "kvs"
+    tmux new-window -t "$session" -n "file_system"
     tmux split-window -h
     tmux select-pane -t 0
     tmux split-window -v

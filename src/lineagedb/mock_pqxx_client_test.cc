@@ -275,12 +275,12 @@ TEST(MockPqxxClient, RegisterBlackBoxPythonLineage) {
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(4));
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, R"(
     UPDATE Collections
-    SET python_lineage_method = get
+    SET lineage_type = 'python', python_lineage_method = get
     WHERE node_id = 9001 AND collection_name = foo;
   )");
   ExpectStringsEqualIgnoreWhiteSpace(queries[3].second, R"(
     UPDATE Collections
-    SET python_lineage_method = set
+    SET lineage_type = 'python', python_lineage_method = set
     WHERE node_id = 9001 AND collection_name = bar;
   )");
 }

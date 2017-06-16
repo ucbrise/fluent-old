@@ -295,7 +295,7 @@ class InjectablePqxxClient {
       const std::string& collection_name, const std::string& method) {
     const std::string query_template = R"(
       UPDATE Collections
-      SET python_lineage_method = {}
+      SET lineage_type = 'python', python_lineage_method = {}
       WHERE node_id = {} AND collection_name = {};
     )";
     const std::string query = fmt::format(

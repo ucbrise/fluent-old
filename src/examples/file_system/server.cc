@@ -9,6 +9,7 @@
 #include "zmq.hpp"
 
 #include "common/string_util.h"
+#include "examples/file_system/string_store.h"
 #include "zmq_util/zmq_util.h"
 
 namespace zmq_util = fluent::zmq_util;
@@ -40,23 +41,21 @@ void worker(zmq::context_t* context) {
   const std::string address = "inproc://worker";
   socket.connect(address);
 
-  std::string file;
+  StringStore ss;
 
   while (true) {
     const std::string msg = zmq_util::recv_string(&socket);
     std::vector<std::string> parts = fluent::Split(msg);
 
     if (parts.size() == 3 && parts[0] == "write") {
-      const int start = std::stoi(parts[1]);
+      const int off = std::stoi(parts[1]);
       const std::string& s = parts[2];
-      file.resize(std::max(file.size(), start + s.size()), ' ');
-      file.insert(start, s);
+      ss.Write(off, s);
       zmq_util::send_string("OK", &socket);
     } else if (parts.size() == 3 && parts[0] == "read") {
-      const int start = std::max(std::stoi(parts[1]), 0);
-      const int stop =
-          std::min(static_cast<std::size_t>(std::stoi(parts[2])), file.size());
-      zmq_util::send_string(file.substr(start, stop - start), &socket);
+      const int start = std::stoi(parts[1]);
+      const int stop = std::stoi(parts[2]);
+      zmq_util::send_string(ss.Read(start, stop), &socket);
     } else {
       std::string err = "ERROR: invalid request '" + msg + "'.";
       zmq_util::send_string(std::move(err), &socket);

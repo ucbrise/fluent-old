@@ -20,7 +20,8 @@ MACRO(CREATE_NAMED_TEST NAME FILENAME)
         googlemock
         googlemock_main
         googletest
-        googletest_main)
+        googletest_main
+        pthread)
 ENDMACRO(CREATE_NAMED_TEST)
 
 # CREATE_TEST(foo) creates a test named `foo` from the file `foo.cc`.

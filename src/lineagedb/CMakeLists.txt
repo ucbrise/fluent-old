@@ -9,7 +9,8 @@ TARGET_LINK_LIBRARIES(lineagedb
     fmt
     googlelog
     libpqxx
-    pq)
+    pq
+    pthread)
 
 SET(LINEAGEDB_DEPENDENCIES
     common

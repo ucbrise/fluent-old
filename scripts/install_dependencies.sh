@@ -9,19 +9,19 @@ install_misc() {
 install_clang() {
     sudo bash -c "echo '' >> /etc/apt/sources.list"
     sudo bash -c "echo '# http://apt.llvm.org/' >> /etc/apt/sources.list"
-    sudo bash -c "echo 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-3.9 main' >> /etc/apt/sources.list"
-    sudo bash -c "echo 'deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty-3.9 main' >> /etc/apt/sources.list"
+    sudo bash -c "echo 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main' >> /etc/apt/sources.list"
+    sudo bash -c "echo 'deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main' >> /etc/apt/sources.list"
     wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
     sudo apt-get -y update
 
     sudo apt-get install -y \
-        clang-3.9 clang-format-3.9 clang-tidy-3.9 lldb-3.9
-    sudo ln -s "$(which clang-3.9)" /usr/bin/clang
-    sudo ln -s "$(which clang++-3.9)" /usr/bin/clang++
-    sudo ln -s "$(which clang-format-3.9)" /usr/bin/clang-format
-    sudo ln -s "$(which clang-tidy-3.9)" /usr/bin/clang-tidy
-    sudo ln -s "$(which lldb-3.9)" /usr/bin/lldb
-    sudo ln -s "$(which lldb-server-3.9)" /usr/bin/lldb-server
+        clang-4.0 clang-format-4.0 clang-tidy-4.0 lldb-4.0
+    sudo ln -s "$(which clang-4.0)" /usr/bin/clang
+    sudo ln -s "$(which clang++-4.0)" /usr/bin/clang++
+    sudo ln -s "$(which clang-format-4.0)" /usr/bin/clang-format
+    sudo ln -s "$(which clang-tidy-4.0)" /usr/bin/clang-tidy
+    sudo ln -s "$(which lldb-4.0)" /usr/bin/lldb
+    sudo ln -s "$(which lldb-server-4.0)" /usr/bin/lldb-server
 }
 
 install_gpp() {
@@ -52,8 +52,6 @@ install_redis() {
 main() {
     set -x
     sudo apt-get -y update
-    sudo apt-get install --only-upgrade -y \
-        libc-bin libc-dev-bin libc6 libc6-dev linux-libc-dev
     install_misc
     install_clang
     install_gpp

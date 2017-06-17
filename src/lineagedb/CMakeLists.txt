@@ -1,29 +1,23 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
 SET(LINEAGEDB_SOURCES connection_config.cc)
-
 ADD_LIBRARY(lineagedb ${LINEAGEDB_SOURCES})
 ADD_LIBRARY(lineagedb_object OBJECT ${LINEAGEDB_SOURCES})
 
 TARGET_LINK_LIBRARIES(lineagedb
-    ${FMT_LINK_DIRS}/libfmt.a
-    ${GLOG_LINK_DIRS}/libglog.a
-    ${LIBPQXX_LINK_DIRS}/libpqxx.a
     common
-    pthread
+    fmt
+    googlelog
+    libpqxx
     pq)
 
-ADD_DEPENDENCIES(lineagedb
+SET(LINEAGEDB_DEPENDENCIES
     common
     fmt
     googlelog
     libpqxx)
-
-ADD_DEPENDENCIES(lineagedb_object
-    common
-    fmt
-    googlelog
-    libpqxx)
+ADD_DEPENDENCIES(lineagedb ${LINEAGEDB_DEPENDENCIES})
+ADD_DEPENDENCIES(lineagedb_object ${LINEAGEDB_DEPENDENCIES})
 
 MACRO(CREATE_LINEAGEDB_TEST NAME)
     CREATE_NAMED_TEST(lineagedb_${NAME} ${NAME})

@@ -10,4 +10,4 @@ CREATE_REDIS_EXECUTABLE(client)
 CREATE_REDIS_EXECUTABLE(server)
 
 TARGET_LINK_LIBRARIES(examples_redis_server redox ev hiredis)
-ADD_DEPENDENCIES(examples_redis_server redoxlib)
+ADD_DEPENDENCIES(examples_redis_server redox_project)

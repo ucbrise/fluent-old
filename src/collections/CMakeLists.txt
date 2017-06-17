@@ -1,23 +1,19 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
 SET(COLLECTIONS_SOURCES collection_util.cc)
-
 ADD_LIBRARY(collections ${COLLECTIONS_SOURCES})
 ADD_LIBRARY(collections_object OBJECT ${COLLECTIONS_SOURCES})
 
 TARGET_LINK_LIBRARIES(collections
-    ${GLOG_LINK_DIRS}/libglog.a
+    googlelog
     pthread
-    zmq
     zmq_util)
 
-ADD_DEPENDENCIES(collections
+SET(COLLECTIONS_DEPENDENCIES
     googlelog
     zmq_util)
-
-ADD_DEPENDENCIES(collections_object
-    googlelog
-    zmq_util)
+ADD_DEPENDENCIES(collections ${COLLECTIONS_DEPENDENCIES})
+ADD_DEPENDENCIES(collections_object ${COLLECTIONS_DEPENDENCIES})
 
 MACRO(CREATE_COLLECTIONS_TEST NAME)
     CREATE_NAMED_TEST(collections_${NAME} ${NAME})

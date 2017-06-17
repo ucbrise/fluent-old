@@ -1,11 +1,6 @@
 # Resources:
 #   - https://github.com/rsakamoto/dexter/blob/13bac2f372bf0beeba673187c39d657978d71890/ext/glog/CMakeLists.txt
-
-CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
-
-include(ExternalProject)
-
-ExternalProject_Add(googlelog
+ExternalProject_Add(googlelog_project
     GIT_REPOSITORY "https://github.com/google/glog"
     GIT_TAG "master"
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}
@@ -16,5 +11,10 @@ ExternalProject_Add(googlelog
     INSTALL_COMMAND ""
 )
 
-set(GLOG_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/src/googlelog/src PARENT_SCOPE)
-set(GLOG_LINK_DIRS ${CMAKE_CURRENT_BINARY_DIR}/src/googlelog/.libs PARENT_SCOPE)
+SET(GLOG_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/src/googlelog_project/src)
+SET(GLOG_LINK_DIRS ${CMAKE_CURRENT_BINARY_DIR}/src/googlelog_project/.libs)
+
+ADD_LIBRARY(googlelog STATIC IMPORTED)
+SET_PROPERTY(TARGET googlelog
+             PROPERTY IMPORTED_LOCATION ${GLOG_LINK_DIRS}/libglog.a)
+ADD_DEPENDENCIES(googlelog googlelog_project)

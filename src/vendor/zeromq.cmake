@@ -4,12 +4,7 @@
 #
 # Remember to have libtool, pkg-config, build-essential, autoconf, and automake
 # installed.
-
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
-
-include(ExternalProject)
-
-ExternalProject_Add(zeromq
+ExternalProject_Add(zeromq_project
     URL "https://github.com/zeromq/zeromq4-1/releases/download/v4.1.5/zeromq-4.1.5.tar.gz"
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}
     BUILD_IN_SOURCE 1
@@ -19,5 +14,5 @@ ExternalProject_Add(zeromq
     INSTALL_COMMAND ""
 )
 
-set(ZEROMQ_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/src/zeromq/include PARENT_SCOPE)
-set(ZEROMQ_LINK_DIRS ${CMAKE_CURRENT_BINARY_DIR}/src/zeromq/.libs PARENT_SCOPE)
+SET(ZEROMQ_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/src/zeromq_project/include)
+SET(ZEROMQ_LINK_DIRS ${CMAKE_CURRENT_BINARY_DIR}/src/zeromq_project/.libs)

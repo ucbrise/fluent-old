@@ -1,3 +1,5 @@
+# https://goo.gl/iK7S1H
+# https://goo.gl/K5QMBZ
 ExternalProject_Add(protobuf_project
     GIT_REPOSITORY "https://github.com/google/protobuf"
     GIT_TAG "v3.3.0"

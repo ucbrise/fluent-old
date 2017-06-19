@@ -7,22 +7,12 @@
 
 #include "examples/grpc/api.grpc.pb.h"
 
-// using grpc::Channel;
-// using grpc::ClientContext;
-// using grpc::Status;
-// using helloworld::HelloRequest;
-// using helloworld::HelloReply;
-// using helloworld::Greeter;
-
 class EchoClient {
  public:
   EchoClient(std::shared_ptr<grpc::Channel> channel)
       : stub_(EchoService::NewStub(channel)) {}
 
-  // Assembles the client's payload, sends it and presents the response back
-  // from the server.
   std::string Echo(const std::string& msg) {
-    // Data we are sending to the server.
     EchoRequest request;
     request.set_msg(msg);
     EchoReply reply;

@@ -201,8 +201,9 @@ std::string GetIncludes(ProtoBufFile *file, const Parameters &params) {
   return output;
 }
 
-void PrintMethod(const fluent_generator::Method &method,
-                 const Parameters &params, fluent_generator::Printer *printer) {
+void PrintClientMethod(const fluent_generator::Method &method,
+                       const Parameters &params,
+                       fluent_generator::Printer *printer) {
   UNUSED(params);
 
   const google::protobuf::Descriptor *in_type = method.input_type();
@@ -298,29 +299,105 @@ std::string GetClientClass(ProtoBufFile *file, const Parameters &params) {
     // Constructor.
     printer->Print(vars,
                    "$Service$Client(std::shared_ptr<grpc::Channel> channel)");
-    printer->Print(vars, ": stub_(EchoService::NewStub(channel)) {}");
+    printer->Print(vars, " : stub_($Service$::NewStub(channel)) {}");
     printer->Print(vars, "\n\n");
 
     // Methods.
     for (int i = 0; i < service->method_count(); ++i) {
       std::unique_ptr<const fluent_generator::Method> method =
           service->method(i);
-      PrintMethod(*method, params, printer.get());
+      PrintClientMethod(*method, params, printer.get());
     }
 
     // Private members.
     printer->Outdent();
     printer->Print(vars, " private:\n");
     printer->Print(vars, "  std::unique_ptr<$Service$::Stub> stub_;\n");
-    printer->Print(vars, "};");
+    printer->Print(vars, "};\n\n");
   }
   return output;
 }
 
-std::string GetApiFunction(ProtoBufFile *file, const Parameters &params) {
-  UNUSED(file);
+void PrintMethodCollections(const fluent_generator::Method &method,
+                            const Parameters &params,
+                            fluent_generator::Printer *printer) {
   UNUSED(params);
-  return "";
+
+  const google::protobuf::Descriptor *in_type = method.input_type();
+  const std::vector<std::string> in_field_types = FieldTypes(*in_type);
+  const std::vector<std::string> in_field_names = FieldNames(*in_type);
+
+  const google::protobuf::Descriptor *out_type = method.output_type();
+  const std::vector<std::string> out_field_types = FieldTypes(*out_type);
+  const std::vector<std::string> out_field_names = FieldNames(*out_type);
+
+  std::map<std::string, std::string> vars;
+  vars["request_types"] = fluent::Join(in_field_types);
+  vars["reply_types"] = fluent::Join(out_field_types);
+  vars["method_name"] = method.name();
+
+  // Request channel.
+  printer->Print(vars,
+                 ".channel<"
+                 "std::string, std::string, std::int64_t, $request_types$"
+                 ">(\"$method_name$_request\", "
+                 "{{\"dst_addr\", \"src_addr\", \"id\", ");
+  for (std::size_t i = 0; i < in_field_names.size(); ++i) {
+    vars["column_name"] = in_field_names[i];
+    printer->Print(vars, "\"$column_name$\"");
+    if (i != in_field_names.size() - 1) {
+      printer->Print(vars, ", ");
+    }
+  }
+  printer->Print(vars, "}})\n");
+
+  // Reply channel.
+  printer->Print(vars,
+                 ".channel<std::string, std::int64_t, $reply_types$>"
+                 "(\"$method_name$_reply\", "
+                 "{{\"addr\", \"id\", ");
+  for (std::size_t i = 0; i < out_field_names.size(); ++i) {
+    vars["column_name"] = out_field_names[i];
+    printer->Print(vars, "\"$column_name$\"");
+    if (i != out_field_names.size() - 1) {
+      printer->Print(vars, ", ");
+    }
+  }
+  printer->Print(vars, "}})\n");
+}
+
+std::string GetApiFunction(ProtoBufFile *file, const Parameters &params) {
+  UNUSED(params);
+  CHECK_EQ(file->service_count(), 1);
+  std::unique_ptr<const fluent_generator::Service> service = file->service(0);
+
+  std::string output;
+  {
+    auto printer = file->CreatePrinter(&output);
+    std::map<std::string, std::string> vars;
+    vars["Service"] = service->name();
+
+    // Method signature.
+    printer->Print(vars, "template <typename FluentBuilder>\n");
+    printer->Print(vars, "auto Add$Service$Api(FluentBuilder f) {\n");
+    printer->Indent();
+
+    // Method body.
+    printer->Print(vars, "return std::move(f)\n");
+    printer->Indent();
+    for (int i = 0; i < service->method_count(); ++i) {
+      std::unique_ptr<const fluent_generator::Method> method =
+          service->method(i);
+      PrintMethodCollections(*method, params, printer.get());
+    }
+    printer->Outdent();
+    printer->Print(vars, ";\n");
+
+    // Method end.
+    printer->Outdent();
+    printer->Print(vars, "}\n\n");
+  }
+  return output;
 }
 
 std::string GetFluentFunction(ProtoBufFile *file, const Parameters &params) {

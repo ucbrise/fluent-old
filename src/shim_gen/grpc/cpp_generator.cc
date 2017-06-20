@@ -219,10 +219,9 @@ void PrintClientMethod(const fluent_generator::Method &method,
     vars["input_type"] = in_field_types[j];
     vars["input_name"] = in_field_names[j];
     if (field->type() == google::protobuf::FieldDescriptor::TYPE_MESSAGE) {
-      printer->Print(vars,
-                     "*request->mutable_$input_name$() = $input_name$;\n");
+      printer->Print(vars, "*request.mutable_$input_name$() = $input_name$;\n");
     } else {
-      printer->Print(vars, "request->set_$input_name$($input_name$);\n");
+      printer->Print(vars, "request.set_$input_name$($input_name$);\n");
     }
   }
   printer->Print(vars, "\n");
@@ -236,14 +235,14 @@ void PrintClientMethod(const fluent_generator::Method &method,
   printer->Print(vars, "grpc::ClientContext context;\n");
   printer->Print(vars,
                  "grpc::Status status = stub_->$method_name$("
-                 "&context, request, reply);\n");
+                 "&context, request, &reply);\n");
   printer->Print(vars, "CHECK(status.ok());\n\n");
 
   // Return.
   printer->Print(vars, "return $output_type$(");
   for (std::size_t j = 0; j < out_field_types.size(); ++j) {
     vars["output_name"] = out_field_names[j];
-    printer->Print(vars, "reply->$output_name$()");
+    printer->Print(vars, "reply.$output_name$()");
     if (j != in_field_types.size() - 1) {
       printer->Print(vars, ", ");
     }
@@ -314,7 +313,7 @@ void PrintMethodCollections(const fluent_generator::Method &method,
 
   // Request channel.
   printer->Print(vars,
-                 ".channel<"
+                 ".template channel<"
                  "std::string, std::string, std::int64_t, $request_types$"
                  ">(\"$method_name$_request\", "
                  "{{\"dst_addr\", \"src_addr\", \"id\", ");
@@ -329,7 +328,7 @@ void PrintMethodCollections(const fluent_generator::Method &method,
 
   // Reply channel.
   printer->Print(vars,
-                 ".channel<std::string, std::int64_t, $reply_types$>"
+                 ".template channel<std::string, std::int64_t, $reply_types$>"
                  "(\"$method_name$_reply\", "
                  "{{\"addr\", \"id\", ");
   for (std::size_t i = 0; i < out_field_names.size(); ++i) {

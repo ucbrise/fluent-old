@@ -39,25 +39,25 @@
 #include "shim_gen/grpc/config.h"
 #include "shim_gen/grpc/generator_helpers.h"
 
-namespace grpc_cpp_generator {
+namespace fluent_cpp_generator {
 
-inline grpc::string DotsToColons(const grpc::string &name) {
-  return grpc_generator::StringReplace(name, ".", "::");
+inline std::string DotsToColons(const std::string &name) {
+  return fluent_generator::StringReplace(name, ".", "::");
 }
 
-inline grpc::string DotsToUnderscores(const grpc::string &name) {
-  return grpc_generator::StringReplace(name, ".", "_");
+inline std::string DotsToUnderscores(const std::string &name) {
+  return fluent_generator::StringReplace(name, ".", "_");
 }
 
-inline grpc::string ClassName(const grpc::protobuf::Descriptor *descriptor,
+inline std::string ClassName(const google::protobuf::Descriptor *descriptor,
                               bool qualified) {
   // Find "outer", the descriptor of the top-level message in which
   // "descriptor" is embedded.
-  const grpc::protobuf::Descriptor *outer = descriptor;
+  const google::protobuf::Descriptor *outer = descriptor;
   while (outer->containing_type() != NULL) outer = outer->containing_type();
 
-  const grpc::string &outer_name = outer->full_name();
-  grpc::string inner_name = descriptor->full_name().substr(outer_name.size());
+  const std::string &outer_name = outer->full_name();
+  std::string inner_name = descriptor->full_name().substr(outer_name.size());
 
   if (qualified) {
     return "::" + DotsToColons(outer_name) + DotsToUnderscores(inner_name);
@@ -69,10 +69,10 @@ inline grpc::string ClassName(const grpc::protobuf::Descriptor *descriptor,
 // Get leading or trailing comments in a string. Comment lines start with "// ".
 // Leading detached comments are put in in front of leading comments.
 template <typename DescriptorType>
-inline grpc::string GetCppComments(const DescriptorType *desc, bool leading) {
-  return grpc_generator::GetPrefixedComments(desc, leading, "//");
+inline std::string GetCppComments(const DescriptorType *desc, bool leading) {
+  return fluent_generator::GetPrefixedComments(desc, leading, "//");
 }
 
-}  // namespace grpc_cpp_generator
+}  // namespace fluent_cpp_generator
 
 #endif  // GRPC_INTERNAL_COMPILER_CPP_GENERATOR_HELPERS_H

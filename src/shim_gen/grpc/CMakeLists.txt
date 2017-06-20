@@ -1,5 +1,16 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
-ADD_EXECUTABLE(cpp_plugin cpp_generator.cc cpp_plugin.cc)
-TARGET_LINK_LIBRARIES(cpp_plugin protobuf protoc)
-ADD_DEPENDENCIES(cpp_plugin protobuf_project)
+ADD_EXECUTABLE(shim_gen_grpc_fluent_plugin
+    cpp_generator.cc
+    fluent_plugin.cc)
+
+TARGET_LINK_LIBRARIES(shim_gen_grpc_fluent_plugin
+    fmt
+    googlelog
+    protobuf
+    protoc)
+
+ADD_DEPENDENCIES(shim_gen_grpc_fluent_plugin
+    fmt
+    googlelog
+    protobuf_project)

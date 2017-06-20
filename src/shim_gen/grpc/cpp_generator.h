@@ -42,97 +42,89 @@
 #include <vector>
 
 #include "shim_gen/grpc/config.h"
+#include "shim_gen/grpc/protobuf_plugin.h"
 #include "shim_gen/grpc/schema_interface.h"
 
-#ifndef GRPC_CUSTOM_STRING
-#include <string>
-#define GRPC_CUSTOM_STRING std::string
-#endif
-
-namespace grpc {
-
-typedef GRPC_CUSTOM_STRING string;
-
-}  // namespace grpc
-
-namespace grpc_cpp_generator {
+namespace fluent_cpp_generator {
 
 // Contains all the parameters that are parsed from the command line.
 struct Parameters {
-  // Puts the service into a namespace
-  grpc::string services_namespace;
-  // Use system includes (<>) or local includes ("")
-  bool use_system_headers;
-  // Prefix to any grpc include
-  grpc::string grpc_search_path;
-  // Generate GMOCK code to facilitate unit testing.
-  bool generate_mock_code;
+  // TODO(mwhittaker): Add paramters as appropriate.
 };
 
+std::string GetPrologue(ProtoBufFile *file, const Parameters &params);
+std::string GetIncludes(ProtoBufFile *file, const Parameters &params);
+std::string GetClientClass(ProtoBufFile *file, const Parameters &params);
+std::string GetApiFunction(ProtoBufFile *file, const Parameters &params);
+std::string GetFluentFunction(ProtoBufFile *file, const Parameters &params);
+std::string GetEpilogue(ProtoBufFile *file, const Parameters &params);
+
+#if 0
 // Return the prologue of the generated header file.
-grpc::string GetHeaderPrologue(grpc_generator::File *file,
-                               const Parameters &params);
+std::string GetHeaderPrologue(fluent_generator::File *file,
+                              const Parameters &params);
 
 // Return the includes needed for generated header file.
-grpc::string GetHeaderIncludes(grpc_generator::File *file,
-                               const Parameters &params);
+std::string GetHeaderIncludes(fluent_generator::File *file,
+                              const Parameters &params);
 
 // Return the includes needed for generated source file.
-grpc::string GetSourceIncludes(grpc_generator::File *file,
-                               const Parameters &params);
+std::string GetSourceIncludes(fluent_generator::File *file,
+                              const Parameters &params);
 
 // Return the epilogue of the generated header file.
-grpc::string GetHeaderEpilogue(grpc_generator::File *file,
-                               const Parameters &params);
+std::string GetHeaderEpilogue(fluent_generator::File *file,
+                              const Parameters &params);
 
 // Return the prologue of the generated source file.
-grpc::string GetSourcePrologue(grpc_generator::File *file,
-                               const Parameters &params);
+std::string GetSourcePrologue(fluent_generator::File *file,
+                              const Parameters &params);
 
 // Return the services for generated header file.
-grpc::string GetHeaderServices(grpc_generator::File *file,
-                               const Parameters &params);
+std::string GetHeaderServices(fluent_generator::File *file,
+                              const Parameters &params);
 
 // Return the services for generated source file.
-grpc::string GetSourceServices(grpc_generator::File *file,
-                               const Parameters &params);
+std::string GetSourceServices(fluent_generator::File *file,
+                              const Parameters &params);
 
 // Return the epilogue of the generated source file.
-grpc::string GetSourceEpilogue(grpc_generator::File *file,
-                               const Parameters &params);
+std::string GetSourceEpilogue(fluent_generator::File *file,
+                              const Parameters &params);
 
 // Return the prologue of the generated mock file.
-grpc::string GetMockPrologue(grpc_generator::File *file,
-                             const Parameters &params);
+std::string GetMockPrologue(fluent_generator::File *file,
+                            const Parameters &params);
 
 // Return the includes needed for generated mock file.
-grpc::string GetMockIncludes(grpc_generator::File *file,
-                             const Parameters &params);
+std::string GetMockIncludes(fluent_generator::File *file,
+                            const Parameters &params);
 
 // Return the services for generated mock file.
-grpc::string GetMockServices(grpc_generator::File *file,
-                             const Parameters &params);
+std::string GetMockServices(fluent_generator::File *file,
+                            const Parameters &params);
 
 // Return the epilogue of generated mock file.
-grpc::string GetMockEpilogue(grpc_generator::File *file,
-                             const Parameters &params);
+std::string GetMockEpilogue(fluent_generator::File *file,
+                            const Parameters &params);
 
 // Return the prologue of the generated mock file.
-grpc::string GetMockPrologue(grpc_generator::File *file,
-                             const Parameters &params);
+std::string GetMockPrologue(fluent_generator::File *file,
+                            const Parameters &params);
 
 // Return the includes needed for generated mock file.
-grpc::string GetMockIncludes(grpc_generator::File *file,
-                             const Parameters &params);
+std::string GetMockIncludes(fluent_generator::File *file,
+                            const Parameters &params);
 
 // Return the services for generated mock file.
-grpc::string GetMockServices(grpc_generator::File *file,
-                             const Parameters &params);
+std::string GetMockServices(fluent_generator::File *file,
+                            const Parameters &params);
 
 // Return the epilogue of generated mock file.
-grpc::string GetMockEpilogue(grpc_generator::File *file,
-                             const Parameters &params);
+std::string GetMockEpilogue(fluent_generator::File *file,
+                            const Parameters &params);
+#endif
 
-}  // namespace grpc_cpp_generator
+}  // namespace fluent_cpp_generator
 
 #endif  // GRPC_INTERNAL_COMPILER_CPP_GENERATOR_H

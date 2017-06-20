@@ -40,7 +40,7 @@
 #include "shim_gen/grpc/python_generator.h"
 #include "shim_gen/grpc/schema_interface.h"
 
-namespace grpc_python_generator {
+namespace fluent_python_generator {
 
 namespace {
 
@@ -50,50 +50,50 @@ namespace {
 // only ever used from a single thread.
 struct PrivateGenerator {
   const GeneratorConfiguration& config;
-  const grpc_generator::File* file;
+  const fluent_generator::File* file;
 
   bool generate_in_pb2_grpc;
 
   PrivateGenerator(const GeneratorConfiguration& config,
-                   const grpc_generator::File* file);
+                   const fluent_generator::File* file);
 
-  std::pair<bool, grpc::string> GetGrpcServices();
+  std::pair<bool, std::string> GetGrpcServices();
 
  private:
-  bool PrintPreamble(grpc_generator::Printer* out);
-  bool PrintBetaPreamble(grpc_generator::Printer* out);
-  bool PrintGAServices(grpc_generator::Printer* out);
-  bool PrintBetaServices(grpc_generator::Printer* out);
+  bool PrintPreamble(fluent_generator::Printer* out);
+  bool PrintBetaPreamble(fluent_generator::Printer* out);
+  bool PrintGAServices(fluent_generator::Printer* out);
+  bool PrintBetaServices(fluent_generator::Printer* out);
 
   bool PrintAddServicerToServer(
-      const grpc::string& package_qualified_service_name,
-      const grpc_generator::Service* service, grpc_generator::Printer* out);
-  bool PrintServicer(const grpc_generator::Service* service,
-                     grpc_generator::Printer* out);
-  bool PrintStub(const grpc::string& package_qualified_service_name,
-                 const grpc_generator::Service* service,
-                 grpc_generator::Printer* out);
+      const std::string& package_qualified_service_name,
+      const fluent_generator::Service* service, fluent_generator::Printer* out);
+  bool PrintServicer(const fluent_generator::Service* service,
+                     fluent_generator::Printer* out);
+  bool PrintStub(const std::string& package_qualified_service_name,
+                 const fluent_generator::Service* service,
+                 fluent_generator::Printer* out);
 
-  bool PrintBetaServicer(const grpc_generator::Service* service,
-                         grpc_generator::Printer* out);
+  bool PrintBetaServicer(const fluent_generator::Service* service,
+                         fluent_generator::Printer* out);
   bool PrintBetaServerFactory(
-      const grpc::string& package_qualified_service_name,
-      const grpc_generator::Service* service, grpc_generator::Printer* out);
-  bool PrintBetaStub(const grpc_generator::Service* service,
-                     grpc_generator::Printer* out);
-  bool PrintBetaStubFactory(const grpc::string& package_qualified_service_name,
-                            const grpc_generator::Service* service,
-                            grpc_generator::Printer* out);
+      const std::string& package_qualified_service_name,
+      const fluent_generator::Service* service, fluent_generator::Printer* out);
+  bool PrintBetaStub(const fluent_generator::Service* service,
+                     fluent_generator::Printer* out);
+  bool PrintBetaStubFactory(const std::string& package_qualified_service_name,
+                            const fluent_generator::Service* service,
+                            fluent_generator::Printer* out);
 
   // Get all comments (leading, leading_detached, trailing) and print them as a
   // docstring. Any leading space of a line will be removed, but the line
   // wrapping will not be changed.
-  void PrintAllComments(std::vector<grpc::string> comments,
-                        grpc_generator::Printer* out);
+  void PrintAllComments(std::vector<std::string> comments,
+                        fluent_generator::Printer* out);
 };
 
 }  // namespace
 
-}  // namespace grpc_python_generator
+}  // namespace fluent_python_generator
 
 #endif  // GRPC_INTERNAL_COMPILER_PYTHON_PRIVATE_GENERATOR_H

@@ -39,33 +39,33 @@
 #include "shim_gen/grpc/config.h"
 #include "shim_gen/grpc/schema_interface.h"
 
-namespace grpc_python_generator {
+namespace fluent_python_generator {
 
 // Data pertaining to configuration of the generator with respect to anything
 // that may be used internally at Google.
 struct GeneratorConfiguration {
   GeneratorConfiguration();
-  grpc::string grpc_package_root;
+  std::string grpc_package_root;
   // TODO(https://github.com/grpc/grpc/issues/8622): Drop this.
-  grpc::string beta_package_root;
+  std::string beta_package_root;
   // TODO(https://github.com/google/protobuf/issues/888): Drop this.
-  grpc::string import_prefix;
+  std::string import_prefix;
 };
 
-class PythonGrpcGenerator : public grpc::protobuf::compiler::CodeGenerator {
+class PythonGrpcGenerator : public google::protobuf::compiler::CodeGenerator {
  public:
   PythonGrpcGenerator(const GeneratorConfiguration& config);
   ~PythonGrpcGenerator();
 
-  bool Generate(const grpc::protobuf::FileDescriptor* file,
-                const grpc::string& parameter,
-                grpc::protobuf::compiler::GeneratorContext* context,
-                grpc::string* error) const;
+  bool Generate(const google::protobuf::FileDescriptor* file,
+                const std::string& parameter,
+                google::protobuf::compiler::GeneratorContext* context,
+                std::string* error) const;
 
  private:
   GeneratorConfiguration config_;
 };
 
-}  // namespace grpc_python_generator
+}  // namespace fluent_python_generator
 
 #endif  // GRPC_INTERNAL_COMPILER_PYTHON_GENERATOR_H

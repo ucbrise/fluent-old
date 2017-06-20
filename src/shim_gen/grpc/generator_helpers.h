@@ -42,12 +42,12 @@
 
 #include "shim_gen/grpc/config.h"
 
-namespace grpc_generator {
+namespace fluent_generator {
 
-inline bool StripSuffix(grpc::string *filename, const grpc::string &suffix) {
+inline bool StripSuffix(std::string *filename, const std::string &suffix) {
   if (filename->length() >= suffix.length()) {
     size_t suffix_pos = filename->length() - suffix.length();
-    if (filename->compare(suffix_pos, grpc::string::npos, suffix) == 0) {
+    if (filename->compare(suffix_pos, std::string::npos, suffix) == 0) {
       filename->resize(filename->size() - suffix.size());
       return true;
     }
@@ -56,7 +56,7 @@ inline bool StripSuffix(grpc::string *filename, const grpc::string &suffix) {
   return false;
 }
 
-inline bool StripPrefix(grpc::string *name, const grpc::string &prefix) {
+inline bool StripPrefix(std::string *name, const std::string &prefix) {
   if (name->length() >= prefix.length()) {
     if (name->substr(0, prefix.size()) == prefix) {
       *name = name->substr(prefix.size());
@@ -66,20 +66,20 @@ inline bool StripPrefix(grpc::string *name, const grpc::string &prefix) {
   return false;
 }
 
-inline grpc::string StripProto(grpc::string filename) {
+inline std::string StripProto(std::string filename) {
   if (!StripSuffix(&filename, ".protodevel")) {
     StripSuffix(&filename, ".proto");
   }
   return filename;
 }
 
-inline grpc::string StringReplace(grpc::string str, const grpc::string &from,
-                                  const grpc::string &to, bool replace_all) {
+inline std::string StringReplace(std::string str, const std::string &from,
+                                  const std::string &to, bool replace_all) {
   size_t pos = 0;
 
   do {
     pos = str.find(from, pos);
-    if (pos == grpc::string::npos) {
+    if (pos == std::string::npos) {
       break;
     }
     str.replace(pos, from.length(), to);
@@ -89,20 +89,20 @@ inline grpc::string StringReplace(grpc::string str, const grpc::string &from,
   return str;
 }
 
-inline grpc::string StringReplace(grpc::string str, const grpc::string &from,
-                                  const grpc::string &to) {
+inline std::string StringReplace(std::string str, const std::string &from,
+                                  const std::string &to) {
   return StringReplace(str, from, to, true);
 }
 
-inline std::vector<grpc::string> tokenize(const grpc::string &input,
-                                          const grpc::string &delimiters) {
-  std::vector<grpc::string> tokens;
+inline std::vector<std::string> tokenize(const std::string &input,
+                                          const std::string &delimiters) {
+  std::vector<std::string> tokens;
   size_t pos, last_pos = 0;
 
   for (;;) {
     bool done = false;
     pos = input.find_first_of(delimiters, last_pos);
-    if (pos == grpc::string::npos) {
+    if (pos == std::string::npos) {
       done = true;
       pos = input.length();
     }
@@ -114,7 +114,7 @@ inline std::vector<grpc::string> tokenize(const grpc::string &input,
   }
 }
 
-inline grpc::string CapitalizeFirstLetter(grpc::string s) {
+inline std::string CapitalizeFirstLetter(std::string s) {
   if (s.empty()) {
     return s;
   }
@@ -122,7 +122,7 @@ inline grpc::string CapitalizeFirstLetter(grpc::string s) {
   return s;
 }
 
-inline grpc::string LowercaseFirstLetter(grpc::string s) {
+inline std::string LowercaseFirstLetter(std::string s) {
   if (s.empty()) {
     return s;
   }
@@ -130,19 +130,19 @@ inline grpc::string LowercaseFirstLetter(grpc::string s) {
   return s;
 }
 
-inline grpc::string LowerUnderscoreToUpperCamel(grpc::string str) {
-  std::vector<grpc::string> tokens = tokenize(str, "_");
-  grpc::string result = "";
+inline std::string LowerUnderscoreToUpperCamel(std::string str) {
+  std::vector<std::string> tokens = tokenize(str, "_");
+  std::string result = "";
   for (unsigned int i = 0; i < tokens.size(); i++) {
     result += CapitalizeFirstLetter(tokens[i]);
   }
   return result;
 }
 
-inline grpc::string FileNameInUpperCamel(
-    const grpc::protobuf::FileDescriptor *file, bool include_package_path) {
-  std::vector<grpc::string> tokens = tokenize(StripProto(file->name()), "/");
-  grpc::string result = "";
+inline std::string FileNameInUpperCamel(
+    const google::protobuf::FileDescriptor *file, bool include_package_path) {
+  std::vector<std::string> tokens = tokenize(StripProto(file->name()), "/");
+  std::string result = "";
   if (include_package_path) {
     for (unsigned int i = 0; i < tokens.size() - 1; i++) {
       result += tokens[i] + "/";
@@ -152,8 +152,8 @@ inline grpc::string FileNameInUpperCamel(
   return result;
 }
 
-inline grpc::string FileNameInUpperCamel(
-    const grpc::protobuf::FileDescriptor *file) {
+inline std::string FileNameInUpperCamel(
+    const google::protobuf::FileDescriptor *file) {
   return FileNameInUpperCamel(file, true);
 }
 
@@ -165,7 +165,7 @@ enum MethodType {
 };
 
 inline MethodType GetMethodType(
-    const grpc::protobuf::MethodDescriptor *method) {
+    const google::protobuf::MethodDescriptor *method) {
   if (method->client_streaming()) {
     if (method->server_streaming()) {
       return METHODTYPE_BIDI_STREAMING;
@@ -181,10 +181,10 @@ inline MethodType GetMethodType(
   }
 }
 
-inline void Split(const grpc::string &s, char,
-                  std::vector<grpc::string> *append_to) {
+inline void Split(const std::string &s, char,
+                  std::vector<std::string> *append_to) {
   std::istringstream iss(s);
-  grpc::string piece;
+  std::string piece;
   while (std::getline(iss, piece)) {
     append_to->push_back(piece);
   }
@@ -199,13 +199,13 @@ enum CommentType {
 // Get all the raw comments and append each line without newline to out.
 template <typename DescriptorType>
 inline void GetComment(const DescriptorType *desc, CommentType type,
-                       std::vector<grpc::string> *out) {
-  grpc::protobuf::SourceLocation location;
+                       std::vector<std::string> *out) {
+  google::protobuf::SourceLocation location;
   if (!desc->GetSourceLocation(&location)) {
     return;
   }
   if (type == COMMENTTYPE_LEADING || type == COMMENTTYPE_TRAILING) {
-    const grpc::string &comments = type == COMMENTTYPE_LEADING
+    const std::string &comments = type == COMMENTTYPE_LEADING
                                        ? location.leading_comments
                                        : location.trailing_comments;
     Split(comments, '\n', out);
@@ -225,14 +225,14 @@ inline void GetComment(const DescriptorType *desc, CommentType type,
 // For file level leading and detached leading comments, we return comments
 // above syntax line. Return nothing for trailing comments.
 template <>
-inline void GetComment(const grpc::protobuf::FileDescriptor *desc,
-                       CommentType type, std::vector<grpc::string> *out) {
+inline void GetComment(const google::protobuf::FileDescriptor *desc,
+                       CommentType type, std::vector<std::string> *out) {
   if (type == COMMENTTYPE_TRAILING) {
     return;
   }
-  grpc::protobuf::SourceLocation location;
+  google::protobuf::SourceLocation location;
   std::vector<int> path;
-  path.push_back(grpc::protobuf::FileDescriptorProto::kSyntaxFieldNumber);
+  path.push_back(google::protobuf::FileDescriptorProto::kSyntaxFieldNumber);
   if (!desc->GetSourceLocation(path, &location)) {
     return;
   }
@@ -252,11 +252,11 @@ inline void GetComment(const grpc::protobuf::FileDescriptor *desc,
 
 // Add prefix and newline to each comment line and concatenate them together.
 // Make sure there is a space after the prefix unless the line is empty.
-inline grpc::string GenerateCommentsWithPrefix(
-    const std::vector<grpc::string> &in, const grpc::string &prefix) {
+inline std::string GenerateCommentsWithPrefix(
+    const std::vector<std::string> &in, const std::string &prefix) {
   std::ostringstream oss;
   for (auto it = in.begin(); it != in.end(); it++) {
-    const grpc::string &elem = *it;
+    const std::string &elem = *it;
     if (elem.empty()) {
       oss << prefix << "\n";
     } else if (elem[0] == ' ') {
@@ -269,24 +269,24 @@ inline grpc::string GenerateCommentsWithPrefix(
 }
 
 template <typename DescriptorType>
-inline grpc::string GetPrefixedComments(const DescriptorType *desc,
+inline std::string GetPrefixedComments(const DescriptorType *desc,
                                         bool leading,
-                                        const grpc::string &prefix) {
-  std::vector<grpc::string> out;
+                                        const std::string &prefix) {
+  std::vector<std::string> out;
   if (leading) {
-    grpc_generator::GetComment(
-        desc, grpc_generator::COMMENTTYPE_LEADING_DETACHED, &out);
-    std::vector<grpc::string> leading;
-    grpc_generator::GetComment(desc, grpc_generator::COMMENTTYPE_LEADING,
+    fluent_generator::GetComment(
+        desc, fluent_generator::COMMENTTYPE_LEADING_DETACHED, &out);
+    std::vector<std::string> leading;
+    fluent_generator::GetComment(desc, fluent_generator::COMMENTTYPE_LEADING,
                                &leading);
     out.insert(out.end(), leading.begin(), leading.end());
   } else {
-    grpc_generator::GetComment(desc, grpc_generator::COMMENTTYPE_TRAILING,
+    fluent_generator::GetComment(desc, fluent_generator::COMMENTTYPE_TRAILING,
                                &out);
   }
   return GenerateCommentsWithPrefix(out, prefix);
 }
 
-}  // namespace grpc_generator
+}  // namespace fluent_generator
 
 #endif  // GRPC_INTERNAL_COMPILER_GENERATOR_HELPERS_H

@@ -45,31 +45,31 @@
 #include "shim_gen/grpc/python_private_generator.h"
 
 using std::vector;
-using grpc_generator::StringReplace;
-using grpc_generator::StripProto;
-using grpc::protobuf::Descriptor;
-using grpc::protobuf::FileDescriptor;
-using grpc::protobuf::MethodDescriptor;
-using grpc::protobuf::ServiceDescriptor;
-using grpc::protobuf::compiler::GeneratorContext;
-using grpc::protobuf::io::CodedOutputStream;
-using grpc::protobuf::io::Printer;
-using grpc::protobuf::io::StringOutputStream;
-using grpc::protobuf::io::ZeroCopyOutputStream;
+using fluent_generator::StringReplace;
+using fluent_generator::StripProto;
+using google::protobuf::Descriptor;
+using google::protobuf::FileDescriptor;
+using google::protobuf::MethodDescriptor;
+using google::protobuf::ServiceDescriptor;
+using google::protobuf::compiler::GeneratorContext;
+using google::protobuf::io::CodedOutputStream;
+using google::protobuf::io::Printer;
+using google::protobuf::io::StringOutputStream;
+using google::protobuf::io::ZeroCopyOutputStream;
 
-namespace grpc_python_generator {
+namespace fluent_python_generator {
 
 namespace {
 
 typedef vector<const Descriptor*> DescriptorVector;
-typedef vector<grpc::string> StringVector;
+typedef vector<std::string> StringVector;
 
 // TODO(https://github.com/google/protobuf/issues/888):
 // Export `ModuleName` from protobuf's
 // `src/google/protobuf/compiler/python/python_generator.cc` file.
-grpc::string ModuleName(const grpc::string& filename,
-                        const grpc::string& import_prefix) {
-  grpc::string basename = StripProto(filename);
+std::string ModuleName(const std::string& filename,
+                        const std::string& import_prefix) {
+  std::string basename = StripProto(filename);
   basename = StringReplace(basename, "-", "_");
   basename = StringReplace(basename, "/", ".");
   return import_prefix + basename + "_pb2";
@@ -78,9 +78,9 @@ grpc::string ModuleName(const grpc::string& filename,
 // TODO(https://github.com/google/protobuf/issues/888):
 // Export `ModuleAlias` from protobuf's
 // `src/google/protobuf/compiler/python/python_generator.cc` file.
-grpc::string ModuleAlias(const grpc::string& filename,
-                         const grpc::string& import_prefix) {
-  grpc::string module_name = ModuleName(filename, import_prefix);
+std::string ModuleAlias(const std::string& filename,
+                         const std::string& import_prefix) {
+  std::string module_name = ModuleName(filename, import_prefix);
   // We can't have dots in the module name, so we replace each with _dot_.
   // But that could lead to a collision between a.b and a_dot_b, so we also
   // duplicate each underscore.
@@ -89,30 +89,30 @@ grpc::string ModuleAlias(const grpc::string& filename,
   return module_name;
 }
 
-bool GetModuleAndMessagePath(const Descriptor* type, grpc::string* out,
-                             grpc::string generator_file_name,
+bool GetModuleAndMessagePath(const Descriptor* type, std::string* out,
+                             std::string generator_file_name,
                              bool generate_in_pb2_grpc,
-                             grpc::string& import_prefix) {
+                             std::string& import_prefix) {
   const Descriptor* path_elem_type = type;
   DescriptorVector message_path;
   do {
     message_path.push_back(path_elem_type);
     path_elem_type = path_elem_type->containing_type();
   } while (path_elem_type);  // implicit nullptr comparison; don't be explicit
-  grpc::string file_name = type->file()->name();
+  std::string file_name = type->file()->name();
   static const int proto_suffix_length = strlen(".proto");
   if (!(file_name.size() > static_cast<size_t>(proto_suffix_length) &&
         file_name.find_last_of(".proto") == file_name.size() - 1)) {
     return false;
   }
 
-  grpc::string module;
+  std::string module;
   if (generator_file_name != file_name || generate_in_pb2_grpc) {
     module = ModuleAlias(file_name, import_prefix) + ".";
   } else {
     module = "";
   }
-  grpc::string message_type;
+  std::string message_type;
   for (DescriptorVector::reverse_iterator path_iter = message_path.rbegin();
        path_iter != message_path.rend(); ++path_iter) {
     message_type += (*path_iter)->name() + ".";
@@ -126,17 +126,17 @@ bool GetModuleAndMessagePath(const Descriptor* type, grpc::string* out,
 template <typename DescriptorType>
 StringVector get_all_comments(const DescriptorType* descriptor) {
   StringVector comments;
-  grpc_generator::GetComment(
-      descriptor, grpc_generator::COMMENTTYPE_LEADING_DETACHED, &comments);
-  grpc_generator::GetComment(descriptor, grpc_generator::COMMENTTYPE_LEADING,
+  fluent_generator::GetComment(
+      descriptor, fluent_generator::COMMENTTYPE_LEADING_DETACHED, &comments);
+  fluent_generator::GetComment(descriptor, fluent_generator::COMMENTTYPE_LEADING,
                              &comments);
-  grpc_generator::GetComment(descriptor, grpc_generator::COMMENTTYPE_TRAILING,
+  fluent_generator::GetComment(descriptor, fluent_generator::COMMENTTYPE_TRAILING,
                              &comments);
   return comments;
 }
 
 }  // namespace
 
-}  // namespace grpc_python_generator
+}  // namespace fluent_python_generator
 
 #endif  // GRPC_INTERNAL_COMPILER_PYTHON_GENERATOR_HELPERS_H

@@ -407,9 +407,33 @@ std::string GetFluentFunction(ProtoBufFile *file, const Parameters &params) {
 }
 
 std::string GetEpilogue(ProtoBufFile *file, const Parameters &params) {
-  UNUSED(file);
   UNUSED(params);
-  return "";
+
+  std::string output;
+  {
+    // Scope the output stream so it closes and finalizes output to the string.
+    auto printer = file->CreatePrinter(&output);
+    std::map<std::string, std::string> vars;
+
+    vars["filename"] = file->filename();
+    vars["filename_identifier"] = FilenameIdentifier(file->filename());
+
+    if (!file->package().empty()) {
+      std::vector<std::string> parts = file->package_parts();
+
+      for (auto part = parts.rbegin(); part != parts.rend(); part++) {
+        vars["part"] = *part;
+        printer->Print(vars, "}  // namespace $part$\n");
+      }
+      printer->Print(vars, "\n");
+    }
+
+    printer->Print(vars, "\n");
+    printer->Print(vars, "#endif  // GRPC_$filename_identifier$__INCLUDED\n");
+
+    printer->Print(file->GetTrailingComments("//").c_str());
+  }
+  return output;
 }
 
 #if 0

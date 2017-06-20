@@ -11,13 +11,16 @@ MACRO(CREATE_NAMED_TEST NAME FILENAME)
     SET_TESTS_PROPERTIES(${NAME} PROPERTIES LABELS "UNITTEST")
     ADD_DEPENDENCIES(${NAME}
         googlelog
-        googletest)
+        googlemock
+        googlemock_main
+        googletest
+        googletest_main)
     TARGET_LINK_LIBRARIES(${NAME}
-        ${GLOG_LINK_DIRS}/libglog.a
-        ${GMOCK_LIBS_DIR}/libgmock.a
-        ${GMOCK_LIBS_DIR}/libgmock_main.a
-        ${GTEST_LIBS_DIR}/libgtest.a
-        ${GTEST_LIBS_DIR}/libgtest_main.a
+        googlelog
+        googlemock
+        googlemock_main
+        googletest
+        googletest_main
         pthread)
 ENDMACRO(CREATE_NAMED_TEST)
 

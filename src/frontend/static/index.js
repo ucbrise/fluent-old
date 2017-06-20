@@ -82,14 +82,14 @@ fluent.Node = function(name, address, bootstrap_rules, rules, time,
 // type: string,
 // column_names: string list,
 // tuples: string list list,
-fluent.Collection = function(name, type, column_names, black_box_lineage, tuples) {
-  assert(typeof(name) === "string");
-  assert(typeof(type) === "string");
-  assert(typeof(black_box_lineage) === "boolean");
+fluent.Collection = function(name, type, column_names, lineage_type, tuples) {
+  assert(typeof(name) === "string", typeof(name));
+  assert(typeof(type) === "string", typeof(type));
+  assert(typeof(lineage_type) === "string", typeof(lineage_type));
   this.name = name;
   this.type = type;
   this.column_names = column_names;
-  this.black_box_lineage = black_box_lineage;
+  this.lineage_type = lineage_type;
   this.tuples = tuples;
 }
 
@@ -159,16 +159,6 @@ fluent.ajax.node_collection = function(node_name, collection_name, time, callbac
   fluent.ajax_get(url, callback);
 }
 
-// black_box_backwards_lineage: string -> string -> int -> TupleId list
-fluent.ajax.black_box_backwards_lineage = function(node_name, collection_name,
-                                                   id, callback) {
-  var url = "/black_box_backwards_lineage" +
-    "?node_name=" + node_name +
-    "&collection_name=" + collection_name +
-    "&id=" + id;
-  fluent.ajax_get(url, callback);
-}
-
 // regular_backwards_lineage: string -> string -> int -> int -> TupleId list
 fluent.ajax.regular_backwards_lineage = function(node_name, collection_name,
                                                  hash, time, callback) {
@@ -177,6 +167,26 @@ fluent.ajax.regular_backwards_lineage = function(node_name, collection_name,
     "&collection_name=" + collection_name +
     "&hash=" + hash +
     "&time=" + time;
+  fluent.ajax_get(url, callback);
+}
+
+// sql_backwards_lineage: string -> string -> int -> TupleId list
+fluent.ajax.sql_backwards_lineage = function(node_name, collection_name, id,
+                                             callback) {
+  var url = "/sql_backwards_lineage" +
+    "?node_name=" + node_name +
+    "&collection_name=" + collection_name +
+    "&id=" + id;
+  fluent.ajax_get(url, callback);
+}
+
+// python_backwards_lineage: string -> string -> int -> TupleId list
+fluent.ajax.python_backwards_lineage = function(node_name, collection_name,
+                                                id, callback) {
+  var url = "/python_backwards_lineage" +
+    "?node_name=" + node_name +
+    "&collection_name=" + collection_name +
+    "&id=" + id;
   fluent.ajax_get(url, callback);
 }
 
@@ -193,7 +203,7 @@ fluent.get_collections = function(node_name, collection_names, time, callback) {
       fluent.ajax.node_collection(node_name, cname, time, function(collection) {
         collections.push(new fluent.Collection(
             cname, collection.type, collection.column_names,
-            collection.black_box_lineage, collection.tuples));
+            collection.lineage_type, collection.tuples));
         get_collections_impl();
       });
     }
@@ -309,6 +319,14 @@ fluent.add_edge = function(source_tid, target_tid) {
 }
 
 fluent.backwards_lineage = function(node, collection, tuple) {
+  // tuple looks like this:
+  //   0. hash
+  //   1. logical time inserted
+  //   2. logical time deleted
+  //   3. physical time inserted
+  //   4. physical time deleted
+  //   5. address
+  //   6. id
   var hash = tuple[0];
   var time = tuple[1];
   var target_tid = new fluent.TupleId(node.name, collection.name, hash, time);
@@ -332,20 +350,16 @@ fluent.backwards_lineage = function(node, collection, tuple) {
     }).run();
   }
 
-  if (collection.black_box_lineage) {
-    // The tuple looks like this:
-    //   0. hash
-    //   1. logical time inserted
-    //   2. logical time deleted
-    //   3. physical time inserted
-    //   4. physical time deleted
-    //   5. address
-    //   6. id
-    fluent.ajax.black_box_backwards_lineage(node.name, collection.name,
-                                            tuple[6], callback);
+  if (collection.lineage_type === "regular") {
+    var f = fluent.ajax.regular_backwards_lineage;
+    f(node.name, collection.name, hash, time, callback);
+  } else if (collection.lineage_type === "sql") {
+    var f = fluent.ajax.sql_backwards_lineage;
+    f(node.name, collection.name, tuple[6], callback);
   } else {
-    fluent.ajax.regular_backwards_lineage(node.name, collection.name, hash,
-                                          time, callback);
+    assert(collection.lineage_type === "python", collection.lineage_type);
+    var f = fluent.ajax.python_backwards_lineage;
+    f(node.name, collection.name, tuple[6], callback);
   }
 }
 

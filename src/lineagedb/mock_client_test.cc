@@ -184,13 +184,46 @@ TEST(MockClient, RegisterBlackBoxLineage) {
   ASSERT_EQ(Status::OK, (client.RegisterBlackBoxLineage("bar", {"1"})));
   ASSERT_EQ(Status::OK, (client.RegisterBlackBoxLineage("baz", {"1", "2"})));
 
-  using Tuple =
-      MockClient<Hash, MockToSql, MockClock>::RegisterBlackBoxLineageTuple;
+  using Tuple = Client::RegisterBlackBoxLineageTuple;
   ASSERT_EQ(client.GetRegisterBlackBoxLineage().size(),
             static_cast<std::size_t>(3));
   EXPECT_EQ(client.GetRegisterBlackBoxLineage()[0], Tuple("foo", {}));
   EXPECT_EQ(client.GetRegisterBlackBoxLineage()[1], Tuple("bar", {"1"}));
   EXPECT_EQ(client.GetRegisterBlackBoxLineage()[2], Tuple("baz", {"1", "2"}));
+}
+
+TEST(MockClient, RegisterBlackBoxPythonLineageScript) {
+  using Client = MockClient<Hash, MockToSql, MockClock>;
+  StatusOr<Client> client_or = Client::Make("", 42, "", ConnectionConfig());
+  ASSERT_EQ(Status::OK, client_or.status());
+  Client client = client_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK,
+            (client.RegisterBlackBoxPythonLineageScript("bonnie\nand\nclyde")));
+  ASSERT_EQ(Status::OK,
+            (client.RegisterBlackBoxPythonLineageScript("bert\nand\nernie")));
+
+  using Tuple = Client::RegisterBlackBoxPythonLineageScriptTuple;
+  ASSERT_EQ(client.GetRegisterBlackBoxPythonLineageScript().size(),
+            static_cast<std::size_t>(2));
+  EXPECT_EQ(client.GetRegisterBlackBoxPythonLineageScript()[0],
+            Tuple("bonnie\nand\nclyde"));
+  EXPECT_EQ(client.GetRegisterBlackBoxPythonLineageScript()[1],
+            Tuple("bert\nand\nernie"));
+}
+
+TEST(MockClient, RegisterBlackBoxPythonLineage) {
+  using Client = MockClient<Hash, MockToSql, MockClock>;
+  StatusOr<Client> client_or = Client::Make("", 42, "", ConnectionConfig());
+  ASSERT_EQ(Status::OK, client_or.status());
+  Client client = client_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK, (client.RegisterBlackBoxPythonLineage("foo", "get")));
+  ASSERT_EQ(Status::OK, (client.RegisterBlackBoxPythonLineage("bar", "set")));
+
+  using Tuple = Client::RegisterBlackBoxPythonLineageTuple;
+  ASSERT_EQ(client.GetRegisterBlackBoxPythonLineage().size(),
+            static_cast<std::size_t>(2));
+  EXPECT_EQ(client.GetRegisterBlackBoxPythonLineage()[0], Tuple("foo", "get"));
+  EXPECT_EQ(client.GetRegisterBlackBoxPythonLineage()[1], Tuple("bar", "set"));
 }
 
 }  // namespace lineagedb

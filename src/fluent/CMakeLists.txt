@@ -7,10 +7,10 @@ ADD_LIBRARY(fluent
     $<TARGET_OBJECTS:lineagedb_object>)
 
 TARGET_LINK_LIBRARIES(fluent
-    ${FMT_LINK_DIRS}/libfmt.a
-    ${GLOG_LINK_DIRS}/libglog.a
     collections
     common
+    fmt
+    googlelog
     lineagedb
     pthread
     zmq_util)

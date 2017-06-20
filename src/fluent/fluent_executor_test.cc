@@ -629,6 +629,40 @@ TEST(FluentExecutor, BlackBoxLineage) {
   )"));
 }
 
+TEST(FluentExecutor, BlackBoxPythonLineage) {
+  zmq::context_t context(1);
+  lineagedb::ConnectionConfig connection_config;
+  auto fb_or =
+      fluent<ldb::MockClient, Hash, ldb::MockToSql, MockPickler, MockClock>(
+          "name", "inproc://yolo", &context, connection_config);
+  ASSERT_EQ(Status::OK, fb_or.status());
+  auto fe_or =
+      fb_or.ConsumeValueOrDie()
+          .channel<std::string, std::string, std::int64_t, int>(
+              "f_request", {{"dst_addr", "src_addr", "id", "x"}})
+          .channel<std::string, std::int64_t, int>("f_response",
+                                                   {{"addr", "id", "y"}})
+          .RegisterRules([](auto&, auto&) { return std::make_tuple(); });
+  ASSERT_EQ(Status::OK, fe_or.status());
+  auto f = fe_or.ConsumeValueOrDie();
+  ASSERT_EQ(Status::OK, f.RegisterBlackBoxPythonLineageScript("script"));
+  ASSERT_EQ(Status::OK, (f.RegisterBlackBoxPythonLineage<0, 1>("method")));
+
+  using Client = ldb::MockClient<Hash, ldb::MockToSql, MockClock>;
+  const Client& client = f.GetLineageDbClient();
+
+  const std::vector<Client::RegisterBlackBoxPythonLineageScriptTuple>&
+      python_script_tuples = client.GetRegisterBlackBoxPythonLineageScript();
+  ASSERT_EQ(python_script_tuples.size(), static_cast<std::size_t>(1));
+  EXPECT_EQ(CrunchWhitespace(std::get<0>(python_script_tuples[0])), "script");
+
+  const std::vector<Client::RegisterBlackBoxPythonLineageTuple>& python_tuples =
+      client.GetRegisterBlackBoxPythonLineage();
+  ASSERT_EQ(python_tuples.size(), static_cast<std::size_t>(1));
+  EXPECT_EQ(CrunchWhitespace(std::get<0>(python_tuples[0])), "f_response");
+  EXPECT_EQ(CrunchWhitespace(std::get<1>(python_tuples[0])), "method");
+}
+
 // TODO(mwhittaker): Test the lineage of a fluent program with communication
 // and deletion.
 

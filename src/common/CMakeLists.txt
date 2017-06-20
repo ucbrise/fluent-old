@@ -2,24 +2,23 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
 SET(COMMON_SOURCES
     error_code.cc
+    file_util.cc
+    rand_util.cc
     status.cc
     string_util.cc)
-
 ADD_LIBRARY(common ${COMMON_SOURCES})
 ADD_LIBRARY(common_object OBJECT ${COMMON_SOURCES})
 
 TARGET_LINK_LIBRARIES(common
-    ${FMT_LINK_DIRS}/libfmt.a
-    ${GLOG_LINK_DIRS}/libglog.a
+    fmt
+    googlelog
     pthread)
 
-ADD_DEPENDENCIES(common
+SET(COMMON_DEPENDENCIES
     fmt
     googlelog)
-
-ADD_DEPENDENCIES(common_object
-    fmt
-    googlelog)
+ADD_DEPENDENCIES(common ${COMMON_DEPENDENCIES})
+ADD_DEPENDENCIES(common_object ${COMMON_DEPENDENCIES})
 
 MACRO(CREATE_COMMON_TEST NAME)
     CREATE_NAMED_TEST(common_${NAME} ${NAME})

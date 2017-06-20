@@ -1,0 +1,21 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
+
+# PROTOBUF_GENERATE_CPP(PROTOBUF_SRC PROTOBUF_HDR foo.proto) runs the grpc
+# compiler on foo.proto to generate a source file (whose name is stored in
+# PROTOBUF_SRC) and a header file (whose name is stored in PROTOBUF_HDR).
+MACRO(PROTOBUF_GENERATE_CPP PROTOBUF_SRC PROTOBUF_HDR FILENAME)
+    GET_FILENAME_COMPONENT(FILENAME_NO_EXTENSION ${FILENAME} NAME_WE)
+    SET(${PROTOBUF_SRC}
+        "${CMAKE_CURRENT_BINARY_DIR}/${FILENAME_NO_EXTENSION}.pb.cc")
+    SET(${PROTOBUF_HDR}
+        "${CMAKE_CURRENT_BINARY_DIR}/${FILENAME_NO_EXTENSION}.pb.h")
+
+    add_custom_command(
+        OUTPUT "${${PROTOBUF_SRC}}" "${${PROTOBUF_HDR}}"
+        COMMAND ${Protobuf_PROTOC_EXECUTABLE}
+        ARGS --cpp_out "${CMAKE_CURRENT_BINARY_DIR}"
+             -I "${CMAKE_CURRENT_SOURCE_DIR}"
+             "${CMAKE_CURRENT_SOURCE_DIR}/${FILENAME}"
+        DEPENDS ${FILENAME}
+    )
+ENDMACRO(PROTOBUF_GENERATE_CPP)

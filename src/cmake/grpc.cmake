@@ -1,11 +1,8 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
-
-# CREATE_NAMED_TEST(foo bar.cc) creates a test named `foo` from the file
-# `bar.cc`. Refer to [1] and [2] for documentation on how ADD_TEST works.
-#
-# [1]: http://stackoverflow.com/a/21413672/3187068
-# [2]: https://cmake.org/cmake/help/v3.0/command/add_test.html
+# GRPC_GENERATE_CPP(GRPC_SRC GRPC_HDR foo.proto) runs the grpc compiler on
+# foo.proto to generate a source file (whose name is stored in GRPC_SRC) and a
+# header file (whose name is stored in GRPC_HDR).
 MACRO(GRPC_GENERATE_CPP GRPC_SRC GRPC_HDR FILENAME)
     GET_FILENAME_COMPONENT(FILENAME_NO_EXTENSION ${FILENAME} NAME_WE)
     SET(${GRPC_SRC}
@@ -13,7 +10,6 @@ MACRO(GRPC_GENERATE_CPP GRPC_SRC GRPC_HDR FILENAME)
     SET(${GRPC_HDR}
         "${CMAKE_CURRENT_BINARY_DIR}/${FILENAME_NO_EXTENSION}.grpc.pb.h")
 
-    SET(FULL_FILENAME)
     add_custom_command(
         OUTPUT "${${GRPC_SRC}}" "${${GRPC_HDR}}"
         COMMAND ${Protobuf_PROTOC_EXECUTABLE}

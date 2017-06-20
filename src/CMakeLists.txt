@@ -7,6 +7,7 @@ SET(FLUENT_VERSION_PATCH 0)
 
 INCLUDE(cmake/benchmarking.cmake NO_POLICY_SCOPE)
 INCLUDE(cmake/grpc.cmake NO_POLICY_SCOPE)
+INCLUDE(cmake/protobuf.cmake NO_POLICY_SCOPE)
 INCLUDE(cmake/testing.cmake NO_POLICY_SCOPE)
 
 # Imagine the following file organization:

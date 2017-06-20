@@ -8,7 +8,8 @@ TARGET_LINK_LIBRARIES(shim_gen_grpc_fluent_plugin
     fmt
     googlelog
     protobuf
-    protoc)
+    protoc
+    pthread)
 
 ADD_DEPENDENCIES(shim_gen_grpc_fluent_plugin
     fmt

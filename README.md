@@ -25,13 +25,13 @@ install and build the rest of the dependencies for you!
 ./scripts/build.sh Release 4 # build the code in release mode with 4 cores
 
 # Testing
-./build/bin/ra_logical_cross_test # run a test
-./build/bin/common_macros_test    # run another test
-(cd build && ctest -L UNITTEST)   # run all the tests
+./build/Debug/bin/ra_logical_cross_test # run a test
+./build/Debug/bin/common_macros_test    # run another test
+(cd build/Debug && ctest -L UNITTEST)   # run all the tests
 
 # Benchmarking
-./build/bin/ra_physical_iterable_bench # run a benchmark
-(cd build && ctest -L BENCHMARK)       # run all the benchmarks
+./build/Debug/bin/ra_physical_iterable_bench # run a benchmark
+(cd build/Debug && ctest -L BENCHMARK)       # run all the benchmarks
 
 # Generating Tags
 ./scripts/generate_tags.sh
@@ -39,13 +39,13 @@ install and build the rest of the dependencies for you!
 # Everything
 ./scripts/build.sh Debug 4 && \
     ./scripts/generate_tags.sh && \
-    (cd build && make test)
+    (cd build/Debug && make test)
 
 # Run a chat server listening on port 8000.
-./build/bin/examples_chat_noop_server 'tcp://*:8000'
+./build/Debug/bin/examples_chat_noop_server 'tcp://*:8000'
 
 # Run a chat client on port 8001 with nickname "zardoz"
-./build/bin/examples_chat_noop_client \
+./build/Debug/bin/examples_chat_noop_client \
     tcp://0.0.0.0:8000 tcp://0.0.0.0:8001 zardoz
 ```
 

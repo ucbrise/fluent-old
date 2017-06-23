@@ -9,6 +9,9 @@
 
 namespace fluent {
 
+// Returns a random integer in the range [low, high).
+int RandInt(int low, int high);
+
 // Returns a random string `xs` of length `len` where each character in `x` is
 // one of the following characters:
 //

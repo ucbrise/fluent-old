@@ -2,6 +2,13 @@
 
 namespace fluent {
 
+int RandInt(int low, int high) {
+  std::random_device random_device;
+  std::mt19937 random_engine(random_device());
+  std::uniform_int_distribution<int> distribution(low, high - 1);
+  return distribution(random_engine);
+}
+
 std::string RandomAlphanum(int len) {
   static const std::string chars =
       "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";

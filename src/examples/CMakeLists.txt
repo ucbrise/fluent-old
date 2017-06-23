@@ -1,6 +1,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
 ADD_SUBDIRECTORY(chat)
+ADD_SUBDIRECTORY(distributed_key_value_store)
 ADD_SUBDIRECTORY(file_system)
 ADD_SUBDIRECTORY(grpc)
 ADD_SUBDIRECTORY(key_value_store)

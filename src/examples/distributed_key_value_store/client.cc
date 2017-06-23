@@ -13,7 +13,7 @@ bool KeyValueServiceClient::Set(const std::string& key,
   // RPC.
   grpc::ClientContext context;
   grpc::Status status = stub_->Set(&context, request, &reply);
-  CHECK(status.ok());
+  CHECK(status.ok()) << status.error_message();
   return reply.success();
 }
 
@@ -28,7 +28,7 @@ google::protobuf::int64 KeyValueServiceClient::Get(const std::string& key) {
   // RPC.
   grpc::ClientContext context;
   grpc::Status status = stub_->Get(&context, request, &reply);
-  CHECK(status.ok());
+  CHECK(status.ok()) << status.error_message();
   return reply.value();
 }
 
@@ -48,6 +48,6 @@ bool KeyValueServiceClient::Merge(
   // RPC.
   grpc::ClientContext context;
   grpc::Status status = stub_->Merge(&context, request, &reply);
-  CHECK(status.ok());
+  CHECK(status.ok()) << status.error_message();
   return reply.success();
 }

@@ -15,6 +15,7 @@ TARGET_LINK_LIBRARIES(common
     pthread)
 
 SET(COMMON_DEPENDENCIES
+    cereal_project
     fmt
     googlelog)
 ADD_DEPENDENCIES(common ${COMMON_DEPENDENCIES})
@@ -26,6 +27,7 @@ MACRO(CREATE_COMMON_TEST NAME)
     ADD_DEPENDENCIES(common_${NAME} common)
 ENDMACRO(CREATE_COMMON_TEST)
 
+CREATE_COMMON_TEST(cereal_pickler_test)
 CREATE_COMMON_TEST(collection_util_test)
 CREATE_COMMON_TEST(hash_util_test)
 CREATE_COMMON_TEST(macros_test)

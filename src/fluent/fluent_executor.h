@@ -734,7 +734,11 @@ class FluentExecutor<
   template <typename Collection, typename RuleTag, typename Ra>
   WARN_UNUSED Status ExecuteRule(int rule_number,
                                  Rule<Collection, RuleTag, Ra>* rule) {
+    if (logical_time_wrapper_ != nullptr) {
+      logical_time_wrapper_->Set(&time_);
+    }
     time_++;
+
     using column_types = typename Ra::column_types;
     using tuple_type = typename TypeListToTuple<column_types>::type;
     Hash<tuple_type> hash;

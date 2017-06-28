@@ -53,82 +53,89 @@ int main(int argc, char* argv[]) {
                 .stdin()
                 .stdout()
                 .scratch<std::vector<std::string>>("split", {{"parts"}});
-  AddRedisApi(std::move(fb))
-      .RegisterRules([&](auto& stdin, auto& stdout, auto& split, auto& set_req,
-                         auto& set_resp, auto& append_req, auto& append_resp,
-                         auto& get_req, auto& get_resp) {
-        using namespace fluent::infix;
+  fluent::Status status =
+      AddRedisApi(std::move(fb))
+          .RegisterRules([&](auto& stdin, auto& stdout, auto& split,
+                             auto& set_req, auto& set_resp, auto& append_req,
+                             auto& append_resp, auto& get_req, auto& get_resp) {
+            using namespace fluent::infix;
 
-        (void)set_resp;
-        (void)append_resp;
+            (void)set_resp;
+            (void)append_resp;
 
-        auto buffer_stdin =
-            split <= (lra::make_collection(&stdin) |
-                      lra::map([](const std::tuple<std::string>& s)
-                                   -> std::tuple<std::vector<std::string>> {
-                        return {fluent::Split(std::get<0>(s))};
-                      }));
+            auto buffer_stdin =
+                split <= (lra::make_collection(&stdin) |
+                          lra::map([](const std::tuple<std::string>& s)
+                                       -> std::tuple<std::vector<std::string>> {
+                            return {fluent::Split(std::get<0>(s))};
+                          }));
 
-        auto get_request =
-            get_req <=
-            (lra::make_collection(&split) |
-             lra::filter([](
-                 const std::tuple<std::vector<std::string>>& parts_tuple) {
-               const std::vector<std::string>& parts = std::get<0>(parts_tuple);
-               return parts.size() == 2 && parts[0] == "GET";
-             }) |
-             lra::map(
-                 [&](const std::tuple<std::vector<std::string>>& parts_tuple)
-                     -> std::tuple<std::string, std::string, std::int64_t,
-                                   std::string> {
+            auto get_request =
+                get_req <=
+                (lra::make_collection(&split) |
+                 lra::filter([](
+                     const std::tuple<std::vector<std::string>>& parts_tuple) {
+                   const std::vector<std::string>& parts =
+                       std::get<0>(parts_tuple);
+                   return parts.size() == 2 && parts[0] == "GET";
+                 }) |
+                 lra::map([&](const std::tuple<std::vector<std::string>>&
+                                  parts_tuple)
+                              -> std::tuple<std::string, std::string,
+                                            std::int64_t, std::string> {
                    const std::vector<std::string>& parts =
                        std::get<0>(parts_tuple);
                    return {server_address, client_address, id_gen.Generate(),
                            parts[1]};
                  }));
 
-        auto append_request =
-            append_req <=
-            (lra::make_collection(&split) |
-             lra::filter([](
-                 const std::tuple<std::vector<std::string>>& parts_tuple) {
-               const std::vector<std::string>& parts = std::get<0>(parts_tuple);
-               return parts.size() == 3 && parts[0] == "APPEND";
-             }) |
-             lra::map(
-                 [&](const std::tuple<std::vector<std::string>>& parts_tuple)
-                     -> std::tuple<std::string, std::string, std::int64_t,
-                                   std::string, std::string> {
+            auto append_request =
+                append_req <=
+                (lra::make_collection(&split) |
+                 lra::filter([](
+                     const std::tuple<std::vector<std::string>>& parts_tuple) {
                    const std::vector<std::string>& parts =
                        std::get<0>(parts_tuple);
-                   return {server_address, client_address, id_gen.Generate(),
-                           parts[1], parts[2]};
-                 }));
+                   return parts.size() == 3 && parts[0] == "APPEND";
+                 }) |
+                 lra::map(
+                     [&](const std::tuple<std::vector<std::string>>&
+                             parts_tuple)
+                         -> std::tuple<std::string, std::string, std::int64_t,
+                                       std::string, std::string> {
+                       const std::vector<std::string>& parts =
+                           std::get<0>(parts_tuple);
+                       return {server_address, client_address,
+                               id_gen.Generate(), parts[1], parts[2]};
+                     }));
 
-        auto set_request =
-            set_req <=
-            (lra::make_collection(&split) |
-             lra::filter([](
-                 const std::tuple<std::vector<std::string>>& parts_tuple) {
-               const std::vector<std::string>& parts = std::get<0>(parts_tuple);
-               return parts.size() == 3 && parts[0] == "SET";
-             }) |
-             lra::map(
-                 [&](const std::tuple<std::vector<std::string>>& parts_tuple)
-                     -> std::tuple<std::string, std::string, std::int64_t,
-                                   std::string, std::string> {
+            auto set_request =
+                set_req <=
+                (lra::make_collection(&split) |
+                 lra::filter([](
+                     const std::tuple<std::vector<std::string>>& parts_tuple) {
                    const std::vector<std::string>& parts =
                        std::get<0>(parts_tuple);
-                   return {server_address, client_address, id_gen.Generate(),
-                           parts[1], parts[2]};
-                 }));
+                   return parts.size() == 3 && parts[0] == "SET";
+                 }) |
+                 lra::map(
+                     [&](const std::tuple<std::vector<std::string>>&
+                             parts_tuple)
+                         -> std::tuple<std::string, std::string, std::int64_t,
+                                       std::string, std::string> {
+                       const std::vector<std::string>& parts =
+                           std::get<0>(parts_tuple);
+                       return {server_address, client_address,
+                               id_gen.Generate(), parts[1], parts[2]};
+                     }));
 
-        auto get_response =
-            stdout <= (lra::make_collection(&get_resp) | lra::project<2>());
+            auto get_response =
+                stdout <= (lra::make_collection(&get_resp) | lra::project<2>());
 
-        return std::make_tuple(buffer_stdin, get_request, set_request,
-                               append_request, get_response);
-      })
-      .ConsumeValueOrDie()
-      .Run();
+            return std::make_tuple(buffer_stdin, get_request, set_request,
+                                   append_request, get_response);
+          })
+          .ConsumeValueOrDie()
+          .Run();
+  CHECK_EQ(status, fluent::Status::OK);
 }

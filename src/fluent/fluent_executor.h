@@ -471,7 +471,7 @@ class FluentExecutor<
   }
 
   // Runs a fluent program.
-  Status Run() {
+  WARN_UNUSED Status Run() {
     RETURN_IF_ERROR(BootstrapTick());
     while (true) {
       RETURN_IF_ERROR(Receive());

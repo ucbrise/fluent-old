@@ -49,25 +49,28 @@ int main(int argc, char* argv[]) {
                 .ConsumeValueOrDie()
                 .stdin()
                 .stdout();
-  AddEchoServiceApi(std::move(fb))
-      .RegisterRules([&](auto& stdin, auto& stdout, auto& echo_request,
-                         auto& echo_reply) {
-        using namespace fluent::infix;
+  fluent::Status status =
+      AddEchoServiceApi(std::move(fb))
+          .RegisterRules([&](auto& stdin, auto& stdout, auto& echo_request,
+                             auto& echo_reply) {
+            using namespace fluent::infix;
 
-        auto stdin_to_echo =
-            echo_request <=
-            (lra::make_collection(&stdin) |
-             lra::map([&](const std::tuple<std::string>& t) -> std::tuple<
-                          std::string, std::string, std::int64_t, std::string> {
-               return {server_address, client_address, id_gen.Generate(),
-                       std::get<0>(t)};
-             }));
+            auto stdin_to_echo =
+                echo_request <=
+                (lra::make_collection(&stdin) |
+                 lra::map([&](const std::tuple<std::string>& t)
+                              -> std::tuple<std::string, std::string,
+                                            std::int64_t, std::string> {
+                   return {server_address, client_address, id_gen.Generate(),
+                           std::get<0>(t)};
+                 }));
 
-        auto echo_to_stdout =
-            stdout <= (lra::make_collection(&echo_reply) | lra::project<2>());
+            auto echo_to_stdout = stdout <= (lra::make_collection(&echo_reply) |
+                                             lra::project<2>());
 
-        return std::make_tuple(stdin_to_echo, echo_to_stdout);
-      })
-      .ConsumeValueOrDie()
-      .Run();
+            return std::make_tuple(stdin_to_echo, echo_to_stdout);
+          })
+          .ConsumeValueOrDie()
+          .Run();
+  CHECK_EQ(status, fluent::Status::OK);
 }

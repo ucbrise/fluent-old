@@ -30,3 +30,40 @@ CREATE TABLE Rules (
     rule         text    NOT NULL,
     PRIMARY KEY (node_id, rule_number, is_bootstrap)
 );
+
+-- Vector clock comparators.
+-- =
+CREATE FUNCTION VectorClockEq(lhs integer[], rhs integer[]) RETURNS boolean AS
+$$SELECT lhs = rhs;$$
+LANGUAGE SQL;
+
+-- <>
+CREATE FUNCTION VectorClockNe(lhs integer[], rhs integer[]) RETURNS boolean AS
+$$SELECT lhs <> rhs;$$
+LANGUAGE SQL;
+
+-- <=
+CREATE FUNCTION VectorClockLe(lhs integer[], rhs integer[]) RETURNS boolean AS
+$$SELECT bool_and(x <= y) FROM UNNEST(lhs) AS x, UNNEST(rhs) as y;$$
+LANGUAGE SQL;
+
+-- <
+CREATE FUNCTION VectorClockLt(lhs integer[], rhs integer[]) RETURNS boolean AS
+$$SELECT VectorClockLe(lhs, rhs) AND VectorClockNe(lhs, rhs);$$
+LANGUAGE SQL;
+
+-- >=
+CREATE FUNCTION VectorClockGe(lhs integer[], rhs integer[]) RETURNS boolean AS
+$$SELECT bool_and(x >= y) FROM UNNEST(lhs) AS x, UNNEST(rhs) as y;$$
+LANGUAGE SQL;
+
+-- >
+CREATE FUNCTION VectorClockGt(lhs integer[], rhs integer[]) RETURNS boolean AS
+$$SELECT VectorClockGe(lhs, rhs) AND VectorClockNe(lhs, rhs);$$
+LANGUAGE SQL;
+
+-- Concurrent
+CREATE FUNCTION VectorClockConcurrent(lhs integer[], rhs integer[])
+    RETURNS boolean AS
+$$SELECT NOT VectorClockLe(lhs, rhs) AND NOT VectorClockGe(lhs, rhs);$$
+LANGUAGE SQL;

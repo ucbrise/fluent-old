@@ -1,3 +1,4 @@
+import decimal
 import imp
 import sys
 
@@ -15,6 +16,8 @@ def with_cursor(f, *args):
 def escape(x):
     if type(x) == long:
         return str(x)
+    if type(x) == decimal.Decimal:
+        return float(x)
     else:
         return x
 
@@ -91,7 +94,6 @@ def node_collection_(cur, node_name, collection_name, time):
                                         time_deleted > %s))
     """.format(node_name, collection_name), (time, time, time))
     collection["tuples"] = [[escape(x) for x in t] for t in cur.fetchall()]
-
     return collection
 
 def regular_backwards_lineage_(cur, node_name, collection_name, hash, time):

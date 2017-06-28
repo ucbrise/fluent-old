@@ -17,9 +17,9 @@
 
 #include "collections/all.h"
 #include "collections/collection.h"
+#include "common/cereal_pickler.h"
 #include "common/hash_util.h"
 #include "common/macros.h"
-#include "common/mock_pickler.h"
 #include "common/static_assert.h"
 #include "common/status.h"
 #include "common/status_macros.h"
@@ -61,7 +61,7 @@ template <typename Collections, typename BootstrapRules,
           class LineageDbClient,
           template <typename> class Hash = Hash,
           template <typename> class ToSql = lineagedb::ToSql,
-          template <typename> class Pickler = MockPickler,
+          template <typename> class Pickler = CerealPickler,
           typename Clock = std::chrono::system_clock>
 class FluentBuilder;
 
@@ -152,9 +152,10 @@ class FluentBuilder<
   }
 
   // See `RegisterRules`
-  template <typename F, typename RetTuple =
-                            typename std::result_of<F(Collections&...)>::type,
-            typename RetTypes = typename TupleToTypeList<RetTuple>::type>
+  template <
+      typename F,
+      typename RetTuple = typename std::result_of<F(Collections&...)>::type,
+      typename RetTypes = typename TupleToTypeList<RetTuple>::type>
   WithBootstrapRules<RetTypes> RegisterBootstrapRules(const F& f) && {
     static_assert(TypeListLen<BootstrapRules>::value == 0,
                   "You are registering bootstrap rules with a FluentBuilder "
@@ -186,9 +187,10 @@ class FluentBuilder<
   // Note that `t <= ra` is syntactic sugar for `std::make_pair(t, ra)`
   // implemented by Collection's `<=` operator. `RegisterRules` will execute
   // `f` to generate the rules and use them to construct a `FluentExecutor`.
-  template <typename F, typename RetTuple =
-                            typename std::result_of<F(Collections&...)>::type,
-            typename RetTypes = typename TupleToTypeList<RetTuple>::type>
+  template <
+      typename F,
+      typename RetTuple = typename std::result_of<F(Collections&...)>::type,
+      typename RetTypes = typename TupleToTypeList<RetTuple>::type>
   WARN_UNUSED StatusOr<
       FluentExecutor<TypeList<Collections...>, BootstrapRules, RetTypes,
                      LineageDbClient, Hash, ToSql, Pickler, Clock>>
@@ -360,7 +362,7 @@ template <template <template <typename> class Hash,
           class LineageDbClient,
           template <typename> class Hash = Hash,
           template <typename> class ToSql = lineagedb::ToSql,
-          template <typename> class Pickler = MockPickler,
+          template <typename> class Pickler = CerealPickler,
           typename Clock = std::chrono::system_clock>
 StatusOr<FluentBuilder<TypeList<>, TypeList<>, LineageDbClient, Hash, ToSql,
                        Pickler, Clock>>

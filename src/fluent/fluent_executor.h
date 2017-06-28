@@ -31,6 +31,7 @@
 #include "fluent/network_state.h"
 #include "fluent/rule.h"
 #include "fluent/rule_tags.h"
+#include "fluent/timestamp_wrapper.h"
 #include "lineagedb/connection_config.h"
 #include "lineagedb/to_sql.h"
 #include "ra/logical_to_physical.h"
@@ -134,14 +135,15 @@ class FluentExecutor<
       std::string name, std::size_t id,
       std::tuple<std::unique_ptr<Collections>...> collections,
       BootstrapRulesTuple bootstrap_rules,
+      std::unique_ptr<TimestampWrapper> logical_time_wrapper,
       std::unique_ptr<NetworkState> network_state, Stdin* stdin,
       std::vector<Periodic<Clock>*> periodics,
       std::unique_ptr<LineageDbClient<Hash, ToSql, Clock>> lineagedb_client,
       RulesTuple rules) {
-    FluentExecutor f(std::move(name), id, std::move(collections),
-                     std::move(bootstrap_rules), std::move(network_state),
-                     stdin, std::move(periodics), std::move(lineagedb_client),
-                     std::move(rules));
+    FluentExecutor f(
+        std::move(name), id, std::move(collections), std::move(bootstrap_rules),
+        std::move(logical_time_wrapper), std::move(network_state), stdin,
+        std::move(periodics), std::move(lineagedb_client), std::move(rules));
     RETURN_IF_ERROR(f.InitLineageDbClient());
     return std::move(f);
   }
@@ -150,6 +152,7 @@ class FluentExecutor<
       std::string name, std::size_t id,
       std::tuple<std::unique_ptr<Collections>...> collections,
       BootstrapRulesTuple bootstrap_rules,
+      std::unique_ptr<TimestampWrapper> logical_time_wrapper,
       std::unique_ptr<NetworkState> network_state, Stdin* stdin,
       std::vector<Periodic<Clock>*> periodics,
       std::unique_ptr<LineageDbClient<Hash, ToSql, Clock>> lineagedb_client,
@@ -158,6 +161,7 @@ class FluentExecutor<
         id_(id),
         collections_(std::move(collections)),
         bootstrap_rules_(std::move(bootstrap_rules)),
+        logical_time_wrapper_(std::move(logical_time_wrapper)),
         network_state_(std::move(network_state)),
         stdin_(stdin),
         periodics_(std::move(periodics)),
@@ -804,6 +808,7 @@ class FluentExecutor<
   const std::size_t id_;
   std::tuple<std::unique_ptr<Collections>...> collections_;
   BootstrapRulesTuple bootstrap_rules_;
+  std::unique_ptr<TimestampWrapper> logical_time_wrapper_;
   std::unique_ptr<NetworkState> network_state_;
   Stdin* const stdin_;
   std::vector<Periodic<Clock>*> periodics_;

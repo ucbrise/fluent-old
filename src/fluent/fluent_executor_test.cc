@@ -113,6 +113,57 @@ TEST(FluentExecutor, SimpleProgram) {
   EXPECT_EQ(f.Get<1>().Get(), expected);
 }
 
+TEST(FluentExecutor, SimpleProgramWithLogicalTime) {
+  zmq::context_t context(1);
+  ldb::ConnectionConfig connection_config;
+  std::set<std::tuple<int>> xs = {{0}};
+  std::map<std::tuple<int>, CollectionTupleIds> expected;
+  Hash<std::tuple<int>> hash;
+
+  auto fb_or = noopfluent("name", "inproc://yolo", &context, connection_config);
+  ASSERT_EQ(Status::OK, fb_or.status());
+  auto fe_or = fb_or.ConsumeValueOrDie()
+                   .logical_time()
+                   .table<int>("t", {{"x"}})
+                   .RegisterRules([&xs](auto& logical_time, auto& t) {
+                     using namespace fluent::infix;
+                     auto rule =
+                         t <= (lra::make_iterable(&xs) |
+                               lra::map([&](const auto&) -> std::tuple<int> {
+                                 return {logical_time.Get()};
+                               }));
+                     return std::make_tuple(rule);
+                   });
+  ASSERT_EQ(Status::OK, fe_or.status());
+  auto f = fe_or.ConsumeValueOrDie();
+
+  // | time | action | delta t |
+  // | ---- | ------ | ------- |
+  // | 1    | rule   | +1      |
+  // | 2    | tick   |         |
+  // | 3    | rule   | +3      |
+  // | 4    | tick   |         |
+  // | 5    | rule   | +5      |
+  // | 6    | tick   |         |
+
+  expected = {};
+  EXPECT_EQ(f.Get<0>().Get(), expected);
+
+  ASSERT_EQ(Status::OK, f.Tick());
+  expected = {{{1}, {hash({1}), {1}}}};
+  EXPECT_EQ(f.Get<0>().Get(), expected);
+
+  ASSERT_EQ(Status::OK, f.Tick());
+  expected = {{{1}, {hash({1}), {1}}}, {{3}, {hash({3}), {3}}}};
+  EXPECT_EQ(f.Get<0>().Get(), expected);
+
+  ASSERT_EQ(Status::OK, f.Tick());
+  expected = {{{1}, {hash({1}), {1}}},
+              {{3}, {hash({3}), {3}}},
+              {{5}, {hash({5}), {5}}}};
+  EXPECT_EQ(f.Get<0>().Get(), expected);
+}
+
 TEST(FluentExecutor, SimpleBootstrap) {
   zmq::context_t context(1);
   lineagedb::ConnectionConfig connection_config;

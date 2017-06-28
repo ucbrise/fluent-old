@@ -1,6 +1,8 @@
 #ifndef FLUENT_FLUENT_TIMESTAMP_WRAPPER_H_
 #define FLUENT_FLUENT_TIMESTAMP_WRAPPER_H_
 
+#include "glog/logging.h"
+
 namespace fluent {
 
 class TimestampWrapper {
@@ -9,7 +11,10 @@ class TimestampWrapper {
 
   void Set(int* x) { x_ = x; }
 
-  int Get() const { return *x_; }
+  int Get() const {
+    CHECK_NOTNULL(x_);
+    return *x_;
+  }
 
  private:
   int* x_;

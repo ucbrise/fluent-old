@@ -66,13 +66,14 @@ int main(int argc, char* argv[]) {
   KeyValueServiceClient grpc_client(channel);
 
   const std::string name =
-      "distributed_kvs_server_" + fluent::RandomAlphanum(10);
+      "distributed_kvs_server_" + std::to_string(replica_index);
   auto fb_or =
       fluent::fluent<ldb::PqxxClient>(name, replica_address, &context, config);
   auto fb = fb_or.ConsumeValueOrDie();
 
   auto with_collections =
       AddKvsApi(std::move(fb))
+          .logical_time()
           .table<std::vector<int>>("vector_clock", {{"clock"}})
           .periodic("gossip_period", std::chrono::seconds(5))
           .channel<std::string, std::vector<int>>("vector_clock_merge",
@@ -81,9 +82,10 @@ int main(int argc, char* argv[]) {
   auto with_bootstrap_rule =
       std::move(with_collections)
           .RegisterBootstrapRules([&initial_vector_clock](
-              auto& set_request, auto& set_response, auto& get_request,
-              auto& get_response, auto& vector_clock, auto& gossip_period,
-              auto& vector_clock_merge) {
+              auto& logical_time, auto& set_request, auto& set_response,
+              auto& get_request, auto& get_response, auto& vector_clock,
+              auto& gossip_period, auto& vector_clock_merge) {
+            UNUSED(logical_time);
             UNUSED(set_request);
             UNUSED(set_response);
             UNUSED(get_request);
@@ -99,10 +101,10 @@ int main(int argc, char* argv[]) {
 
   auto with_rules_or =
       std::move(with_bootstrap_rule)
-          .RegisterRules([&](auto& set_request, auto& set_response,
-                             auto& get_request, auto& get_response,
-                             auto& vector_clock, auto& gossip_period,
-                             auto& vector_clock_merge) {
+          .RegisterRules([&](auto& logical_time, auto& set_request,
+                             auto& set_response, auto& get_request,
+                             auto& get_response, auto& vector_clock,
+                             auto& gossip_period, auto& vector_clock_merge) {
             using namespace fluent::infix;
 
             auto set = set_response <=
@@ -126,18 +128,55 @@ int main(int argc, char* argv[]) {
                           return get_response_tuple(src_addr, id, value);
                         }));
 
+            auto delete_vector_clock_periodic = vector_clock -=
+                (lra::make_cross(lra::make_collection(&gossip_period),
+                                 lra::make_collection(&vector_clock)) |
+                 lra::project<2>());
+
+            auto update_vector_clock_periodic = vector_clock +=
+                (lra::make_cross(lra::make_collection(&gossip_period),
+                                 lra::make_collection(&vector_clock)) |
+                 lra::map([&](const auto& t) {
+                   std::vector<int> clock = std::get<2>(t);
+                   clock[replica_index] = logical_time.Get();
+                   return std::make_tuple(clock);
+                 }));
+
             auto gossip =
                 vector_clock_merge <=
                 (lra::make_cross(lra::make_collection(&gossip_period),
                                  lra::make_collection(&vector_clock)) |
-                 lra::map([&replica_addresses](const auto& t) {
+                 lra::map([&](const auto& t) {
                    std::vector<int> clock = std::get<2>(t);
+                   clock[replica_index] = logical_time.Get();
                    const std::string& replica_address =
                        replica_addresses[fluent::RandInt(0, 2)];
                    return std::make_tuple(replica_address, clock);
                  }));
 
-            return std::make_tuple(set, get, gossip);
+            auto delete_vector_clock_gossip = vector_clock -=
+                (lra::make_cross(lra::make_collection(&vector_clock_merge),
+                                 lra::make_collection(&vector_clock)) |
+                 lra::project<2>());
+
+            auto update_vector_clock_gossip = vector_clock +=
+                (lra::make_cross(lra::make_collection(&vector_clock_merge),
+                                 lra::make_collection(&vector_clock)) |
+                 lra::map([&](const auto& t) {
+                   const std::vector<int>& remote_clock = std::get<1>(t);
+                   std::vector<int> clock = std::get<2>(t);
+                   CHECK_EQ(remote_clock.size(), clock.size());
+                   for (std::size_t i = 0; i < clock.size(); ++i) {
+                     clock[i] = std::max(remote_clock[i], clock[i]);
+                   }
+                   clock[replica_index] = logical_time.Get();
+                   return std::make_tuple(clock);
+                 }));
+
+            return std::make_tuple(set, get, delete_vector_clock_periodic,
+                                   update_vector_clock_periodic, gossip,
+                                   delete_vector_clock_gossip,
+                                   update_vector_clock_gossip);
           });
   auto with_rules = with_rules_or.ConsumeValueOrDie();
   CHECK_EQ(with_rules.Run(), fluent::Status::OK);

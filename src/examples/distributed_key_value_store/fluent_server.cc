@@ -197,56 +197,62 @@ int main(int argc, char* argv[]) {
               LIMIT 1
           )
 
-          SELECT CAST('distributed_kvs_server_{a}' AS text),
-                 CAST('set_request' AS text),
-                 hash,
-                 time_inserted
-          FROM distributed_kvs_server_{a}_set_request SR
-          WHERE key = {key} AND NOT EXISTS(
-              SELECT *
-              FROM (SELECT    VC{a}.clock
-                    FROM      distributed_kvs_server_{a}_vector_clock VC{a},
-                              vector_clock_{p} VC{p}
-                     WHERE    VC{a}.time_inserted <= SR.time_inserted
-                     ORDER BY VC{a}.time_inserted DESC
-                     LIMIT 1) VC{a},
-                    vector_clock_{p} VC{p}
-              WHERE NOT (VectorClockGe(VC{p}.clock, VC{a}.clock) OR
-                         VectorClockConcurrent(VC{p}.clock, VC{a}.clock))
+          (
+            SELECT CAST('distributed_kvs_server_{a}' AS text),
+                   CAST('set_request' AS text),
+                   hash,
+                   time_inserted
+            FROM distributed_kvs_server_{a}_set_request SR
+            WHERE key = {key} AND NOT EXISTS(
+                SELECT *
+                FROM (SELECT    VC{a}.clock
+                      FROM      distributed_kvs_server_{a}_vector_clock VC{a},
+                                vector_clock_{p} VC{p}
+                       WHERE    VC{a}.time_inserted <= SR.time_inserted
+                       ORDER BY VC{a}.time_inserted DESC
+                       LIMIT 1) VC{a},
+                      vector_clock_{p} VC{p}
+                WHERE NOT (VectorClockGe(VC{p}.clock, VC{a}.clock) OR
+                           VectorClockConcurrent(VC{p}.clock, VC{a}.clock))
 
+            )
           )
 
           UNION
 
-          SELECT CAST('distributed_kvs_server_{b}' AS text),
-                 CAST('set_request' AS text),
-                 hash,
-                 time_inserted
-          FROM distributed_kvs_server_{b}_set_request SR
-          WHERE key = {key} AND NOT EXISTS(
-              SELECT *
-              FROM (SELECT    VC{b}.clock
-                    FROM      distributed_kvs_server_{b}_vector_clock VC{b},
-                              vector_clock_{p} VC{p}
-                     WHERE    VC{b}.time_inserted <= SR.time_inserted
-                     ORDER BY VC{b}.time_inserted DESC
-                     LIMIT 1) VC{b},
-                    vector_clock_{p} VC{p}
-              WHERE NOT (VectorClockGe(VC{p}.clock, VC{b}.clock) OR
-                         VectorClockConcurrent(VC{p}.clock, VC{b}.clock))
+          (
+            SELECT CAST('distributed_kvs_server_{b}' AS text),
+                   CAST('set_request' AS text),
+                   hash,
+                   time_inserted
+            FROM distributed_kvs_server_{b}_set_request SR
+            WHERE key = {key} AND NOT EXISTS(
+                SELECT *
+                FROM (SELECT    VC{b}.clock
+                      FROM      distributed_kvs_server_{b}_vector_clock VC{b},
+                                vector_clock_{p} VC{p}
+                       WHERE    VC{b}.time_inserted <= SR.time_inserted
+                       ORDER BY VC{b}.time_inserted DESC
+                       LIMIT 1) VC{b},
+                      vector_clock_{p} VC{p}
+                WHERE NOT (VectorClockGe(VC{p}.clock, VC{b}.clock) OR
+                           VectorClockConcurrent(VC{p}.clock, VC{b}.clock))
 
+            )
           )
 
           UNION
 
-          SELECT CAST('distributed_kvs_server_{p}' AS text),
-                 CAST('set_request' AS text),
-                 hash,
-                 time_inserted
-          FROM distributed_kvs_server_{p}_set_request
-          WHERE time_inserted <= {time_inserted} AND key = {key}
-          ORDER BY time_inserted DESC
-          LIMIT 1
+          (
+            SELECT CAST('distributed_kvs_server_{p}' AS text),
+                   CAST('set_request' AS text),
+                   hash,
+                   time_inserted
+            FROM distributed_kvs_server_{p}_set_request
+            WHERE time_inserted <= {time_inserted} AND key = {key}
+            ORDER BY time_inserted DESC
+            LIMIT 1
+          )
         )";
         return fmt::format(query, fmt::arg("key", key),
                            fmt::arg("time_inserted", time_inserted),

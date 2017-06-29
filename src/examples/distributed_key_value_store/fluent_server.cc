@@ -128,20 +128,6 @@ int main(int argc, char* argv[]) {
                           return get_response_tuple(src_addr, id, value);
                         }));
 
-            auto delete_vector_clock_periodic = vector_clock -=
-                (lra::make_cross(lra::make_collection(&gossip_period),
-                                 lra::make_collection(&vector_clock)) |
-                 lra::project<2>());
-
-            auto update_vector_clock_periodic = vector_clock +=
-                (lra::make_cross(lra::make_collection(&gossip_period),
-                                 lra::make_collection(&vector_clock)) |
-                 lra::map([&](const auto& t) {
-                   std::vector<int> clock = std::get<2>(t);
-                   clock[replica_index] = logical_time.Get();
-                   return std::make_tuple(clock);
-                 }));
-
             auto gossip =
                 vector_clock_merge <=
                 (lra::make_cross(lra::make_collection(&gossip_period),
@@ -173,9 +159,7 @@ int main(int argc, char* argv[]) {
                    return std::make_tuple(clock);
                  }));
 
-            return std::make_tuple(set, get, delete_vector_clock_periodic,
-                                   update_vector_clock_periodic, gossip,
-                                   delete_vector_clock_gossip,
+            return std::make_tuple(set, get, gossip, delete_vector_clock_gossip,
                                    update_vector_clock_gossip);
           });
   auto with_rules = with_rules_or.ConsumeValueOrDie();

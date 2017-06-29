@@ -24,7 +24,7 @@ main() {
     tmux select-layout tiled
     tmux select-pane -t 9
 
-    glog="GLOG_logtostderr=1 GLOG_v=1"
+    glog="GLOG_logtostderr=1"
     bin="./build/Debug/bin"
 
     server="$bin/examples_distributed_key_value_store_server"

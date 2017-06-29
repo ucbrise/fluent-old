@@ -734,6 +734,8 @@ class FluentExecutor<
   template <typename Collection, typename RuleTag, typename Ra>
   WARN_UNUSED Status ExecuteRule(int rule_number,
                                  Rule<Collection, RuleTag, Ra>* rule) {
+    VLOG(1) << "Executing rule " << rule_number << ".";
+
     if (logical_time_wrapper_ != nullptr) {
       logical_time_wrapper_->Set(&time_);
     }

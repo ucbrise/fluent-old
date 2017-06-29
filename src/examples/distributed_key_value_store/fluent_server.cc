@@ -1,4 +1,6 @@
+#include <chrono>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "glog/logging.h"
@@ -163,6 +165,96 @@ int main(int argc, char* argv[]) {
                                    update_vector_clock_gossip);
           });
   auto with_rules = with_rules_or.ConsumeValueOrDie();
+
+  // TODO(mwhittaker): Remove this hack.
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+  fluent::Status status = with_rules.RegisterBlackBoxLineage<2, 3>(
+      [&replica_index](const std::string& time_inserted, const std::string& key,
+                       const std::string& value) {
+        UNUSED(value);
+
+        int primary = replica_index;
+        int backup_a = 0;
+        int backup_b = 0;
+        if (replica_index == 0) {
+          backup_a = 1;
+          backup_b = 2;
+        } else if (replica_index == 1) {
+          backup_a = 0;
+          backup_b = 2;
+        } else {
+          CHECK_EQ(replica_index, 2);
+          backup_a = 0;
+          backup_b = 1;
+        }
+
+        const std::string query = R"(
+          WITH vector_clock_{p} AS (
+              SELECT clock
+              FROM distributed_kvs_server_{p}_vector_clock
+              WHERE time_inserted <= {time_inserted}
+              ORDER BY time_inserted DESC
+              LIMIT 1
+          )
+
+          SELECT CAST('distributed_kvs_server_{a}' AS text),
+                 CAST('set_request' AS text),
+                 hash,
+                 time_inserted
+          FROM distributed_kvs_server_{a}_set_request SR
+          WHERE key = {key} AND NOT EXISTS(
+              SELECT *
+              FROM (SELECT    VC{a}.clock
+                    FROM      distributed_kvs_server_{a}_vector_clock VC{a},
+                              vector_clock_{p} VC{p}
+                     WHERE    VC{a}.time_inserted <= SR.time_inserted
+                     ORDER BY VC{a}.time_inserted DESC
+                     LIMIT 1) VC{a},
+                    vector_clock_{p} VC{p}
+              WHERE NOT (VectorClockGe(VC{p}.clock, VC{a}.clock) OR
+                         VectorClockConcurrent(VC{p}.clock, VC{a}.clock))
+
+          )
+
+          UNION
+
+          SELECT CAST('distributed_kvs_server_{b}' AS text),
+                 CAST('set_request' AS text),
+                 hash,
+                 time_inserted
+          FROM distributed_kvs_server_{b}_set_request SR
+          WHERE key = {key} AND NOT EXISTS(
+              SELECT *
+              FROM (SELECT    VC{b}.clock
+                    FROM      distributed_kvs_server_{b}_vector_clock VC{b},
+                              vector_clock_{p} VC{p}
+                     WHERE    VC{b}.time_inserted <= SR.time_inserted
+                     ORDER BY VC{b}.time_inserted DESC
+                     LIMIT 1) VC{b},
+                    vector_clock_{p} VC{p}
+              WHERE NOT (VectorClockGe(VC{p}.clock, VC{b}.clock) OR
+                         VectorClockConcurrent(VC{p}.clock, VC{b}.clock))
+
+          )
+
+          UNION
+
+          SELECT CAST('distributed_kvs_server_{p}' AS text),
+                 CAST('set_request' AS text),
+                 hash,
+                 time_inserted
+          FROM distributed_kvs_server_{p}_set_request
+          WHERE time_inserted <= {time_inserted} AND key = {key}
+          ORDER BY time_inserted DESC
+          LIMIT 1
+        )";
+        return fmt::format(query, fmt::arg("key", key),
+                           fmt::arg("time_inserted", time_inserted),
+                           fmt::arg("p", primary), fmt::arg("a", backup_a),
+                           fmt::arg("b", backup_b));
+      });
+
+  CHECK_EQ(status, fluent::Status::OK);
   CHECK_EQ(with_rules.Run(), fluent::Status::OK);
 
   return 0;

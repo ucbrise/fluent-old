@@ -19,8 +19,8 @@ main() {
 
     glog="GLOG_logtostderr=1"
     bin="./build/Debug/bin"
-    server="$bin/examples_distributed_key_value_store_server"
-    client="$bin/examples_distributed_key_value_store_command_line_client"
+    server="$bin/examples_distributed_kvs_server"
+    client="$bin/examples_distributed_kvs_command_line_client"
     addr9000="0.0.0.0:9000"
     addr9001="0.0.0.0:9001"
     addr9002="0.0.0.0:9002"

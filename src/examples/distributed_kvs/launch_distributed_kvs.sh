@@ -27,19 +27,19 @@ main() {
     glog="GLOG_logtostderr=1"
     bin="./build/Debug/bin"
 
-    server="$bin/examples_distributed_key_value_store_server"
+    server="$bin/examples_distributed_kvs_server"
     addr9000="0.0.0.0:9000"
     addr9001="0.0.0.0:9001"
     addr9002="0.0.0.0:9002"
 
-    fluent_server="$bin/examples_distributed_key_value_store_fluent_server"
+    fluent_server="$bin/examples_distributed_kvs_fluent_server"
     lineagedb_config="vagrant vagrant vagrant"
     addr8000="tcp://0.0.0.0:8000"
     addr8001="tcp://0.0.0.0:8001"
     addr8002="tcp://0.0.0.0:8002"
     replica_addrs="$addr8000 $addr8001 $addr8002"
 
-    fluent_client="$bin/examples_distributed_key_value_store_fluent_client"
+    fluent_client="$bin/examples_distributed_kvs_fluent_client"
     addr10000="tcp://0.0.0.0:10000"
     addr10001="tcp://0.0.0.0:10001"
     addr10002="tcp://0.0.0.0:10002"

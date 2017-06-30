@@ -7,7 +7,7 @@
 #include "zmq.hpp"
 
 #include "common/status.h"
-#include "examples/key_value_store/key_value.h"
+#include "examples/kvs/kvs.h"
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"
@@ -35,9 +35,9 @@ int main(int argc, char* argv[]) {
   zmq::context_t context(1);
   ldb::ConnectionConfig config{"localhost", 5432, argv[1], argv[2], argv[3]};
   auto f =
-      AddKeyValueApi(fluent::fluent<ldb::PqxxClient>("key_value_server",
-                                                     argv[4], &context, config)
-                         .ConsumeValueOrDie())
+      AddKvsApi(fluent::fluent<ldb::PqxxClient>("key_value_server", argv[4],
+                                                &context, config)
+                    .ConsumeValueOrDie())
           .RegisterRules([&](auto& set_req, auto& set_resp, auto& get_req,
                              auto& get_resp) {
             using namespace fluent::infix;

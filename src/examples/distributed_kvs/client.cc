@@ -1,4 +1,4 @@
-#include "examples/distributed_key_value_store/client.h"
+#include "examples/distributed_kvs/client.h"
 
 bool KeyValueServiceClient::Set(const std::string& key,
                                 const google::protobuf::int64 value) {

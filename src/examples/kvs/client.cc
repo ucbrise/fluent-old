@@ -10,7 +10,7 @@
 #include "common/rand_util.h"
 #include "common/status.h"
 #include "common/string_util.h"
-#include "examples/key_value_store/key_value.h"
+#include "examples/kvs/kvs.h"
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"
@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
                 .stdout()
                 .scratch<std::vector<std::string>>("split", {{"parts"}});
   fluent::Status status =
-      AddKeyValueApi(std::move(fb))
+      AddKvsApi(std::move(fb))
           .RegisterRules([&](auto& stdin, auto& stdout, auto& split,
                              auto& set_req, auto& set_resp, auto& get_req,
                              auto& get_resp) {

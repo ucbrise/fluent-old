@@ -11,9 +11,9 @@
 
 #include "common/macros.h"
 #include "common/rand_util.h"
-#include "examples/distributed_key_value_store/api.grpc.pb.h"
-#include "examples/distributed_key_value_store/api.pb.h"
-#include "examples/distributed_key_value_store/client.h"
+#include "examples/distributed_kvs/api.grpc.pb.h"
+#include "examples/distributed_kvs/api.pb.h"
+#include "examples/distributed_kvs/client.h"
 
 using ::google::protobuf::int64;
 

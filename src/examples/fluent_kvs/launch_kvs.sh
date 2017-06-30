@@ -21,13 +21,13 @@ main() {
 
     lineage_server=""
     lineage_server+="$glog "
-    lineage_server+="./build/Debug/bin/examples_key_value_store_server "
+    lineage_server+="./build/Debug/bin/examples_fluent_kvs_server "
     lineage_server+="$db_config "
     lineage_server+="$server_addr"
 
     lineage_client=""
     lineage_client+="$glog "
-    lineage_client+="./build/Debug/bin/examples_key_value_store_client "
+    lineage_client+="./build/Debug/bin/examples_fluent_kvs_client "
     lineage_client+="$db_config "
     lineage_client+="$server_addr"
 

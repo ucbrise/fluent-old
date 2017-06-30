@@ -9,7 +9,7 @@
 
 #include "common/rand_util.h"
 #include "common/string_util.h"
-#include "examples/distributed_key_value_store/fluent_api.h"
+#include "examples/distributed_kvs/fluent_api.h"
 #include "fluent/fluent.h"
 
 namespace lra = fluent::ra::logical;

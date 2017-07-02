@@ -5,15 +5,15 @@ osx_image: xcode8.3
 compiler:
 - clang
 - gcc
-os: 
+os:
 - linux
 # - osx
 env:
 - TEST_TYPE=Debug
 - TEST_TYPE=Release
 install:
-- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
-    ./scripts/install_dependencies_osx.sh; 
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+    ./scripts/install_dependencies_osx.sh;
   else
     ./scripts/install_dependencies.sh;
   fi
@@ -21,7 +21,7 @@ before_script:
 - export PATH="/usr/bin:$PATH"
 - ./scripts/print_diagnostics.sh
 script:
-- ./scripts/travis.sh
+- travis_wait 60 ./scripts/travis.sh
 # matrix:
 #   allow_failures:
 #     - os: osx

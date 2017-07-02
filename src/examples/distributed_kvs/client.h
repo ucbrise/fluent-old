@@ -1,5 +1,5 @@
-#ifndef EXAMPLES_DISTRIBUTED_KEY_VALUE_STORE_CLIENT_H_
-#define EXAMPLES_DISTRIBUTED_KEY_VALUE_STORE_CLIENT_H_
+#ifndef EXAMPLES_DISTRIBUTED_KVS_CLIENT_H_
+#define EXAMPLES_DISTRIBUTED_KVS_CLIENT_H_
 
 #include <iostream>
 #include <memory>
@@ -8,7 +8,7 @@
 #include "glog/logging.h"
 #include "grpc++/grpc++.h"
 
-#include "examples/distributed_key_value_store/api.grpc.pb.h"
+#include "examples/distributed_kvs/api.grpc.pb.h"
 
 class KeyValueServiceClient {
  public:
@@ -26,4 +26,4 @@ class KeyValueServiceClient {
   std::unique_ptr<KeyValueService::Stub> stub_;
 };
 
-#endif  // EXAMPLES_DISTRIBUTED_KEY_VALUE_STORE_CLIENT_H_
+#endif  // EXAMPLES_DISTRIBUTED_KVS_CLIENT_H_

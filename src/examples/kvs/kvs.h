@@ -1,8 +1,8 @@
-#ifndef EXAMPLES_KEY_VALUE_STORE_KEY_VALUE_H_
-#define EXAMPLES_KEY_VALUE_STORE_KEY_VALUE_H_
+#ifndef EXAMPLES_KVS_KVS_H_
+#define EXAMPLES_KVS_KVS_H_
 
 template <typename FluentBuilder>
-auto AddKeyValueApi(FluentBuilder f) {
+auto AddKvsApi(FluentBuilder f) {
   using string = std::string;
   return std::move(f)
       .template channel<string, string, std::int64_t, string, string>(
@@ -15,4 +15,4 @@ auto AddKeyValueApi(FluentBuilder f) {
           "get_response", {{"addr", "id", "value"}});
 }
 
-#endif  // EXAMPLES_KEY_VALUE_STORE_KEY_VALUE_H_
+#endif  // EXAMPLES_KVS_KVS_H_

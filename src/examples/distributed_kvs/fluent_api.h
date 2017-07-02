@@ -1,5 +1,5 @@
-#ifndef EXAMPLES_DISTRIBUTED_KEY_VALUE_STORE_FLUENT_API_H_
-#define EXAMPLES_DISTRIBUTED_KEY_VALUE_STORE_FLUENT_API_H_
+#ifndef EXAMPLES_DISTRIBUTED_KVS_FLUENT_API_H_
+#define EXAMPLES_DISTRIBUTED_KVS_FLUENT_API_H_
 
 #include <cstddef>
 
@@ -29,4 +29,4 @@ auto AddKvsApi(FluentBuilder f) {
           "get_response", {{"addr", "id", "value"}});
 }
 
-#endif  // EXAMPLES_DISTRIBUTED_KEY_VALUE_STORE_FLUENT_API_H_
+#endif  // EXAMPLES_DISTRIBUTED_KVS_FLUENT_API_H_

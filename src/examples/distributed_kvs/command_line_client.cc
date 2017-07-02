@@ -7,7 +7,7 @@
 #include "grpc++/grpc++.h"
 
 #include "common/string_util.h"
-#include "examples/distributed_key_value_store/client.h"
+#include "examples/distributed_kvs/client.h"
 
 int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);

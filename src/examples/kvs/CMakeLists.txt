@@ -1,9 +1,9 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
 MACRO(CREATE_KEY_VALUE_STORE_EXECUTABLE NAME)
-    ADD_EXECUTABLE(examples_key_value_store_${NAME} ${NAME})
-    TARGET_LINK_LIBRARIES(examples_key_value_store_${NAME} fluent)
-    ADD_DEPENDENCIES(examples_key_value_store_${NAME} fluent)
+    ADD_EXECUTABLE(examples_kvs_${NAME} ${NAME})
+    TARGET_LINK_LIBRARIES(examples_kvs_${NAME} fluent)
+    ADD_DEPENDENCIES(examples_kvs_${NAME} fluent)
 ENDMACRO(CREATE_KEY_VALUE_STORE_EXECUTABLE)
 
 CREATE_KEY_VALUE_STORE_EXECUTABLE(client)

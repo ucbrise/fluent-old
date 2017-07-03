@@ -12,6 +12,7 @@ main() {
     # Make sure to run
     #
     #   ccm create test_cluster --install-dir=$HOME/cassandra -n 3 -s
+    #   cqlsh -f reset_database.cql
     #
     # first.
 

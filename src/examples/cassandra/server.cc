@@ -219,8 +219,8 @@ int main(int argc, char* argv[]) {
         }
 
         const std::string query = R"(
-          WITH vector_clock_{p} AS (
-              SELECT clock
+          WITH vector_clock_{p}(clock) AS (
+              SELECT clock[1:{p}] || {time_inserted} || clock[{pplustwo}:3]
               FROM cassandra_server_{p}_vector_clock
               WHERE time_inserted <= {time_inserted}
               ORDER BY time_inserted DESC
@@ -286,8 +286,9 @@ int main(int argc, char* argv[]) {
         )";
         return fmt::format(query, fmt::arg("key", key),
                            fmt::arg("time_inserted", time_inserted),
-                           fmt::arg("p", primary), fmt::arg("a", backup_a),
-                           fmt::arg("b", backup_b));
+                           fmt::arg("p", primary),
+                           fmt::arg("pplustwo", primary + 2),
+                           fmt::arg("a", backup_a), fmt::arg("b", backup_b));
       });
 
   CHECK_EQ(status, fluent::Status::OK);

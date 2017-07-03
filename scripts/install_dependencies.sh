@@ -49,6 +49,10 @@ install_redis() {
     sudo apt-get install -y libhiredis-dev libev-dev
 }
 
+install_cassandra_deps() {
+    sudo apt-get install -y libuv-dev libssl-dev
+}
+
 main() {
     set -x
     sudo apt-get -y update
@@ -57,6 +61,7 @@ main() {
     install_gpp
     install_cmake
     install_redis
+    install_cassandra_deps
     set +x
 }
 

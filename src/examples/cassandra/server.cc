@@ -124,9 +124,11 @@ int main(int argc, char* argv[]) {
                    const std::int32_t value = std::get<4>(t);
 
                    CassStatementWrapper statement{cass_statement_new(
-                       "INSERT INTO test.kvs (key, value) VALUES (?, ?)", 2)};
+                       "INSERT INTO test.kvs (key, value, id) VALUES (?, ?, ?)",
+                       3)};
                    cass_statement_bind_string(statement.get(), 0, key.c_str());
                    cass_statement_bind_int32(statement.get(), 1, value);
+                   cass_statement_bind_int64(statement.get(), 2, id);
                    CassFutureWrapper query_future{
                        cass_session_execute(session.get(), statement.get())};
                    CassError rc = cass_future_error_code(query_future.get());
@@ -144,7 +146,7 @@ int main(int argc, char* argv[]) {
                    const std::string& key = std::get<3>(t);
 
                    CassStatementWrapper statement{cass_statement_new(
-                       "SELECT value FROM test.kvs WHERE key = ?", 1)};
+                       "SELECT value, id FROM test.kvs WHERE key = ?", 1)};
                    cass_statement_bind_string(statement.get(), 0, key.c_str());
                    CassFutureWrapper query_future{
                        cass_session_execute(session.get(), statement.get())};
@@ -155,9 +157,11 @@ int main(int argc, char* argv[]) {
                    std::int32_t value;
                    cass_value_get_int32(
                        cass_row_get_column_by_name(row, "value"), &value);
+                   std::int64_t reply_id;
+                   cass_value_get_int64(cass_row_get_column_by_name(row, "id"),
+                                        &reply_id);
 
-                   LOG(INFO) << "value = " << value;
-                   return get_response_tuple(src_addr, id, value);
+                   return get_response_tuple(src_addr, id, value, reply_id);
                  }));
 
             auto gossip =
@@ -200,8 +204,9 @@ int main(int argc, char* argv[]) {
   std::this_thread::sleep_for(std::chrono::seconds(1));
   fluent::Status status = with_rules.RegisterBlackBoxLineage<2, 3>(
       [&replica_index](const std::string& time_inserted, const std::string& key,
-                       const std::string& value) {
+                       const std::string& value, const std::string& id) {
         UNUSED(value);
+        UNUSED(id);
 
         int primary = replica_index;
         int backup_a = 0;

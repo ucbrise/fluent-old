@@ -111,10 +111,13 @@ int main(int argc, char* argv[]) {
 
             auto print_get =
                 stdout <=
-                (lra::make_collection(&get_response) | lra::project<2>() |
-                 lra::map([](const std::tuple<std::int32_t>& t) {
-                   return std::tuple<std::string>(
-                       std::to_string(std::get<0>(t)));
+                (lra::make_collection(&get_response) | lra::project<2, 3>() |
+                 lra::map([](const std::tuple<std::int32_t, std::int64_t>& t) {
+                   const std::string value =
+                       "value = " + std::to_string(std::get<0>(t));
+                   const std::string id =
+                       "id = " + std::to_string(std::get<1>(t));
+                   return std::tuple<std::string>(value + "\n" + id);
                  }));
 
             auto print_set = stdout <= (lra::make_collection(&set_response) |

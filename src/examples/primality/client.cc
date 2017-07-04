@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
 
   zmq::context_t context(1);
   ldb::ConnectionConfig config{"localhost", 5432, argv[1], argv[2], argv[3]};
-  auto fb = fluent::fluent<ldb::PqxxClient>("key_value_server", client_address,
+  auto fb = fluent::fluent<ldb::PqxxClient>("primality_client", client_address,
                                             &context, config)
                 .ConsumeValueOrDie()
                 .stdin()

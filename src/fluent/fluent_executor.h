@@ -215,63 +215,74 @@ class FluentExecutor<
   // Fluent will automatically generate the following relations in postgres:
   //
   //   CREATE TABLE SetRequest (
-  //       hash          integer NOT NULL,
-  //       time_inserted integer NOT NULL,
-  //       time_deleted  integer NOT NULL,
-  //       dst_addr      text    NOT NULL,
-  //       src_addr      text    NOT NULL,
-  //       id            integer NOT NULL,
-  //       key           text    NOT NULL,
-  //       value         text    NOT NULL,
+  //       hash          integer             NOT NULL,
+  //       time_inserted integer             NOT NULL,
+  //       time_deleted  integer             NOT NULL,
+  //       physical_time_inserted timestampz NOT NULL,
+  //       physical_time_deleted  timestampz NOT NULL,
+  //       dst_addr      text                NOT NULL,
+  //       src_addr      text                NOT NULL,
+  //       id            integer             NOT NULL,
+  //       key           text                NOT NULL,
+  //       value         text                NOT NULL,
   //       PRIMARY KEY (hash, time_inserted)
   //   );
   //
   //   CREATE TABLE SetResponse (
-  //       hash          integer NOT NULL,
-  //       time_inserted integer NOT NULL,
-  //       time_deleted  integer NOT NULL,
-  //       addr          text    NOT NULL,
-  //       id            integer NOT NULL,
-  //       succeeded     boolean NOT NULL,
+  //       hash          integer             NOT NULL,
+  //       time_inserted integer             NOT NULL,
+  //       time_deleted  integer             NOT NULL,
+  //       physical_time_inserted timestampz NOT NULL,
+  //       physical_time_deleted  timestampz NOT NULL,
+  //       addr          text                NOT NULL,
+  //       id            integer             NOT NULL,
+  //       succeeded     boolean             NOT NULL,
   //       PRIMARY KEY (hash, time_inserted)
   //   );
   //
   //   CREATE TABLE GetRequest (
-  //       hash          integer NOT NULL,
-  //       time_inserted integer NOT NULL,
-  //       time_deleted  integer NOT NULL,
-  //       dst_addr      text    NOT NULL,
-  //       src_addr      text    NOT NULL,
-  //       id            integer NOT NULL,
-  //       key           text    NOT NULL,
+  //       hash          integer             NOT NULL,
+  //       time_inserted integer             NOT NULL,
+  //       time_deleted  integer             NOT NULL,
+  //       physical_time_inserted timestampz NOT NULL,
+  //       physical_time_deleted  timestampz NOT NULL,
+  //       dst_addr      text                NOT NULL,
+  //       src_addr      text                NOT NULL,
+  //       id            integer             NOT NULL,
+  //       key           text                NOT NULL,
   //       PRIMARY KEY (hash, time_inserted)
   //   );
   //
   //   CREATE TABLE GetResponse (
-  //       hash          integer NOT NULL,
-  //       time_inserted integer NOT NULL,
-  //       time_deleted  integer NOT NULL,
-  //       addr          text    NOT NULL,
-  //       id            integer NOT NULL,
-  //       value         text    NOT NULL,
+  //       hash          integer             NOT NULL,
+  //       time_inserted integer             NOT NULL,
+  //       time_deleted  integer             NOT NULL,
+  //       physical_time_inserted timestampz NOT NULL,
+  //       physical_time_deleted  timestampz NOT NULL,
+  //       addr          text                NOT NULL,
+  //       id            integer             NOT NULL,
+  //       value         text                NOT NULL,
   //       PRIMARY KEY (hash, time_inserted)
   //   );
   //
   // We want to register the following two functions which specify the lineage
-  // of get responses:
+  // of get responses. Note that results are returned in descending order of
+  // physical time.
   //
-  //   -- get_response_lineage_impl(time_inserted, key, value)
-  //   CREATE get_response_lineage_impl(integer, text, text)
+  //   -- redis_get_response_lineage_impl(time_inserted, key, value)
+  //   CREATE redis_get_response_lineage_impl(integer, text, text)
   //   RETURNS TABLE(node_name text,
   //                 collection_name text,
   //                 hash integer,
-  //                 time_inserted integer)
+  //                 time_inserted integer,
+  //                 physical_time_inserted timestampz)
   //   AS $$
   //     SELECT
   //       CAST('redis_server' AS TEXT),
   //       CAST('set_request' AS text),
   //       hash,
-  //       time_inserted
+  //       time_inserted,
+  //       physical_time_inserted
   //     FROM redis_server_set_request
   //     WHERE time_inserted <= $1 AND key = $2
   //     ORDER BY time_inserted DESC
@@ -280,33 +291,60 @@ class FluentExecutor<
   //
   //   -- id
   //   get_response_lineage(id)
-  //   CREATE FUNCTION get_response_lineage(integer)
-  //   RETURNS TABLE(collection_name text, hash integer, time_inserted integer)
+  //   CREATE FUNCTION redis_get_response_lineage(integer)
+  //   RETURNS TABLE(node_name text,
+  //                 collection_name text,
+  //                 hash integer,
+  //                 time_inserted integer)
   //   AS $$
-  //     SELECT L.*
-  //     FROM get_request Req,
-  //          get_response Resp,
-  //          get_response_lineage_impl(Req.time_inserted, Req.key, Resp.value)
-  //          AS L
-  //     WHERE Req.id = $1 AND Resp.id = $1
-  //     UNION
-  //     SELECT
-  //       CAST('redis_server' as text),
-  //       CAST('get_request' as text),
-  //       hash,
-  //       time_inserted
-  //     FROM redis_server_get_request
-  //     WHERE id = $1;
+  //     WITH
+  //     user_specified_lineage(node_name,
+  //                            collection_name,
+  //                            hash,
+  //                            time_inserted,
+  //                            physical_time_inserted) AS (
+  //       SELECT L.*
+  //       FROM redis_get_request Req,
+  //            redis_get_response Resp,
+  //            redis_get_response_lineage_impl(
+  //                Req.time_inserted, Req.key, Resp.value) AS L
+  //       WHERE Req.id = $1 AND Resp.id = $1
+  //     ),
+  //
+  //     request_lineage(node_name,
+  //                     collection_name,
+  //                     hash,
+  //                     time_inserted,
+  //                     physical_time_inserted) AS (
+  //       SELECT
+  //         CAST('redis_server' as text),
+  //         CAST('get_request' as text),
+  //         hash,
+  //         time_inserted,
+  //         physical_time_inserted
+  //       FROM redis_server_get_request
+  //       WHERE id = $1;
+  //     ),
+  //
+  //     lineage AS (
+  //       SELECT * FROM user_specified_lineage UNION
+  //       SELECT * FROM request_lineage
+  //     )
+  //
+  //     SELECT node_name, collection_name, hash, time_inserted
+  //     FROM lineage
+  //     ORDER BY physical_time_inserted DESC
   //   $$ LANGUAGE SQL;
   //
-  // Most of these two functions are boilerplate. The only creative bit that a
+  // These two functions are mostly boilerplate. The only creative bit that a
   // user would have to provide is this part:
   //
   //   SELECT
-  //     CAST('redis_server' AS text)
+  //     CAST('redis_server' AS TEXT),
   //     CAST('set_request' AS text),
   //     hash,
-  //     time_inserted
+  //     time_inserted,
+  //     physical_time_inserted
   //   FROM redis_server_set_request
   //   WHERE time_inserted <= $1 AND key = $2
   //   ORDER BY time_inserted DESC
@@ -317,21 +355,22 @@ class FluentExecutor<
   // argument of the first SQL function. For example, here's what f would look
   // like to generate the SQL above:
   //
-  //   [](const string& time_inserted, const string& key, const string&) {
+  //   [](const string& time_inserted, const string& key, const string& value) {
   //     return fmt::format(R"(
   //       SELECT
-  //         CAST('redis_server' AS text),
+  //         CAST('redis_server' AS TEXT),
   //         CAST('set_request' AS text),
   //         hash,
-  //         time_inserted
-  //       FROM set_request
+  //         time_inserted,
+  //         physical_time_inserted
+  //       FROM redis_server_set_request
   //       WHERE time_inserted <= {} AND key = {}
   //       ORDER BY time_inserted DESC
   //       LIMIT 1
   //     )", time_inserted, key);
   //   }
   //
-  // ReqIndes and RespIndex specify the request and response channel whose
+  // ReqIndex and RespIndex specify the request and response channel whose
   // lineage is being specified. For example, given the following fluent
   // program:
   //
@@ -344,7 +383,7 @@ class FluentExecutor<
   //
   // we can specify the lineage of the foo API with
   // f.RegisterBlackBoxLineage<0, 1>(...) and specify the lineage of the bar
-  // API with f.RegisterBlackBoxLineage<2, 3>(...);
+  // API with f.RegisterBlackBoxLineage<2, 3>(...).
   //
   // [1]: https://goo.gl/yGmr78
   template <std::size_t RequestIndex, std::size_t ResponseIndex, typename F>
@@ -354,11 +393,13 @@ class FluentExecutor<
                                        Get<ResponseIndex>(), f);
   }
 
+  // TODO(mwhittaker): Document.
   WARN_UNUSED Status
   RegisterBlackBoxPythonLineageScript(const std::string& script) {
     return lineagedb_client_->RegisterBlackBoxPythonLineageScript(script);
   }
 
+  // TODO(mwhittaker): Document.
   template <std::size_t RequestIndex, std::size_t ResponseIndex>
   WARN_UNUSED Status RegisterBlackBoxPythonLineage(const std::string& method) {
     ValidateBlackBoxIndexes<RequestIndex, ResponseIndex>();
@@ -694,7 +735,8 @@ class FluentExecutor<
       RETURNS TABLE(node_name text,
                     collection_name text,
                     hash bigint,
-                    time_inserted integer)
+                    time_inserted integer,
+                    physical_time_inserted timestamp with time zone)
       AS $${}$$ LANGUAGE SQL;
     )",
         name_, response.Name(), Join(types),
@@ -708,22 +750,47 @@ class FluentExecutor<
                     hash bigint,
                     time_inserted integer)
       AS $$
-        SELECT L.*
-        FROM {0}_{1} Req,
-             {0}_{2} Resp,
-             {0}_{2}_lineage_impl(Req.time_inserted, {3}) AS L
-        WHERE Req.id = $1 AND Resp.id = $1
-        UNION
-        SELECT
-          CAST('{0}' AS TEXT),
-          CAST('{1}' AS TEXT),
-          hash,
-          time_inserted
-        FROM {0}_{1}
-        WHERE id = $1
+        WITH
+        user_specified_lineage(node_name,
+                               collection_name,
+                               hash,
+                               time_inserted,
+                               physical_time_inserted) AS (
+          SELECT L.*
+          FROM {node_name}_{request_table} Req,
+               {node_name}_{response_table} Resp,
+               {node_name}_{response_table}_lineage_impl(
+                   Req.time_inserted, {column_names}) AS L
+          WHERE Req.id = $1 AND Resp.id = $1
+        ),
+
+        request_lineage(node_name,
+                        collection_name,
+                        hash,
+                        time_inserted,
+                        physical_time_inserted) AS (
+          SELECT CAST('{node_name}' AS text),
+                 CAST('{request_table}' AS text),
+                 hash,
+                 time_inserted,
+                 physical_time_inserted
+          FROM {node_name}_{request_table}
+          WHERE id = $1
+        ),
+
+        lineage AS (
+          SELECT * FROM user_specified_lineage UNION
+          SELECT * FROM request_lineage
+        )
+
+        SELECT node_name, collection_name, hash, time_inserted
+        FROM lineage
+        ORDER BY physical_time_inserted DESC
       $$ LANGUAGE SQL;
     )",
-        name_, request.Name(), response.Name(), Join(column_names));
+        fmt::arg("node_name", name_), fmt::arg("request_table", request.Name()),
+        fmt::arg("response_table", response.Name()),
+        fmt::arg("column_names", Join(column_names)));
 
     return lineagedb_client_->RegisterBlackBoxLineage(
         response.Name(),

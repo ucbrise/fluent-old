@@ -189,24 +189,27 @@ int main(int argc, char* argv[]) {
         }
 
         const std::string query = R"(
-          WITH vector_clock_{p} AS (
-              SELECT clock
-              FROM distributed_kvs_server_{p}_vector_clock
+          WITH
+
+          vector_clock_{p}(clock) AS (
+              SELECT clock[1:{p}] || {time_inserted} || clock[{pplustwo}:3]
+              FROM {server_name}_{p}_vector_clock
               WHERE time_inserted <= {time_inserted}
               ORDER BY time_inserted DESC
               LIMIT 1
-          )
+          ),
 
-          (
-            SELECT CAST('distributed_kvs_server_{a}' AS text),
+          lineage_{a}(node, collection, hash, time_inserted, physical_time) AS (
+            SELECT CAST('{server_name}_{a}' AS text),
                    CAST('set_request' AS text),
                    hash,
-                   time_inserted
-            FROM distributed_kvs_server_{a}_set_request SR
+                   time_inserted,
+                   physical_time_inserted
+            FROM {server_name}_{a}_set_request SR
             WHERE key = {key} AND NOT EXISTS(
                 SELECT *
                 FROM (SELECT    VC{a}.clock
-                      FROM      distributed_kvs_server_{a}_vector_clock VC{a},
+                      FROM      {server_name}_{a}_vector_clock VC{a},
                                 vector_clock_{p} VC{p}
                        WHERE    VC{a}.time_inserted <= SR.time_inserted
                        ORDER BY VC{a}.time_inserted DESC
@@ -216,20 +219,19 @@ int main(int argc, char* argv[]) {
                            VectorClockConcurrent(VC{p}.clock, VC{a}.clock))
 
             )
-          )
+          ),
 
-          UNION
-
-          (
-            SELECT CAST('distributed_kvs_server_{b}' AS text),
+          lineage_{b}(node, collection, hash, time_inserted, physical_time) AS (
+            SELECT CAST('{server_name}_{b}' AS text),
                    CAST('set_request' AS text),
                    hash,
-                   time_inserted
-            FROM distributed_kvs_server_{b}_set_request SR
+                   time_inserted,
+                   physical_time_inserted
+            FROM {server_name}_{b}_set_request SR
             WHERE key = {key} AND NOT EXISTS(
                 SELECT *
                 FROM (SELECT    VC{b}.clock
-                      FROM      distributed_kvs_server_{b}_vector_clock VC{b},
+                      FROM      {server_name}_{b}_vector_clock VC{b},
                                 vector_clock_{p} VC{p}
                        WHERE    VC{b}.time_inserted <= SR.time_inserted
                        ORDER BY VC{b}.time_inserted DESC
@@ -239,25 +241,29 @@ int main(int argc, char* argv[]) {
                            VectorClockConcurrent(VC{p}.clock, VC{b}.clock))
 
             )
-          )
+          ),
 
-          UNION
-
-          (
-            SELECT CAST('distributed_kvs_server_{p}' AS text),
+          lineage_{p}(node, collection, hash, time_inserted, physical_time) AS (
+            SELECT CAST('{server_name}_{p}' AS text),
                    CAST('set_request' AS text),
                    hash,
-                   time_inserted
-            FROM distributed_kvs_server_{p}_set_request
+                   time_inserted,
+                   physical_time_inserted
+            FROM {server_name}_{p}_set_request
             WHERE time_inserted <= {time_inserted} AND key = {key}
             ORDER BY time_inserted DESC
             LIMIT 1
           )
+
+          SELECT * FROM lineage_{a} UNION
+          SELECT * FROM lineage_{b} UNION
+          SELECT * FROM lineage_{p}
         )";
-        return fmt::format(query, fmt::arg("key", key),
-                           fmt::arg("time_inserted", time_inserted),
-                           fmt::arg("p", primary), fmt::arg("a", backup_a),
-                           fmt::arg("b", backup_b));
+        return fmt::format(
+            query, fmt::arg("server_name", "distributed_kvs_server"),
+            fmt::arg("key", key), fmt::arg("time_inserted", time_inserted),
+            fmt::arg("p", primary), fmt::arg("pplustwo", primary + 2),
+            fmt::arg("a", backup_a), fmt::arg("b", backup_b));
       });
 
   CHECK_EQ(status, fluent::Status::OK);

@@ -219,19 +219,22 @@ int main(int argc, char* argv[]) {
         }
 
         const std::string query = R"(
-          WITH vector_clock_{p}(clock) AS (
+          WITH
+
+          vector_clock_{p}(clock) AS (
               SELECT clock[1:{p}] || {time_inserted} || clock[{pplustwo}:3]
               FROM cassandra_server_{p}_vector_clock
               WHERE time_inserted <= {time_inserted}
               ORDER BY time_inserted DESC
               LIMIT 1
-          )
+          ),
 
-          (
+          lineage_{a}(node, collection, hash, time_inserted, physical_time) AS (
             SELECT CAST('cassandra_server_{a}' AS text),
                    CAST('set_request' AS text),
                    hash,
-                   time_inserted
+                   time_inserted,
+                   physical_time_inserted
             FROM cassandra_server_{a}_set_request SR
             WHERE key = {key} AND NOT EXISTS(
                 SELECT *
@@ -246,15 +249,14 @@ int main(int argc, char* argv[]) {
                            VectorClockConcurrent(VC{p}.clock, VC{a}.clock))
 
             )
-          )
+          ),
 
-          UNION
-
-          (
+          lineage_{b}(node, collection, hash, time_inserted, physical_time) AS (
             SELECT CAST('cassandra_server_{b}' AS text),
                    CAST('set_request' AS text),
                    hash,
-                   time_inserted
+                   time_inserted,
+                   physical_time_inserted
             FROM cassandra_server_{b}_set_request SR
             WHERE key = {key} AND NOT EXISTS(
                 SELECT *
@@ -269,20 +271,23 @@ int main(int argc, char* argv[]) {
                            VectorClockConcurrent(VC{p}.clock, VC{b}.clock))
 
             )
-          )
+          ),
 
-          UNION
-
-          (
+          lineage_{p}(node, collection, hash, time_inserted, physical_time) AS (
             SELECT CAST('cassandra_server_{p}' AS text),
                    CAST('set_request' AS text),
                    hash,
-                   time_inserted
+                   time_inserted,
+                   physical_time_inserted
             FROM cassandra_server_{p}_set_request
             WHERE time_inserted <= {time_inserted} AND key = {key}
             ORDER BY time_inserted DESC
             LIMIT 1
           )
+
+          SELECT * FROM lineage_{a} UNION
+          SELECT * FROM lineage_{b} UNION
+          SELECT * FROM lineage_{p}
         )";
         return fmt::format(query, fmt::arg("key", key),
                            fmt::arg("time_inserted", time_inserted),

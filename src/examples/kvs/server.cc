@@ -66,7 +66,8 @@ int main(int argc, char* argv[]) {
           SELECT CAST('key_value_server' as TEXT),
                  CAST('set_request' as TEXT),
                  hash,
-                 time_inserted
+                 time_inserted,
+                 physical_time_inserted
           FROM key_value_server_set_request
           WHERE key = {} AND time_inserted <= {}
           ORDER BY time_inserted DESC

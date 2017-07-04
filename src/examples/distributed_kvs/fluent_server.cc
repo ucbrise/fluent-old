@@ -67,8 +67,7 @@ int main(int argc, char* argv[]) {
       grpc::CreateChannel(kvs_address, grpc::InsecureChannelCredentials());
   KeyValueServiceClient grpc_client(channel);
 
-  const std::string name =
-      "distributed_kvs_server_" + std::to_string(replica_index);
+  const std::string name = "dkvs_server_" + std::to_string(replica_index);
   auto fb_or =
       fluent::fluent<ldb::PqxxClient>(name, replica_address, &context, config);
   auto fb = fb_or.ConsumeValueOrDie();
@@ -115,20 +114,26 @@ int main(int argc, char* argv[]) {
                           const std::string& src_addr = std::get<1>(t);
                           const std::int64_t id = std::get<2>(t);
                           const std::string& key = std::get<3>(t);
-                          const std::int64_t value = std::get<4>(t);
-                          grpc_client.Set(key, value);
+                          const std::int32_t value = std::get<4>(t);
+                          const std::int64_t timestamp = std::get<5>(t);
+                          grpc_client.Set(key, value, id, timestamp);
                           return set_response_tuple(src_addr, id);
                         }));
 
-            auto get = get_response <=
-                       (lra::make_collection(&get_request) |
-                        lra::map([&grpc_client](const get_request_tuple& t) {
-                          const std::string& src_addr = std::get<1>(t);
-                          const std::int64_t id = std::get<2>(t);
-                          const std::string& key = std::get<3>(t);
-                          const std::int64_t value = grpc_client.Get(key);
-                          return get_response_tuple(src_addr, id, value);
-                        }));
+            auto get =
+                get_response <=
+                (lra::make_collection(&get_request) |
+                 lra::map([&grpc_client](const get_request_tuple& t) {
+                   const std::string& src_addr = std::get<1>(t);
+                   const std::int64_t id = std::get<2>(t);
+                   const std::string& key = std::get<3>(t);
+
+                   const std::tuple<std::int32_t, std::int64_t> reply =
+                       grpc_client.Get(key);
+                   const std::int32_t value = std::get<0>(reply);
+                   const std::int64_t reply_id = std::get<1>(reply);
+                   return get_response_tuple(src_addr, id, value, reply_id);
+                 }));
 
             auto gossip =
                 vector_clock_merge <=
@@ -170,8 +175,9 @@ int main(int argc, char* argv[]) {
   std::this_thread::sleep_for(std::chrono::seconds(1));
   fluent::Status status = with_rules.RegisterBlackBoxLineage<2, 3>(
       [&replica_index](const std::string& time_inserted, const std::string& key,
-                       const std::string& value) {
+                       const std::string& value, const std::string& id) {
         UNUSED(value);
+        UNUSED(id);
 
         int primary = replica_index;
         int backup_a = 0;
@@ -260,10 +266,10 @@ int main(int argc, char* argv[]) {
           SELECT * FROM lineage_{p}
         )";
         return fmt::format(
-            query, fmt::arg("server_name", "distributed_kvs_server"),
-            fmt::arg("key", key), fmt::arg("time_inserted", time_inserted),
-            fmt::arg("p", primary), fmt::arg("pplustwo", primary + 2),
-            fmt::arg("a", backup_a), fmt::arg("b", backup_b));
+            query, fmt::arg("server_name", "dkvs_server"), fmt::arg("key", key),
+            fmt::arg("time_inserted", time_inserted), fmt::arg("p", primary),
+            fmt::arg("pplustwo", primary + 2), fmt::arg("a", backup_a),
+            fmt::arg("b", backup_b));
       });
 
   CHECK_EQ(status, fluent::Status::OK);

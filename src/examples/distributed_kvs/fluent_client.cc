@@ -1,5 +1,6 @@
 #include <cstdint>
 
+#include <chrono>
 #include <map>
 #include <vector>
 
@@ -49,7 +50,7 @@ int main(int argc, char* argv[]) {
   config.password = db_password;
   config.dbname = db_dbname;
 
-  const std::string name = "key_value_client_" + fluent::RandomAlphanum(10);
+  const std::string name = "dkvs_client_" + fluent::RandomAlphanum(10);
   auto fb =
       fluent::fluent<ldb::PqxxClient>(name, client_address, &context, config)
           .ConsumeValueOrDie()
@@ -106,15 +107,23 @@ int main(int argc, char* argv[]) {
                        const std::string key = parts[1];
                        const std::int64_t value = std::stoll(parts[2]);
                        const std::int64_t id = id_gen.Generate();
-                       return {server_address, client_address, id, key, value};
+                       const std::int64_t timestamp =
+                           std::chrono::system_clock::now()
+                               .time_since_epoch()
+                               .count();
+                       return {server_address, client_address, id, key,
+                               value,          timestamp};
                      }));
 
             auto print_get =
                 stdout <=
-                (lra::make_collection(&get_response) | lra::project<2>() |
-                 lra::map([](const std::tuple<std::int64_t>& t) {
-                   return std::tuple<std::string>(
-                       std::to_string(std::get<0>(t)));
+                (lra::make_collection(&get_response) | lra::project<2, 3>() |
+                 lra::map([](const std::tuple<std::int32_t, std::int64_t>& t) {
+                   const std::string value =
+                       "value = " + std::to_string(std::get<0>(t));
+                   const std::string id =
+                       "id = " + std::to_string(std::get<1>(t));
+                   return std::tuple<std::string>(value + "\n" + id);
                  }));
 
             auto print_set = stdout <= (lra::make_collection(&set_response) |

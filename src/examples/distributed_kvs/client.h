@@ -4,6 +4,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <tuple>
 
 #include "glog/logging.h"
 #include "grpc++/grpc++.h"
@@ -15,9 +16,15 @@ class KeyValueServiceClient {
   KeyValueServiceClient(std::shared_ptr<grpc::Channel> channel)
       : channel_(channel), stub_(KeyValueService::NewStub(channel)) {}
 
-  bool Set(const std::string& key, const google::protobuf::int64 value);
-  google::protobuf::int64 Get(const std::string& key);
-  bool Merge(const std::map<std::string, google::protobuf::int64>& kvs);
+  bool Set(const std::string& key, const google::protobuf::int32 value,
+           google::protobuf::int64 id, google::protobuf::int64 timestamp);
+
+  std::tuple<google::protobuf::int32, google::protobuf::int64> Get(
+      const std::string& key);
+
+  bool Merge(const std::vector<std::tuple<std::string, google::protobuf::int32,
+                                          google::protobuf::int64,
+                                          google::protobuf::int64>>& delta);
 
   std::shared_ptr<grpc::Channel> Channel() { return channel_; }
 

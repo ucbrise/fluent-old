@@ -11,10 +11,12 @@ main() {
 
     session="$(tmux display-message -p '#S')"
     tmux new-window -t "$session" -n "dkvs"
-    tmux split-window -h
-    tmux split-window -h
-    tmux split-window -h
-    tmux select-layout main-vertical
+    tmux split-window -h -p 99
+    tmux split-window -h -p 99
+    tmux split-window -h -p 99
+    tmux split-window -h -p 99
+    tmux split-window -h -p 99
+    tmux select-layout tiled
     tmux select-pane -t 0
 
     glog="GLOG_logtostderr=1"
@@ -26,9 +28,11 @@ main() {
     addr9002="0.0.0.0:9002"
 
     tmux send-keys -t 1 "$glog $server ${addr9000} ${addr9001} ${addr9002}" C-m
-    tmux send-keys -t 2 "$glog $server ${addr9001} ${addr9002} ${addr9000}" C-m
-    tmux send-keys -t 3 "$glog $server ${addr9002} ${addr9000} ${addr9001}" C-m
+    tmux send-keys -t 3 "$glog $server ${addr9001} ${addr9002} ${addr9000}" C-m
+    tmux send-keys -t 5 "$glog $server ${addr9002} ${addr9000} ${addr9001}" C-m
     tmux send-keys -t 0 "$glog $client ${addr9000}" C-m
+    tmux send-keys -t 2 "$glog $client ${addr9001}" C-m
+    tmux send-keys -t 4 "$glog $client ${addr9002}" C-m
 }
 
 main

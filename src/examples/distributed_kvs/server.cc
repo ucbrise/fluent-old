@@ -4,6 +4,8 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 #include "glog/logging.h"
@@ -15,14 +17,20 @@
 #include "examples/distributed_kvs/api.pb.h"
 #include "examples/distributed_kvs/client.h"
 
+using ::google::protobuf::int32;
 using ::google::protobuf::int64;
 
-std::string MapToString(const std::map<std::string, int64>& m) {
+std::string DeltaToString(
+    const std::vector<std::tuple<std::string, int32, int64, int64>>& delta) {
   std::string s = "{";
-  for (const std::pair<const std::string, int64>& pair : m) {
-    const std::string key_string = pair.first;
-    const std::string value_string = std::to_string(pair.second);
-    s += "(" + key_string + ", " + value_string + "), ";
+  for (const std::tuple<std::string, int32, int64, int64>& t : delta) {
+    const std::string key_string = std::get<0>(t);
+    const std::string value_string = std::to_string(std::get<1>(t));
+    const std::string id_string = std::to_string(std::get<2>(t));
+    const std::string timestamp_string = std::to_string(std::get<3>(t));
+
+    s += "(" + key_string + ", " + value_string + ", " + id_string + ", " +
+         timestamp_string + "), ";
   }
   s += "}";
   return s;
@@ -58,12 +66,12 @@ class KeyValueServiceImpl : public KeyValueService::Service {
     while (true) {
       std::this_thread::sleep_for(std::chrono::seconds(1));
 
-      std::map<std::string, int64> delta;
+      std::vector<std::tuple<std::string, int32, int64, int64>> delta;
       {
         std::unique_lock<std::mutex> lock(delta_lock_);
         std::swap(delta, delta_);
       }
-      LOG(INFO) << "Gossiping delta = " << MapToString(delta);
+      LOG(INFO) << "Gossiping delta = " << DeltaToString(delta);
 
       for (KeyValueServiceClient& client : clients_) {
         client.Merge(delta);
@@ -74,11 +82,21 @@ class KeyValueServiceImpl : public KeyValueService::Service {
   grpc::Status Set(grpc::ServerContext*, const SetRequest* request,
                    SetReply* reply) override {
     LOG(INFO) << "Set:\n" << request->DebugString();
-    std::unique_lock<std::mutex> lock(delta_lock_);
     const std::string& key = request->key();
-    const int64 value = request->value();
-    kvs_[key] = std::max(kvs_[key], value);
-    delta_[key] = kvs_[key];
+    const int32 value = request->value();
+    const int64 id = request->id();
+    const int64 timestamp = request->timestamp();
+
+    const std::tuple<int32, int64, int64>& t = kvs_[key];
+    if (timestamp > std::get<2>(t)) {
+      kvs_[key] = {value, id, timestamp};
+    }
+
+    {
+      std::unique_lock<std::mutex> lock(delta_lock_);
+      delta_.push_back(std::make_tuple(key, value, id, timestamp));
+    }
+
     reply->set_success(true);
     return grpc::Status::OK;
   }
@@ -86,7 +104,8 @@ class KeyValueServiceImpl : public KeyValueService::Service {
   grpc::Status Get(grpc::ServerContext*, const GetRequest* request,
                    GetReply* reply) override {
     LOG(INFO) << "Get:\n" << request->DebugString();
-    reply->set_value(kvs_[request->key()]);
+    reply->set_value(std::get<0>(kvs_[request->key()]));
+    reply->set_id(std::get<1>(kvs_[request->key()]));
     return grpc::Status::OK;
   }
 
@@ -94,20 +113,29 @@ class KeyValueServiceImpl : public KeyValueService::Service {
                      MergeReply* reply) override {
     LOG(INFO) << "Merge:\n" << request->DebugString();
     CHECK_EQ(request->key_size(), request->value_size());
+    CHECK_EQ(request->key_size(), request->id_size());
+    CHECK_EQ(request->key_size(), request->timestamp_size());
+
     for (int i = 0; i < request->key_size(); ++i) {
       const std::string& key = request->key(i);
-      const int64 value = request->value(i);
-      kvs_[key] = std::max(kvs_[key], value);
+      const int32 value = request->value(i);
+      const int64 id = request->id(i);
+      const int64 timestamp = request->timestamp(i);
+
+      const std::tuple<int32, int64, int64>& t = kvs_[key];
+      if (timestamp > std::get<2>(t)) {
+        kvs_[key] = {value, id, timestamp};
+      }
     }
     reply->set_success(true);
     return grpc::Status::OK;
   }
 
-  std::map<std::string, int64> kvs_;
+  std::map<std::string, std::tuple<int32, int64, int64>> kvs_;
   std::thread gossip_thread_;
   std::vector<KeyValueServiceClient> clients_;
   std::mutex delta_lock_;
-  std::map<std::string, int64> delta_;
+  std::vector<std::tuple<std::string, int32, int64, int64>> delta_;
 };
 
 int main(int argc, char* argv[]) {

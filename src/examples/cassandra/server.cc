@@ -19,8 +19,10 @@ namespace ldb = fluent::lineagedb;
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
 
-  if (argc != 9) {
+  if (argc != 11) {
     std::cerr << "usage: " << argv[0] << " \\" << std::endl  //
+              << "  <db_host> \\" << std::endl               //
+              << "  <db_port> \\" << std::endl               //
               << "  <db_user> \\" << std::endl               //
               << "  <db_password> \\" << std::endl           //
               << "  <db_dbname> \\" << std::endl             //
@@ -33,15 +35,18 @@ int main(int argc, char* argv[]) {
   }
 
   // Command line arguments.
-  const std::string db_user = argv[1];
-  const std::string db_password = argv[2];
-  const std::string db_dbname = argv[3];
-  const std::string cassandra_address = argv[4];
-  const int replica_index = std::stoi(argv[5]);
+  const std::string db_host = argv[1];
+  const int db_port = std::stoi(argv[2]);
+  const std::string db_user = argv[3];
+  const std::string db_password = argv[4];
+  const std::string db_dbname = argv[5];
+  const std::string cassandra_address = argv[6];
+  const int replica_index = std::stoi(argv[7]);
+
   std::vector<std::string> replica_addresses;
-  replica_addresses.push_back(argv[6]);
-  replica_addresses.push_back(argv[7]);
   replica_addresses.push_back(argv[8]);
+  replica_addresses.push_back(argv[9]);
+  replica_addresses.push_back(argv[10]);
   CHECK_GE(replica_index, 0);
   CHECK_LE(replica_index, 2);
   const std::string replica_address = replica_addresses[replica_index];
@@ -67,8 +72,8 @@ int main(int argc, char* argv[]) {
 
   // Lineage database configuration.
   ldb::ConnectionConfig config;
-  config.host = "localhost";
-  config.port = 5432;
+  config.host = db_host;
+  config.port = db_port;
   config.user = db_user;
   config.password = db_password;
   config.dbname = db_dbname;
@@ -153,14 +158,21 @@ int main(int argc, char* argv[]) {
                    CassResultWrapper result{
                        cass_future_get_result(query_future.get())};
                    CHECK_NOTNULL(result);
+
                    const CassRow* row = cass_result_first_row(result.get());
                    std::int32_t value;
-                   cass_value_get_int32(
-                       cass_row_get_column_by_name(row, "value"), &value);
                    std::int64_t reply_id;
-                   cass_value_get_int64(cass_row_get_column_by_name(row, "id"),
-                                        &reply_id);
-
+                   if (row == nullptr) {
+                     // If this row has never been set, row will be null. We
+                     // respond with a default return.
+                     value = -1;
+                     reply_id = -1;
+                   } else {
+                     cass_value_get_int32(
+                         cass_row_get_column_by_name(row, "value"), &value);
+                     cass_value_get_int64(
+                         cass_row_get_column_by_name(row, "id"), &reply_id);
+                   }
                    return get_response_tuple(src_addr, id, value, reply_id);
                  }));
 

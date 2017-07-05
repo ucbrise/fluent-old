@@ -18,8 +18,10 @@ namespace ldb = fluent::lineagedb;
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
 
-  if (argc != 6) {
+  if (argc != 8) {
     std::cerr << "usage: " << argv[0] << " \\" << std::endl  //
+              << "  <db_host> \\" << std::endl               //
+              << "  <db_port> \\" << std::endl               //
               << "  <db_user> \\" << std::endl               //
               << "  <db_password> \\" << std::endl           //
               << "  <db_dbname> \\" << std::endl             //
@@ -29,11 +31,13 @@ int main(int argc, char* argv[]) {
   }
 
   // Command line arguments.
-  const std::string db_user = argv[1];
-  const std::string db_password = argv[2];
-  const std::string db_dbname = argv[3];
-  const std::string server_address = argv[4];
-  const std::string client_address = argv[5];
+  const std::string db_host = argv[1];
+  const int db_port = std::stoi(argv[2]);
+  const std::string db_user = argv[3];
+  const std::string db_password = argv[4];
+  const std::string db_dbname = argv[5];
+  const std::string server_address = argv[6];
+  const std::string client_address = argv[7];
 
   // Random id generator.
   fluent::RandomIdGenerator id_gen;
@@ -43,8 +47,8 @@ int main(int argc, char* argv[]) {
 
   // Lineage database configuration.
   ldb::ConnectionConfig config;
-  config.host = "localhost";
-  config.port = 5432;
+  config.host = db_host;
+  config.port = db_port;
   config.user = db_user;
   config.password = db_password;
   config.dbname = db_dbname;

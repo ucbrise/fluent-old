@@ -17,7 +17,7 @@ main() {
     # first.
 
     session="$(tmux display-message -p '#S')"
-    tmux new-window -t "$session" -n "cassandra"
+    tmux new-window -t "$session" -n "cassandra_benchmark"
     tmux split-window -v -p 99
     tmux split-window -v -p 99
     tmux split-window -v -p 99
@@ -43,7 +43,8 @@ main() {
     replica_addrs="$addr8000 $addr8001 $addr8002"
 
     server="$bin/examples_cassandra_server"
-    client="$bin/examples_cassandra_client"
+    client_getter="$bin/examples_cassandra_benchmark_client_getter"
+    client_setter="$bin/examples_cassandra_benchmark_client_setter"
 
     tmux send-keys -t 6 "psql -f scripts/reset_database.sql" C-m
 
@@ -57,9 +58,9 @@ main() {
     tmux send-keys -t 3 "sleep 3" C-m
     tmux send-keys -t 4 "sleep 3" C-m
     tmux send-keys -t 5 "sleep 3" C-m
-    tmux send-keys -t 3 "$glog $client $lineagedb_config $addr8000 $addr9000" C-m
-    tmux send-keys -t 4 "$glog $client $lineagedb_config $addr8001 $addr9001" C-m
-    tmux send-keys -t 5 "$glog $client $lineagedb_config $addr8002 $addr9002" C-m
+    tmux send-keys -t 3 "$glog $client_getter $lineagedb_config $addr8000 $addr9000 1000 UNIFORM 1" C-m
+    tmux send-keys -t 4 "$glog $client_setter $lineagedb_config $addr8001 $addr9001 1000 UNIFORM 1" C-m
+    tmux send-keys -t 5 "$glog $client_setter $lineagedb_config $addr8002 $addr9002 1000 UNIFORM 1" C-m
 }
 
 main

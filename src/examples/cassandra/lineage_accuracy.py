@@ -24,7 +24,9 @@ def get_by_tid(cur, (node, collection, hash, time)):
     return fetchonly(cur)
 
 def lineage_accuracy(cur, server, debug_file, data_file):
-    query = "SELECT * FROM {server}_get_response;"
+    query = """SELECT *
+               FROM {server}_get_response
+               WHERE reply_id != -1;"""
     query = query.format(server=server)
     cur.execute(query)
     get_resps = cur.fetchall()

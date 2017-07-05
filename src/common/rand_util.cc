@@ -1,5 +1,7 @@
 #include "common/rand_util.h"
 
+#include "glog/logging.h"
+
 namespace fluent {
 
 int RandInt(int low, int high) {
@@ -21,6 +23,16 @@ std::string RandomAlphanum(int len) {
     s += chars[distribution(random_engine)];
   }
   return s;
+}
+
+std::discrete_distribution<int> ZipfDistribution(int n, float alpha) {
+  std::vector<double> weights;
+  for (int i = 0; i < n; ++i) {
+    double weight = 1.0 / std::pow(i + 1, alpha);
+    CHECK_NE(0, weight);
+    weights.push_back(weight);
+  }
+  return std::discrete_distribution<int>(weights.begin(), weights.end());
 }
 
 }  // namespace fluent

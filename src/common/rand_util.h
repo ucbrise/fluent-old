@@ -20,6 +20,9 @@ int RandInt(int low, int high);
 // 0123456789
 std::string RandomAlphanum(int len);
 
+// Return a zipfian distribution with parameters n and alpha.
+std::discrete_distribution<int> ZipfDistribution(int n, float alpha);
+
 // A struct which randomly generates 64 bit unique ids uniformally at random.
 //
 //   RandomIdGenerator gen;

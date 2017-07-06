@@ -5,6 +5,8 @@
 -pedantic
 -Ibuild/Debug
 -Isrc
+-Ibuild/Debug/src/aws_project/aws-cpp-sdk-core/include
+-Ibuild/Debug/src/aws_project/aws-cpp-sdk-s3/include
 -Ibuild/Debug/src/boost_project
 -Ibuild/Debug/src/cassandra_project/include
 -Ibuild/Debug/src/cereal_project/include

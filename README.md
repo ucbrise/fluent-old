@@ -6,7 +6,7 @@ There are a handful of things you'll have to install for yourself:
 
 1. Some miscellaneous dependencies:
 
-        sudo apt-get install libtool libuv-dev libssl-dev ant
+        sudo apt-get install ant libcurl4-openssl-dev libssl-dev libtool libuv-dev
 2. A C++ compiler that supports C++14. If you're trying to install an
    up-to-date g++ on linux, [this tutorial][gpp_tutorial] might be helpful. If
    you're tying to install an up-to-date clang++ on linux, [this

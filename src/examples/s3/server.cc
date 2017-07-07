@@ -50,7 +50,7 @@ std::string GetErrorString(
   const std::string exn_name = AwsStringToString(error.GetExceptionName());
   const std::string message = AwsStringToString(error.GetMessage());
   const std::string err =
-      fmt::format("ExceptionName = '{}'\nMessage = '{}'", exn_name, message);
+      fmt::format("ExceptionName = {}\nMessage = {}", exn_name, message);
   return err;
 }
 

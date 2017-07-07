@@ -20,8 +20,7 @@ using echo_req_tuple = std::tuple<  //
 using echo_resp_tuple = std::tuple<  //
     std::string, std::int64_t, std::string>;
 using rm_req_tuple = std::tuple<  //
-    std::string, std::string, std::int64_t, std::string, std::string,
-    std::string>;
+    std::string, std::string, std::int64_t, std::string, std::string>;
 using rm_resp_tuple = std::tuple<  //
     std::string, std::int64_t, std::string>;
 using ls_req_tuple = std::tuple<  //
@@ -34,7 +33,7 @@ using cat_resp_tuple = std::tuple<  //
     std::string, std::int64_t, std::string, std::string>;
 using cp_req_tuple = std::tuple<  //
     std::string, std::string, std::int64_t, std::string, std::string,
-    std::string, std::string, std::string>;
+    std::string, std::string>;
 using cp_resp_tuple = std::tuple<  //
     std::string, std::int64_t, std::string>;
 
@@ -60,7 +59,7 @@ auto AddS3Api(FluentBuilder f) {
       .template channel<str, std::int64_t, str>(  //
           "echo_response", {{"addr", "id", "err"}})
       // Remove object.
-      .template channel<str, str, std::int64_t, str, str, str>(  //
+      .template channel<str, str, std::int64_t, str, str>(  //
           "rm_request", {{"dst_addr", "src_addr", "id", "bucket", "key"}})
       .template channel<str, std::int64_t, str>(  //
           "rm_response", {{"addr", "id", "err"}})
@@ -76,7 +75,7 @@ auto AddS3Api(FluentBuilder f) {
       .template channel<str, std::int64_t, str, str>(  //
           "cat_response", {{"addr", "id", "success", "err"}})
       // Copy object.
-      .template channel<str, str, std::int64_t, str, str, str, str, str>(  //
+      .template channel<str, str, std::int64_t, str, str, str, str>(  //
           "cp_request",
           {{"dst_addr", "src_addr", "id", "src_bucket", "src_key", "dst_bucket",
             "dst_key"}})

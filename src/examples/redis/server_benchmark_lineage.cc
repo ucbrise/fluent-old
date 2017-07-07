@@ -49,9 +49,8 @@ int main(int argc, char* argv[]) {
   zmq::context_t context(1);
   ldb::ConnectionConfig config{"localhost", 5432, db_user, db_password,
                                db_dbname};
-
   auto f =
-      fluent::fluent<ldb::NoopClient, fluent::Hash, ldb::ToSql,
+      fluent::fluent<ldb::PqxxClient, fluent::Hash, ldb::ToSql,
                      fluent::MockPickler>("redis_server_benchmark_lineage",
                                           address, &context, config)
           .ConsumeValueOrDie()

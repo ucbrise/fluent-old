@@ -2,23 +2,22 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
 MACRO(CREATE_REDIS_EXECUTABLE NAME)
     ADD_EXECUTABLE(examples_redis_${NAME} ${NAME})
-    TARGET_LINK_LIBRARIES(examples_redis_${NAME} fluent)
-    ADD_DEPENDENCIES(examples_redis_${NAME} fluent)
+    TARGET_LINK_LIBRARIES(examples_redis_${NAME}
+        ev
+        fluent
+        googlelog
+        hiredis
+        redox)
+    ADD_DEPENDENCIES(examples_redis_${NAME}
+        fluent
+        googlelog
+        redox_project)
 ENDMACRO(CREATE_REDIS_EXECUTABLE)
 
 CREATE_REDIS_EXECUTABLE(client)
-CREATE_REDIS_EXECUTABLE(server)
 CREATE_REDIS_EXECUTABLE(client_benchmark)
-CREATE_REDIS_EXECUTABLE(server_benchmark)
 CREATE_REDIS_EXECUTABLE(client_benchmark_lineage)
+CREATE_REDIS_EXECUTABLE(server)
+CREATE_REDIS_EXECUTABLE(server_benchmark)
 CREATE_REDIS_EXECUTABLE(server_benchmark_lineage)
 CREATE_REDIS_EXECUTABLE(speed_test_sync)
-
-TARGET_LINK_LIBRARIES(examples_redis_server redox ev hiredis)
-ADD_DEPENDENCIES(examples_redis_server redox_project)
-TARGET_LINK_LIBRARIES(examples_redis_server_benchmark redox ev hiredis)
-ADD_DEPENDENCIES(examples_redis_server_benchmark redox_project)
-TARGET_LINK_LIBRARIES(examples_redis_server_benchmark_lineage redox ev hiredis)
-ADD_DEPENDENCIES(examples_redis_server_benchmark_lineage redox_project)
-TARGET_LINK_LIBRARIES(examples_redis_speed_test_sync redox ev hiredis)
-ADD_DEPENDENCIES(examples_redis_speed_test_sync redox_project)

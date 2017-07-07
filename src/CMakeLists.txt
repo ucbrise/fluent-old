@@ -59,7 +59,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     #
     # Current CMAKE bug prevents using sanitizers under Xcode
     # https://gitlab.kitware.com/cmake/cmake/issues/16010
-    if(NOT CMAKE_GENERATOR STREQUAL Xcode)
+    if(NOT CMAKE_GENERATOR STREQUAL Xcode AND CMAKE_BUILD_TYPE MATCHES RELEASE)
         SET(CMAKE_CXX_FLAGS_COMMON
             "${CMAKE_CXX_FLAGS_COMMON} \
             -fsanitize=address \
@@ -68,7 +68,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif()
 
 SET(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
-SET(CMAKE_CXX_FLAGS_RELEASE "-O2")
+SET(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 SET(CMAKE_CXX_FLAGS_DEBUG
     "${CMAKE_CXX_FLAGS_DEBUG} \

@@ -6,11 +6,14 @@ ADD_LIBRARY(collections_object OBJECT ${COLLECTIONS_SOURCES})
 
 TARGET_LINK_LIBRARIES(collections
     googlelog
+    googletest
     pthread
     zmq_util)
 
 SET(COLLECTIONS_DEPENDENCIES
+    boost_project
     googlelog
+    googletest
     zmq_util)
 ADD_DEPENDENCIES(collections ${COLLECTIONS_DEPENDENCIES})
 ADD_DEPENDENCIES(collections_object ${COLLECTIONS_DEPENDENCIES})

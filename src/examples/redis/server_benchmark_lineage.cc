@@ -6,8 +6,8 @@
 #include "redox.hpp"
 #include "zmq.hpp"
 
+#include "common/mock_pickler.h"
 #include "common/status.h"
-#include "examples/redis/redis.h"
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"
@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
               << "  <redis_addr> \\" << std::endl            //
               << "  <redis_port> \\" << std::endl            //
               << "  <address> \\" << std::endl               //
-              ;
+        ;
     return 1;
   }
 
@@ -47,21 +47,21 @@ int main(int argc, char* argv[]) {
       << redis_port;
 
   zmq::context_t context(1);
-  ldb::ConnectionConfig config{"localhost", 5432, db_user, db_password, db_dbname};
+  ldb::ConnectionConfig config{"localhost", 5432, db_user, db_password,
+                               db_dbname};
 
   auto f =
-      AddRedisApi(fluent::fluent<ldb::PqxxClient>("redis_server", address,
-                                                  &context, config)
-                      .ConsumeValueOrDie())
-          .RegisterRules([&](auto& set_req, auto& set_resp, auto& append_req,
-                             auto& append_resp, auto& get_req, auto& get_resp) {
+      fluent::fluent<ldb::NoopClient, fluent::Hash, ldb::ToSql,
+                     fluent::MockPickler>("redis_server_benchmark_lineage",
+                                          address, &context, config)
+          .ConsumeValueOrDie()
+          .channel<std::string, std::string, std::int64_t, std::string,
+                   std::string>(
+              "set_request", {{"dst_addr", "src_addr", "id", "key", "value"}})
+          .channel<std::string, std::int64_t, bool>(  //
+              "set_response", {{"addr", "id", "success"}})
+          .RegisterRules([&](auto& set_req, auto& set_resp) {
             using namespace fluent::infix;
-            
-            (void)append_req;
-            (void)append_resp;
-            (void)get_req;
-            (void)get_resp;
-
             auto set =
                 set_resp <=
                 (lra::make_collection(&set_req) |
@@ -72,41 +72,8 @@ int main(int argc, char* argv[]) {
                    const std::string& value = std::get<4>(t);
                    return std::make_tuple(src_addr, id, rdx.set(key, value));
                  }));
-
             return std::make_tuple(set);
           })
           .ConsumeValueOrDie();
-  fluent::Status status = f.RegisterBlackBoxLineage<4, 5>(
-      [](const std::string& time_inserted, const std::string& key,
-         const std::string& value) {
-        (void)value;
-        return fmt::format(R"(
-          -- Most recent SET time.
-          WITH max_set_time AS (
-            SELECT MAX(time_inserted) as max_set_time
-            FROM redis_server_set_request
-            WHERE key = {} AND time_inserted <= {}
-          )
-
-          -- Most recent SET.
-          SELECT CAST('redis_server' as TEXT),
-                 CAST('set_request' as TEXT),
-                 hash,
-                 time_inserted
-          FROM redis_server_set_request, max_set_time
-          WHERE key = {} AND time_inserted = max_set_time.max_set_time
-          UNION
-
-          -- All subsequent APPENDs.
-          SELECT CAST('redis_server' as TEXT),
-                 CAST('append_request' as TEXT),
-                 hash,
-                 time_inserted
-          FROM redis_server_append_request, max_set_time
-          WHERE key={} AND time_inserted >= max_set_time.max_set_time;
-        )",
-                           key, time_inserted, key, key);
-      });
-  CHECK_EQ(fluent::Status::OK, status);
   CHECK_EQ(fluent::Status::OK, f.Run());
 }

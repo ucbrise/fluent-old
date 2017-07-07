@@ -15,6 +15,7 @@ TARGET_LINK_LIBRARIES(common
     pthread)
 
 SET(COMMON_DEPENDENCIES
+    boost_project
     cereal_project
     fmt
     googlelog)

@@ -26,6 +26,7 @@
 #include "glog/logging.h"
 #include "zmq.hpp"
 
+#include "common/file_util.h"
 #include "common/macros.h"
 #include "common/rand_util.h"
 #include "examples/s3/api.h"
@@ -57,12 +58,13 @@ std::string GetErrorString(
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
 
-  if (argc != 5) {
+  if (argc != 6) {
     std::cerr << "usage: " << argv[0] << " \\" << std::endl  //
               << "  <db_user> \\" << std::endl               //
               << "  <db_password> \\" << std::endl           //
               << "  <db_dbname> \\" << std::endl             //
               << "  <address> \\" << std::endl               //
+              << "  <lineage_file> \\" << std::endl          //
         ;
     return 1;
   }
@@ -72,6 +74,7 @@ int main(int argc, char* argv[]) {
   const std::string db_password = argv[2];
   const std::string db_dbname = argv[3];
   const std::string addr = argv[4];
+  const std::string lineage_file = argv[5];
 
   // ZeroMQ socket.
   zmq::context_t context(1);
@@ -262,6 +265,23 @@ int main(int argc, char* argv[]) {
             return std::make_tuple(mb, rb, echo, rm, ls, cat, cp);
           });
   auto with_rules = with_rules_or.ConsumeValueOrDie();
+
+  const std::string script = fluent::Slurp(lineage_file).ConsumeValueOrDie();
+  CHECK_EQ(fluent::Status::OK,
+           with_rules.RegisterBlackBoxPythonLineageScript(script));
+  CHECK_EQ(fluent::Status::OK,
+           (with_rules.RegisterBlackBoxPythonLineage<2, 3>("rb_lineage")));
+  CHECK_EQ(fluent::Status::OK,
+           (with_rules.RegisterBlackBoxPythonLineage<4, 5>("echo_lineage")));
+  CHECK_EQ(fluent::Status::OK,
+           (with_rules.RegisterBlackBoxPythonLineage<6, 7>("rm_lineage")));
+  CHECK_EQ(fluent::Status::OK,
+           (with_rules.RegisterBlackBoxPythonLineage<8, 9>("ls_lineage")));
+  CHECK_EQ(fluent::Status::OK,
+           (with_rules.RegisterBlackBoxPythonLineage<10, 11>("cat_lineage")));
+  CHECK_EQ(fluent::Status::OK,
+           (with_rules.RegisterBlackBoxPythonLineage<12, 13>("cp_lineage")));
+
   CHECK_EQ(with_rules.Run(), fluent::Status::OK);
 
   return 0;

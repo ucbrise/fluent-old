@@ -5,11 +5,13 @@ MACRO(CREATE_S3_EXECUTABLE NAME)
     TARGET_LINK_LIBRARIES(examples_s3_${NAME}
         aws-cpp-sdk-core
         aws-cpp-sdk-s3
+        common
         fluent
         fmt
         googlelog)
     ADD_DEPENDENCIES(examples_s3_${NAME}
         aws_project
+        common
         fluent
         fmt
         googlelog)

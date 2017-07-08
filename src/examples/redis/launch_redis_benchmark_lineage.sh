@@ -14,6 +14,7 @@ main() {
     session="$(tmux display-message -p '#S')"
     tmux new-window -t "$session" -n "redis"
     tmux split-window -h
+    tmux split-window -h
     tmux select-layout even-vertical
     tmux select-pane -t 1
 
@@ -26,9 +27,12 @@ main() {
     server="$bindir/examples_redis_server_benchmark_lineage"
     client="$bindir/examples_redis_client_benchmark"
 
+    tmux send-keys -t 2 "psql -f ./scripts/reset_database.sql" C-m
+
+    tmux send-keys -t 0 "sleep 1" C-m
     tmux send-keys -t 0 "$glog $server $db_config $redis_config $server_addr" C-m
 
-    tmux send-keys -t 1 "sleep 1" C-m
+    tmux send-keys -t 1 "sleep 2" C-m
     tmux send-keys -t 1 "$glog $client $server_addr $client_addr joe" C-m
 }
 

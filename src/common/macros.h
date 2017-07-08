@@ -36,6 +36,10 @@ namespace fluent {
   TypeName(const TypeName&) = delete;      \
   void operator=(const TypeName&) = delete
 
+#define DISALLOW_MOVE_AND_ASSIGN(TypeName) \
+  TypeName(TypeName&&) = delete;           \
+  void operator=(TypeName&&) = delete
+
 // DEFAULT_MOVE_AND_ASSIGN is a macro you can use to add a default move
 // constructor and default move assignment operator to a class. Now, you might
 // be thinking to yourself, doesn't a class have a *default* move constructor

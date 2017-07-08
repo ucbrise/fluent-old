@@ -215,12 +215,11 @@ class FluentBuilder<
       const lineagedb::ConnectionConfig& connection_config) {
     const std::size_t id = Hash<std::string>()(name);
     using Client = LineageDbClient<Hash, ToSql, Clock>;
-    StatusOr<Client> client_or =
+    StatusOr<std::unique_ptr<Client>> client_or =
         Client::Make(name, id, address, connection_config);
     RETURN_IF_ERROR(client_or.status());
-    return FluentBuilder(
-        name, id, address, context,
-        std::make_unique<Client>(client_or.ConsumeValueOrDie()));
+    return FluentBuilder(name, id, address, context,
+                         client_or.ConsumeValueOrDie());
   }
 
   // Constructs an empty FluentBuilder. Note that this constructor should only

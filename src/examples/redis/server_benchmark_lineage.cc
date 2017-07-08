@@ -11,6 +11,7 @@
 #include "fluent/fluent_builder.h"
 #include "fluent/fluent_executor.h"
 #include "fluent/infix.h"
+#include "lineagedb/async_pqxx_client.h"
 #include "lineagedb/connection_config.h"
 #include "lineagedb/pqxx_client.h"
 #include "ra/logical/all.h"
@@ -50,7 +51,7 @@ int main(int argc, char* argv[]) {
   ldb::ConnectionConfig config{"localhost", 5432, db_user, db_password,
                                db_dbname};
   auto f =
-      fluent::fluent<ldb::PqxxClient, fluent::Hash, ldb::ToSql,
+      fluent::fluent<ldb::AsyncPqxxClient, fluent::Hash, ldb::ToSql,
                      fluent::MockPickler>("redis_server_benchmark_lineage",
                                           address, &context, config)
           .ConsumeValueOrDie()

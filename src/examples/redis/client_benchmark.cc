@@ -89,5 +89,5 @@ int main(int argc, char* argv[]) {
   double seconds = elapsed.count() / 1e9;
   double frequency = static_cast<double>(count - 1) / seconds;
   std::cout << fmt::format("{},{},{}", count - 1, seconds, frequency)
-            << std : endl;
+            << std::endl;
 }

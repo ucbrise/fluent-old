@@ -22,8 +22,10 @@ namespace ldb = fluent::lineagedb;
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
 
-  if (argc != 7) {
+  if (argc != 9) {
     std::cerr << "usage: " << argv[0] << " \\" << std::endl  //
+              << "  <db_host> \\" << std::endl               //
+              << "  <db_port> \\" << std::endl               //
               << "  <db_user> \\" << std::endl               //
               << "  <db_password> \\" << std::endl           //
               << "  <db_dbname> \\" << std::endl             //
@@ -34,12 +36,14 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  const std::string db_user = argv[1];
-  const std::string db_password = argv[2];
-  const std::string db_dbname = argv[3];
-  const std::string redis_addr = argv[4];
-  const int redis_port = std::stoi(argv[5]);
-  const std::string address = argv[6];
+  const std::string db_host = argv[1];
+  const int db_port = std::stoi(argv[2]);
+  const std::string db_user = argv[3];
+  const std::string db_password = argv[4];
+  const std::string db_dbname = argv[5];
+  const std::string redis_addr = argv[6];
+  const int redis_port = std::stoi(argv[7]);
+  const std::string address = argv[8];
 
   redox::Redox rdx;
   rdx.noWait(true);
@@ -47,13 +51,18 @@ int main(int argc, char* argv[]) {
       << "Could not connect to redis server listening on " << redis_addr << ":"
       << redis_port;
 
+  ldb::ConnectionConfig conf;
+  conf.host = db_host;
+  conf.port = db_port;
+  conf.user = db_user;
+  conf.password = db_password;
+  conf.dbname = db_dbname;
+
   zmq::context_t context(1);
-  ldb::ConnectionConfig config{"localhost", 5432, db_user, db_password,
-                               db_dbname};
   auto f =
       fluent::fluent<ldb::AsyncPqxxClient, fluent::Hash, ldb::ToSql,
                      fluent::MockPickler>("redis_server_benchmark_lineage",
-                                          address, &context, config)
+                                          address, &context, conf)
           .ConsumeValueOrDie()
           .channel<std::string, std::string, std::int64_t, std::string,
                    std::string>(

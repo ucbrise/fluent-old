@@ -24,9 +24,11 @@
 
 #include "common/file_util.h"
 #include "common/macros.h"
+#include "common/mock_pickler.h"
 #include "common/rand_util.h"
 #include "examples/s3/api_benchmark.h"
 #include "fluent/fluent.h"
+#include "lineagedb/async_pqxx_client.h"
 
 namespace S3 = Aws::S3;
 namespace ldb = fluent::lineagedb;
@@ -93,7 +95,8 @@ int main(int argc, char* argv[]) {
 
   // Fluent builder.
   const std::string name = "s3_server_benchmark_lineage";
-  auto fb_or = fluent::fluent<ldb::PqxxClient>(name, addr, &context, conf);
+  auto fb_or = fluent::fluent<ldb::AsyncPqxxClient, fluent::Hash, ldb::ToSql,
+                              fluent::MockPickler>(name, addr, &context, conf);
   auto fb = fb_or.ConsumeValueOrDie();
 
   // Declare collections.

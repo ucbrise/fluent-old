@@ -18,6 +18,7 @@
 #include "zmq.hpp"
 
 #include "common/macros.h"
+#include "common/mock_pickler.h"
 #include "common/rand_util.h"
 #include "common/status.h"
 #include "common/string_util.h"
@@ -72,8 +73,10 @@ int main(int argc, char* argv[]) {
 
   ldb::ConnectionConfig confg;
   const std::string name = "s3_client_benchmark";
-  auto fb = fluent::fluent<ldb::NoopClient>(name, client_addr, &context, confg)
-                .ConsumeValueOrDie();
+  auto fb =
+      fluent::fluent<ldb::NoopClient, fluent::Hash, ldb::ToSql,
+                     fluent::MockPickler>(name, client_addr, &context, confg)
+          .ConsumeValueOrDie();
   auto f =
       AddS3Api(std::move(fb))
           .RegisterRules([&](auto& echo_req, auto& echo_resp, auto& rm_req,
@@ -113,7 +116,7 @@ int main(int argc, char* argv[]) {
     echo_req_t.clear();
     const std::int64_t id = id_gen.Generate();
     std::string key = fmt::format("{:>04}.txt", i);
-    std::string part = fluent::RandomAlphanum(1024);
+    std::string part = fluent::RandomAlphanum(128);
     echo_req_t.push_back({server_addr, client_addr, id, bucket, key, part});
 
     CHECK_EQ(f.Tick(), fluent::Status::OK);

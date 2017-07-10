@@ -24,6 +24,7 @@
 
 #include "common/file_util.h"
 #include "common/macros.h"
+#include "common/mock_pickler.h"
 #include "common/rand_util.h"
 #include "examples/s3/api_benchmark.h"
 #include "fluent/fluent.h"
@@ -76,7 +77,8 @@ int main(int argc, char* argv[]) {
   // Fluent builder.
   ldb::ConnectionConfig conf;
   const std::string name = "s3_server_benchmark";
-  auto fb_or = fluent::fluent<ldb::NoopClient>(name, addr, &context, conf);
+  auto fb_or = fluent::fluent<ldb::NoopClient, fluent::Hash, ldb::ToSql,
+                              fluent::MockPickler>(name, addr, &context, conf);
   auto fb = fb_or.ConsumeValueOrDie();
 
   // Declare collections.

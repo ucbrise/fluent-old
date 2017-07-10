@@ -41,13 +41,12 @@ int main(int argc, char* argv[]) {
       << redis_port;
 
   zmq::context_t context(1);
-  fluent::lineagedb::ConnectionConfig config;
+  fluent::lineagedb::ConnectionConfig conf;
   auto f =
       fluent::fluent<ldb::NoopClient, fluent::Hash, ldb::ToSql,
                      fluent::MockPickler>("redis_server_benchmark", address,
-                                          &context, config)
+                                          &context, conf)
           .ConsumeValueOrDie()
-
           .channel<std::string, std::string, std::int64_t, std::string,
                    std::string>(
               "set_request", {{"dst_addr", "src_addr", "id", "key", "value"}})

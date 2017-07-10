@@ -27,12 +27,6 @@ using set_req_tuple = std::tuple<std::string, std::string, std::int64_t,
                                  std::string, std::string>;
 using set_resp_tuple = std::tuple<std::string, std::int64_t, bool>;
 
-double time_s() {
-  unsigned long ms = std::chrono::system_clock::now().time_since_epoch() /
-                     std::chrono::microseconds(1);
-  return (double)ms / 1e6;
-}
-
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
 
@@ -86,7 +80,6 @@ int main(int argc, char* argv[]) {
   time_point<system_clock> stop = start + duration;
   int count = 1;
 
-  std::cout << "Sending SET synchronously for 5 seconds." << std::endl;
   for (count = 1; system_clock::now() < stop; ++count) {
     CHECK_EQ(f.Tick(), fluent::Status::OK);
     CHECK_EQ(f.Receive(), fluent::Status::OK);
@@ -95,7 +88,6 @@ int main(int argc, char* argv[]) {
   nanoseconds elapsed = system_clock::now() - start;
   double seconds = elapsed.count() / 1e9;
   double frequency = static_cast<double>(count - 1) / seconds;
-  std::cout << (count - 1) << " commands" << std::endl;
-  std::cout << seconds << "seconds" << std::endl;
-  std::cout << frequency << " commands/second" << std::endl;
+  std::cout << fmt::format("{},{},{}", count - 1, seconds, frequency)
+            << std : endl;
 }

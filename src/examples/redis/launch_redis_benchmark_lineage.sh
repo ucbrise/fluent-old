@@ -19,7 +19,7 @@ main() {
     tmux select-pane -t 1
 
     glog="GLOG_logtostderr=1"
-    db_config="vagrant vagrant vagrant"
+    db_config="localhost 5432 vagrant vagrant vagrant"
     redis_config="localhost 6379"
     server_addr="tcp://0.0.0.0:9000"
     client_addr="tcp://0.0.0.0:9001"

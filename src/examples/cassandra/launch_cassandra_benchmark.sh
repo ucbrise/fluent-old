@@ -38,7 +38,7 @@ main() {
     addr9002="tcp://0.0.0.0:9002"
 
     glog="GLOG_logtostderr=1"
-    bin="./build/Debug/bin"
+    bin="./build/Release/bin"
     lineagedb_config="localhost 5432 vagrant vagrant vagrant"
     replica_addrs="$addr8000 $addr8001 $addr8002"
 
@@ -51,9 +51,9 @@ main() {
     tmux send-keys -t 0 "sleep 2" C-m
     tmux send-keys -t 1 "sleep 2" C-m
     tmux send-keys -t 2 "sleep 2" C-m
-    tmux send-keys -t 0 "$glog $server $lineagedb_config $addr1 0 $replica_addrs" C-m
-    tmux send-keys -t 1 "$glog $server $lineagedb_config $addr2 1 $replica_addrs" C-m
-    tmux send-keys -t 2 "$glog $server $lineagedb_config $addr3 2 $replica_addrs" C-m
+    tmux send-keys -t 0 "$glog $server $lineagedb_config $addr1 100 0 $replica_addrs" C-m
+    tmux send-keys -t 1 "$glog $server $lineagedb_config $addr2 100 1 $replica_addrs" C-m
+    tmux send-keys -t 2 "$glog $server $lineagedb_config $addr3 100 2 $replica_addrs" C-m
 
     tmux send-keys -t 3 "sleep 3" C-m
     tmux send-keys -t 4 "sleep 3" C-m

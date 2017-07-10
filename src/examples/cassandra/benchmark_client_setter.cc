@@ -1,5 +1,6 @@
 #include <cstdint>
 
+#include <chrono>
 #include <map>
 #include <random>
 #include <vector>
@@ -110,5 +111,19 @@ int main(int argc, char* argv[]) {
             return std::make_tuple(send_set);
           })
           .ConsumeValueOrDie();
-  CHECK_EQ(f.Run(), fluent::Status::OK);
+
+  std::cout << "Setter running for 25 seconds." << std::endl;
+
+  using namespace std::chrono;
+  nanoseconds duration = seconds(25);
+  time_point<system_clock> start = system_clock::now();
+  time_point<system_clock> stop = start + duration;
+
+  while (system_clock::now() < stop) {
+    CHECK_EQ(f.Tick(), fluent::Status::OK);
+    CHECK_EQ(f.Receive(), fluent::Status::OK);
+  }
+
+  std::cout << "Setter complete! Now run 'pg_dump " << db_dbname
+            << " > outfile'" << std::endl;
 }

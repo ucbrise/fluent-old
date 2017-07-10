@@ -19,7 +19,7 @@ namespace ldb = fluent::lineagedb;
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
 
-  if (argc != 11) {
+  if (argc != 12) {
     std::cerr << "usage: " << argv[0] << " \\" << std::endl  //
               << "  <db_host> \\" << std::endl               //
               << "  <db_port> \\" << std::endl               //
@@ -27,6 +27,7 @@ int main(int argc, char* argv[]) {
               << "  <db_password> \\" << std::endl           //
               << "  <db_dbname> \\" << std::endl             //
               << "  <cassandra_address> \\" << std::endl     //
+              << "  <gossip_rate_ms> \\" << std::endl        //
               << "  <replica_index> \\" << std::endl         //
               << "  <replica_address1> \\" << std::endl      //
               << "  <replica_address2> \\" << std::endl      //
@@ -41,12 +42,13 @@ int main(int argc, char* argv[]) {
   const std::string db_password = argv[4];
   const std::string db_dbname = argv[5];
   const std::string cassandra_address = argv[6];
-  const int replica_index = std::stoi(argv[7]);
+  const int gossip_rate_ms = std::stoi(argv[7]);
+  const int replica_index = std::stoi(argv[8]);
 
   std::vector<std::string> replica_addresses;
-  replica_addresses.push_back(argv[8]);
   replica_addresses.push_back(argv[9]);
   replica_addresses.push_back(argv[10]);
+  replica_addresses.push_back(argv[11]);
   CHECK_GE(replica_index, 0);
   CHECK_LE(replica_index, 2);
   const std::string replica_address = replica_addresses[replica_index];
@@ -87,7 +89,7 @@ int main(int argc, char* argv[]) {
       AddKvsApi(std::move(fb))
           .logical_time()
           .table<std::vector<int>>("vector_clock", {{"clock"}})
-          .periodic("gossip_period", std::chrono::seconds(5))
+          .periodic("gossip_period", std::chrono::milliseconds(gossip_rate_ms))
           .channel<std::string, std::vector<int>>("vector_clock_merge",
                                                   {{"addr", "clock"}});
 

@@ -116,12 +116,13 @@ int main(int argc, char* argv[]) {
     echo_req_t.clear();
     const std::int64_t id = id_gen.Generate();
     std::string key = fmt::format("{:>04}.txt", i);
-    std::string part = fluent::RandomAlphanum(128);
+    std::string part = fluent::RandomAlphanum(1024);
     echo_req_t.push_back({server_addr, client_addr, id, bucket, key, part});
 
     CHECK_EQ(f.Tick(), fluent::Status::OK);
     CHECK_EQ(f.Receive(), fluent::Status::OK);
   }
+  echo_req_t.clear();
 
   // Read objects.
   for (int i = 0; i < num_objects; ++i) {
@@ -133,6 +134,7 @@ int main(int argc, char* argv[]) {
     CHECK_EQ(f.Tick(), fluent::Status::OK);
     CHECK_EQ(f.Receive(), fluent::Status::OK);
   }
+  cat_req_t.clear();
 
   // Remove objects.
   for (int i = 0; i < num_objects; ++i) {
@@ -144,6 +146,7 @@ int main(int argc, char* argv[]) {
     CHECK_EQ(f.Tick(), fluent::Status::OK);
     CHECK_EQ(f.Receive(), fluent::Status::OK);
   }
+  rm_req_t.clear();
 
   nanoseconds elapsed = system_clock::now() - start;
   double seconds = elapsed.count() / 1e9;

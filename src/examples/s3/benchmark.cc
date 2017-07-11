@@ -79,7 +79,7 @@ int main() {
     request.SetBucket("mwhittaker_benchmark");
     request.SetKey(fmt::format("{:>04}.txt", i).c_str());
     S3::Model::GetObjectOutcome outcome = client.GetObject(request);
-    S3::Model::GetObjectResult result = GetResultOrDie(&outcome);
+    GetResultOrDie(&outcome);
   }
 
   // Remove objects.

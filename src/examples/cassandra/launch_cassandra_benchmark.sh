@@ -11,8 +11,11 @@ main() {
 
     # Make sure to run
     #
-    #   ccm create test_cluster --install-dir=$HOME/cassandra -n 3 -s
-    #   cqlsh -f reset_database.cql
+    # if [[ ! -z $(ccm list) ]]; then
+        # ccm remove
+    # fi
+    # ccm create test_cluster --install-dir=$HOME/cassandra -n 3 -s
+    cqlsh -f src/examples/cassandra/reset_database.cql
     #
     # first.
 
@@ -51,16 +54,16 @@ main() {
     tmux send-keys -t 0 "sleep 2" C-m
     tmux send-keys -t 1 "sleep 2" C-m
     tmux send-keys -t 2 "sleep 2" C-m
-    tmux send-keys -t 0 "$glog $server $lineagedb_config $addr1 100 0 $replica_addrs" C-m
-    tmux send-keys -t 1 "$glog $server $lineagedb_config $addr2 100 1 $replica_addrs" C-m
-    tmux send-keys -t 2 "$glog $server $lineagedb_config $addr3 100 2 $replica_addrs" C-m
+    tmux send-keys -t 0 "$glog $server $lineagedb_config $addr1 1000 0 $replica_addrs" C-m
+    tmux send-keys -t 1 "$glog $server $lineagedb_config $addr2 1000 1 $replica_addrs" C-m
+    tmux send-keys -t 2 "$glog $server $lineagedb_config $addr3 1000 2 $replica_addrs" C-m
 
-    tmux send-keys -t 3 "sleep 3" C-m
-    tmux send-keys -t 4 "sleep 3" C-m
-    tmux send-keys -t 5 "sleep 3" C-m
-    tmux send-keys -t 3 "$glog $client_getter $lineagedb_config $addr8000 $addr9000 1000 UNIFORM 1" C-m
-    tmux send-keys -t 4 "$glog $client_setter $lineagedb_config $addr8001 $addr9001 1000 UNIFORM 1" C-m
-    tmux send-keys -t 5 "$glog $client_setter $lineagedb_config $addr8002 $addr9002 1000 UNIFORM 1" C-m
+    tmux send-keys -t 3 "sleep 3.2" C-m
+    tmux send-keys -t 4 "sleep 3.1" C-m
+    tmux send-keys -t 5 "sleep 3.0" C-m
+    tmux send-keys -t 3 "$glog $client_getter $lineagedb_config $addr8000 $addr9000 "$1" ZIPFIAN 10" C-m
+    tmux send-keys -t 4 "$glog $client_setter $lineagedb_config $addr8001 $addr9001 "$1" ZIPFIAN 10" C-m
+    tmux send-keys -t 5 "$glog $client_setter $lineagedb_config $addr8002 $addr9002 "$1" ZIPFIAN 10" C-m
 }
 
-main
+main "$@"

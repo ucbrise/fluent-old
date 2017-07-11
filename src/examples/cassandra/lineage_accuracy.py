@@ -33,6 +33,9 @@ def lineage_accuracy(cur, server, debug_file, data_file):
 
     for get_resp in get_resps:
         (hash, tadd, tdel, ptadd, ptdel, addr, id, value, reply_id) = get_resp
+        if reply_id == -1:
+            continue
+
         get_request = get_by_id(cur, (server, "get_request", id))
         key = get_request[-1]
         debug_file.write("get({}) = {} [{:20d}/{:20d}]\n"
@@ -51,7 +54,7 @@ def lineage_accuracy(cur, server, debug_file, data_file):
             debug_file.write("  [{}] set({}, {}) [{}]\n"
                              .format(ptadd, key, value, set_id))
 
-        assert reply_id in lineage_ids
+        assert reply_id in lineage_ids, (reply_id, lineage_ids)
         data_file.write("{}\n".format(lineage_ids.index(reply_id) + 1))
 
 def main():

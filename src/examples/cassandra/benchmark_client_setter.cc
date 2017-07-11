@@ -112,10 +112,10 @@ int main(int argc, char* argv[]) {
           })
           .ConsumeValueOrDie();
 
-  std::cout << "Setter running for 25 seconds." << std::endl;
+  std::cout << "Setter running for 15 seconds." << std::endl;
 
   using namespace std::chrono;
-  nanoseconds duration = seconds(25);
+  nanoseconds duration = seconds(15);
   time_point<system_clock> start = system_clock::now();
   time_point<system_clock> stop = start + duration;
 

@@ -17,6 +17,7 @@ MACRO(CREATE_NAMED_TEST NAME FILENAME)
         googletest_main)
     TARGET_LINK_LIBRARIES(${NAME}
         googlelog
+        gflags
         googlemock
         googlemock_main
         googletest

@@ -7,6 +7,7 @@ ADD_EXECUTABLE(shim_gen_grpc_fluent_plugin
 TARGET_LINK_LIBRARIES(shim_gen_grpc_fluent_plugin
     fmt
     googlelog
+    gflags
     protobuf
     protoc
     pthread)

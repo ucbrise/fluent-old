@@ -11,6 +11,7 @@ TARGET_LINK_LIBRARIES(fluent
     common
     fmt
     googlelog
+    gflags
     lineagedb
     pthread
     zmq_util)

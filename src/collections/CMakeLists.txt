@@ -6,6 +6,7 @@ ADD_LIBRARY(collections_object OBJECT ${COLLECTIONS_SOURCES})
 
 TARGET_LINK_LIBRARIES(collections
     googlelog
+    gflags
     pthread
     zmq_util)
 

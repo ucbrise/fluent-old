@@ -12,6 +12,7 @@ ADD_LIBRARY(common_object OBJECT ${COMMON_SOURCES})
 TARGET_LINK_LIBRARIES(common
     fmt
     googlelog
+    gflags
     pthread)
 
 SET(COMMON_DEPENDENCIES

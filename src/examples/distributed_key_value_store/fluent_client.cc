@@ -88,7 +88,7 @@ int main(int argc, char* argv[]) {
                            std::get<0>(parts_tuple);
                        const std::string& key = parts[1];
                        const std::int64_t id = id_gen.Generate();
-                       return {server_address, client_address, id, key};
+                       return std::make_tuple(server_address, client_address, id, key);
                      }));
 
             auto send_set =
@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
                        const std::string key = parts[1];
                        const std::int64_t value = std::stoll(parts[2]);
                        const std::int64_t id = id_gen.Generate();
-                       return {server_address, client_address, id, key, value};
+                       return std::make_tuple(server_address, client_address, id, key, value);
                      }));
 
             auto print_get =

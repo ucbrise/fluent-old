@@ -6,13 +6,14 @@ ADD_EXECUTABLE(shim_gen_grpc_fluent_plugin
 
 TARGET_LINK_LIBRARIES(shim_gen_grpc_fluent_plugin
     fmt
+    googleflags
     googlelog
-    gflags
     protobuf
     protoc
     pthread)
 
 ADD_DEPENDENCIES(shim_gen_grpc_fluent_plugin
     fmt
+    googleflags
     googlelog
     protobuf_project)

@@ -10,14 +10,15 @@ MACRO(CREATE_NAMED_TEST NAME FILENAME)
     ADD_TEST(NAME ${NAME} COMMAND ${NAME})
     SET_TESTS_PROPERTIES(${NAME} PROPERTIES LABELS "UNITTEST")
     ADD_DEPENDENCIES(${NAME}
+        googleflags
         googlelog
         googlemock
         googlemock_main
         googletest
         googletest_main)
     TARGET_LINK_LIBRARIES(${NAME}
+        googleflags
         googlelog
-        gflags
         googlemock
         googlemock_main
         googletest

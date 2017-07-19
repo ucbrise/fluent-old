@@ -11,13 +11,14 @@ ADD_LIBRARY(common_object OBJECT ${COMMON_SOURCES})
 
 TARGET_LINK_LIBRARIES(common
     fmt
+    googleflags
     googlelog
-    gflags
     pthread)
 
 SET(COMMON_DEPENDENCIES
     cereal_project
     fmt
+    googleflags
     googlelog)
 ADD_DEPENDENCIES(common ${COMMON_DEPENDENCIES})
 ADD_DEPENDENCIES(common_object ${COMMON_DEPENDENCIES})

@@ -5,12 +5,13 @@ ADD_LIBRARY(collections ${COLLECTIONS_SOURCES})
 ADD_LIBRARY(collections_object OBJECT ${COLLECTIONS_SOURCES})
 
 TARGET_LINK_LIBRARIES(collections
+    googleflags
     googlelog
-    gflags
     pthread
     zmq_util)
 
 SET(COLLECTIONS_DEPENDENCIES
+    googleflags
     googlelog
     zmq_util)
 ADD_DEPENDENCIES(collections ${COLLECTIONS_DEPENDENCIES})

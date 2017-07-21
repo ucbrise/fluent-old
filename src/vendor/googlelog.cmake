@@ -6,7 +6,7 @@ ExternalProject_Add(googlelog_project
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}
     BUILD_IN_SOURCE 1
     UPDATE_COMMAND ""
-    CONFIGURE_COMMAND ./autogen.sh && ./configure --with-gflags=${GFLAGS_BUILD_DIR} --with-sysroot=${GFLAGS_LIBS_DIR}
+    CONFIGURE_COMMAND ./autogen.sh && ./configure --with-gflags=${GFLAGS_LIBS_DIR} --with-sysroot=${GFLAGS_LIBS_DIR}
     BUILD_COMMAND make
     INSTALL_COMMAND ""
 )

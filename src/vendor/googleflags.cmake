@@ -10,7 +10,7 @@ ExternalProject_Add(googleflags_project
 )
 
 ExternalProject_Get_Property(googleflags_project BINARY_DIR)
-SET(GFLAGS_LIBS_DIR ${BINARY_DIR}/lib)
+SET(GFLAGS_LIBS_DIR ${BINARY_DIR})
 
 ADD_LIBRARY(googleflags STATIC IMPORTED)
 SET_PROPERTY(TARGET googleflags

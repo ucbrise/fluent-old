@@ -15,7 +15,7 @@ MACRO(CREATE_DISTRIBUTED_KEY_VALUE_STORE_EXECUTABLE NAME)
     TARGET_LINK_LIBRARIES(examples_distributed_key_value_store_${NAME}
         examples_distributed_key_value_store_proto
         fluent
-        googlelog
+        glog
         grpc
         grpc++
         protobuf
@@ -23,7 +23,6 @@ MACRO(CREATE_DISTRIBUTED_KEY_VALUE_STORE_EXECUTABLE NAME)
     ADD_DEPENDENCIES(examples_distributed_key_value_store_${NAME}
         examples_distributed_key_value_store_proto
         fluent
-        googlelog
         grpc_project
         protobuf_project)
 ENDMACRO(CREATE_DISTRIBUTED_KEY_VALUE_STORE_EXECUTABLE)

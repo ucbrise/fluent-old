@@ -5,12 +5,11 @@ ADD_LIBRARY(zmq_util ${ZMQ_UTIL_SOURCES})
 ADD_LIBRARY(zmq_util_object OBJECT ${ZMQ_UTIL_SOURCES})
 
 TARGET_LINK_LIBRARIES(zmq_util
-    googlelog
+    glog
     pthread
     zmq)
 
 SET(ZMQ_UTIL_DEPENDENCIES
-    googlelog
     zeromq_project
     zeromqcpp_project)
 ADD_DEPENDENCIES(zmq_util ${ZMQ_UTIL_DEPENDENCIES})

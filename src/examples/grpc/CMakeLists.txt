@@ -11,7 +11,7 @@ MACRO(CREATE_GRPC_EXECUTABLE NAME)
     TARGET_LINK_LIBRARIES(examples_grpc_${NAME}
         examples_grcp_proto
         fluent
-        googlelog
+        glog
         grpc
         grpc++
         protobuf
@@ -19,7 +19,6 @@ MACRO(CREATE_GRPC_EXECUTABLE NAME)
     ADD_DEPENDENCIES(examples_grpc_${NAME}
         examples_grcp_proto
         fluent
-        googlelog
         grpc_project
         protobuf_project)
 ENDMACRO(CREATE_GRPC_EXECUTABLE)

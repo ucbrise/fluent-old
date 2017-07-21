@@ -49,6 +49,10 @@ install_redis() {
     sudo apt-get install -y libhiredis-dev libev-dev
 }
 
+install_gtools() {
+    sudo apt-get install -y gflags glog
+}
+
 main() {
     set -x
     sudo apt-get -y update
@@ -57,6 +61,7 @@ main() {
     install_gpp
     install_cmake
     install_redis
+    install_gtools
     set +x
 }
 

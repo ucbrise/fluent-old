@@ -50,7 +50,7 @@ install_redis() {
 }
 
 install_gtools() {
-    sudo apt-get install -y gflags glog
+    sudo apt-get install -y libgflags2 libgflags-dev libgoogle-glog-dev
 }
 
 main() {

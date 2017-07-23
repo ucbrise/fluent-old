@@ -10,6 +10,7 @@ TARGET_LINK_LIBRARIES(zmq_util
     zmq)
 
 SET(ZMQ_UTIL_DEPENDENCIES
+	zeromq_project
     zeromqcpp_project)
 ADD_DEPENDENCIES(zmq_util ${ZMQ_UTIL_DEPENDENCIES})
 ADD_DEPENDENCIES(zmq_util_object ${ZMQ_UTIL_DEPENDENCIES})

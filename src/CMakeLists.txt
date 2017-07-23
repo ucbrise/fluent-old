@@ -84,6 +84,7 @@ INCLUDE(vendor/googletest.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/grpc.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/range-v3.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/redox.cmake NO_POLICY_SCOPE)
+INCLUDE(vendor/zeromq.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/zeromqcpp.cmake NO_POLICY_SCOPE)
 
 INCLUDE_DIRECTORIES(.)

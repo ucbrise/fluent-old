@@ -42,10 +42,6 @@ install_boost() {
     sudo apt-get install libboost-dev
 }
 
-install_zeromq() {
-    sudo apt-get install libzmq0
-}
-
 install_cereal() {
     sudo apt-get install libghc-cereal-dev
 }
@@ -73,7 +69,6 @@ main() {
     install_gpp
     install_cmake
     install_boost
-    install_zeromq
     install_cereal
     install_redis
     install_gtools

@@ -39,15 +39,15 @@ install_cmake() {
 }
 
 install_boost() {
-    sudo apt-get libboost-dev
+    sudo apt-get install libboost-dev
 }
 
 install_zeromq() {
-    sudo apt-get libzmq0
+    sudo apt-get install libzmq0
 }
 
 install_cereal() {
-    sudo apt-get libghc-cereal-dev
+    sudo apt-get install libghc-cereal-dev
 }
 
 install_postgres() {

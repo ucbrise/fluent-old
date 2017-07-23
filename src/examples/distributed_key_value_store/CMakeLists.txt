@@ -23,8 +23,7 @@ MACRO(CREATE_DISTRIBUTED_KEY_VALUE_STORE_EXECUTABLE NAME)
     ADD_DEPENDENCIES(examples_distributed_key_value_store_${NAME}
         examples_distributed_key_value_store_proto
         fluent
-        grpc_project
-        protobuf_project)
+        grpc_project)
 ENDMACRO(CREATE_DISTRIBUTED_KEY_VALUE_STORE_EXECUTABLE)
 
 CREATE_DISTRIBUTED_KEY_VALUE_STORE_EXECUTABLE(command_line_client client)

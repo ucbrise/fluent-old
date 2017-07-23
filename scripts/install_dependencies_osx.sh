@@ -2,24 +2,18 @@
 
 set -euo pipefail
 
-install_misc() {
-    brew install libtool
+install_gtools() {
+	brew install gflags glog protobuf
 }
-
-install_cmake() {
-    brew install cmake
-}
-
-install_redis() {
-    brew install libhiredis libev
-}
-
 main() {
     set -x
     brew update
-    install_misc
-    install_cmake
-    install_redis
+    brew install boost
+    brew install cereal
+    brew install zmq
+    brew install cereal
+    brew install redis
+    install_gtools
     set +x
 }
 

@@ -19,8 +19,7 @@ MACRO(CREATE_GRPC_EXECUTABLE NAME)
     ADD_DEPENDENCIES(examples_grpc_${NAME}
         examples_grcp_proto
         fluent
-        grpc_project
-        protobuf_project)
+        grpc_project)
 ENDMACRO(CREATE_GRPC_EXECUTABLE)
 
 CREATE_GRPC_EXECUTABLE(client)

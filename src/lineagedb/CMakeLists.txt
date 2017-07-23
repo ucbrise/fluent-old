@@ -14,8 +14,7 @@ TARGET_LINK_LIBRARIES(lineagedb
 
 SET(LINEAGEDB_DEPENDENCIES
     common
-    fmt
-    libpqxx)
+    fmt)
 ADD_DEPENDENCIES(lineagedb ${LINEAGEDB_DEPENDENCIES})
 ADD_DEPENDENCIES(lineagedb_object ${LINEAGEDB_DEPENDENCIES})
 

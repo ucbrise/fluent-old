@@ -78,17 +78,12 @@ SET(CMAKE_CXX_FLAGS_RELEASE
      ${CMAKE_CXX_FLAGS_COMMON}")
 
 INCLUDE(ExternalProject)
-INCLUDE(vendor/boost.cmake NO_POLICY_SCOPE)
-INCLUDE(vendor/cereal.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/fmt.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/googlebenchmark.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/googletest.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/grpc.cmake NO_POLICY_SCOPE)
-INCLUDE(vendor/libpqxx.cmake NO_POLICY_SCOPE)
-INCLUDE(vendor/protobuf.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/range-v3.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/redox.cmake NO_POLICY_SCOPE)
-INCLUDE(vendor/zeromq.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/zeromqcpp.cmake NO_POLICY_SCOPE)
 
 INCLUDE_DIRECTORIES(.)

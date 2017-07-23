@@ -9,7 +9,6 @@ main() {
     set -x
     brew update
     brew install boost
-    brew install cereal
     brew install zmq
     brew install cereal
     brew install redis

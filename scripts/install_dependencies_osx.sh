@@ -12,6 +12,7 @@ main() {
     brew install zmq
     brew install cereal
     brew install redis
+    brew install hiredis
     install_gtools
     set +x
 }

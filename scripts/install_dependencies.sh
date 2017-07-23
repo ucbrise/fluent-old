@@ -42,10 +42,6 @@ install_boost() {
     sudo apt-get install libboost-dev
 }
 
-install_cereal() {
-    sudo apt-get install libghc-cereal-dev
-}
-
 install_postgres() {
     sudo bash -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
     wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
@@ -58,7 +54,7 @@ install_redis() {
 }
 
 install_gtools() {
-    sudo apt-get install -y libgflags2 libgflags-dev libgoogle-glog-dev libprotobuf-dev
+    sudo apt-get install -y libgflags2 libgflags-dev libgoogle-glog-dev
 }
 
 main() {
@@ -69,7 +65,6 @@ main() {
     install_gpp
     install_cmake
     install_boost
-    install_cereal
     install_redis
     install_gtools
     set +x

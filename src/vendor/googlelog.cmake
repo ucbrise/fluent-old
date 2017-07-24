@@ -1,20 +1,21 @@
-# Resources:
-#   - https://github.com/rsakamoto/dexter/blob/13bac2f372bf0beeba673187c39d657978d71890/ext/glog/CMakeLists.txt
-ExternalProject_Add(googlelog_project
-    GIT_REPOSITORY "https://github.com/google/glog"
-    GIT_TAG "master"
-    PREFIX ${CMAKE_CURRENT_BINARY_DIR}
-    BUILD_IN_SOURCE 1
-    UPDATE_COMMAND ""
-    CONFIGURE_COMMAND ./autogen.sh && ./configure --with-gflags=${GFLAGS_BUILD_DIR} --with-sysroot=${GFLAGS_LIBS_DIR}
-    BUILD_COMMAND make
-    INSTALL_COMMAND ""
-)
+FIND_PACKAGE(Glog)
 
-SET(GLOG_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/src/googlelog_project/src)
-SET(GLOG_LINK_DIRS ${CMAKE_CURRENT_BINARY_DIR}/src/googlelog_project/.libs)
+if (GLOG_FOUND)
+    SET(GLOG_INCLUDE_DIRS ${GLOG_INCLUDE_DIRS})
+    SET(GLOG_LINK_DIRS ${GLOG_LIBRARIES})
+else ()
+    # Resources:
+    #   - https://github.com/rsakamoto/dexter/blob/13bac2f372bf0beeba673187c39d657978d71890/ext/glog/CMakeLists.txt
+    ExternalProject_Add(googlelog_project
+        GIT_REPOSITORY "https://github.com/google/glog"
+        GIT_TAG "v0.3.5"
+        PREFIX ${CMAKE_CURRENT_BINARY_DIR}
+        CMAKE_ARGS -DBUILD_SHARED_LIBS=true
+        INSTALL_COMMAND ""
+    )
 
-ADD_LIBRARY(googlelog STATIC IMPORTED)
-SET_PROPERTY(TARGET googlelog
-             PROPERTY IMPORTED_LOCATION ${GLOG_LINK_DIRS}/libglog.a)
-ADD_DEPENDENCIES(googlelog googlelog_project)
+    ExternalProject_Get_Property(googlelog_project SOURCE_DIR)
+    ExternalProject_Get_Property(googlelog_project BINARY_DIR)
+    SET(GLOG_INCLUDE_DIRS ${SOURCE_DIR}/src ${BINARY_DIR})
+    SET(GLOG_LINK_DIRS ${BINARY_DIR})
+endif ()

@@ -11,14 +11,13 @@ ADD_LIBRARY(common_object OBJECT ${COMMON_SOURCES})
 
 TARGET_LINK_LIBRARIES(common
     fmt
-    googlelog
+    glog
     pthread)
 
 SET(COMMON_DEPENDENCIES
-    boost_project
+    ${BOOST_PROJECT}
     cereal_project
-    fmt
-    googlelog)
+    fmt_project)
 ADD_DEPENDENCIES(common ${COMMON_DEPENDENCIES})
 ADD_DEPENDENCIES(common_object ${COMMON_DEPENDENCIES})
 

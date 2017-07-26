@@ -9,9 +9,16 @@ ExternalProject_Add(grpc_project
     INSTALL_COMMAND ""
 )
 
-SET(GRPC_INCLUDE_DIRS
-    "${CMAKE_CURRENT_BINARY_DIR}/src/grpc_project/include")
-SET(GRPC_LINK_DIRS
-    "${CMAKE_CURRENT_BINARY_DIR}/src/grpc_project/libs/opt")
-SET(gRPC_CPP_PLUGIN_EXECUTABLE
-    "${CMAKE_CURRENT_BINARY_DIR}/src/grpc_project/bins/opt/grpc_cpp_plugin")
+SET(GRPC_DIR ${CMAKE_CURRENT_BINARY_DIR}/src/grpc_project)
+SET(PROTOBUF_DIR ${GRPC_DIR}/third_party/protobuf)
+
+# Protobuf
+INCLUDE_DIRECTORIES(SYSTEM ${PROTOBUF_DIR}/src)
+LINK_DIRECTORIES(${PROTOBUF_DIR}/src/.libs)
+SET(Protobuf_PROTOC_EXECUTABLE ${PROTOBUF_DIR}/src/protoc)
+
+# GRPC
+INCLUDE_DIRECTORIES(SYSTEM ${PROTOBUF_DIR}/src)
+INCLUDE_DIRECTORIES(SYSTEM ${GRPC_DIR}/include)
+LINK_DIRECTORIES(${GRPC_DIR}/libs/opt)
+SET(gRPC_CPP_PLUGIN_EXECUTABLE ${GRPC_DIR}/bins/opt/grpc_cpp_plugin)

@@ -15,7 +15,7 @@ MACRO(CREATE_DISTRIBUTED_KEY_VALUE_STORE_EXECUTABLE NAME)
     TARGET_LINK_LIBRARIES(examples_distributed_kvs_${NAME}
         examples_distributed_kvs_proto
         fluent
-        googlelog
+        glog
         grpc
         grpc++
         protobuf
@@ -23,9 +23,7 @@ MACRO(CREATE_DISTRIBUTED_KEY_VALUE_STORE_EXECUTABLE NAME)
     ADD_DEPENDENCIES(examples_distributed_kvs_${NAME}
         examples_distributed_kvs_proto
         fluent
-        googlelog
-        grpc_project
-        protobuf_project)
+        grpc_project)
 ENDMACRO(CREATE_DISTRIBUTED_KEY_VALUE_STORE_EXECUTABLE)
 
 CREATE_DISTRIBUTED_KEY_VALUE_STORE_EXECUTABLE(command_line_client client)

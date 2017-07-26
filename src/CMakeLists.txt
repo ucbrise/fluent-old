@@ -39,7 +39,6 @@ INCLUDE(cmake/testing.cmake NO_POLICY_SCOPE)
 # [1]: http://stackoverflow.com/a/6595001/3187068
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# TODO(mwhittaker): Change compiler flags based on Debug or Release.
 SET(CMAKE_CXX_FLAGS_COMMON
         "-std=c++14 \
          -Wall \
@@ -77,6 +76,25 @@ SET(CMAKE_CXX_FLAGS_RELEASE
     "${CMAKE_CXX_FLAGS_RELEASE} \
      ${CMAKE_CXX_FLAGS_COMMON}")
 
+# CMake provides a FIND_PACKAGE function that can be used to find packages that
+# are already installed on a user's computer. For example, the following code
+# attempts to find the BZip2 package:
+#
+#     FIND_PACKAGE (BZip2)
+#     IF (BZIP2_FOUND)
+#         INCLUDE_DIRECTORIES(${BZIP_INCLUDE_DIRS})
+#         TARGET_LINK_LIBRARIES (helloworld ${BZIP2_LIBRARIES})
+#     ENDIF ()
+#
+# CMake cannot find arbitrary packages. It can only find the ones it is
+# configured to find. Run `cmake --help-module-list` for a list of all the
+# packages CMake can find by default. However, CMake has a plug in system which
+# lets you tell CMake how to find other packages that is doesn't know how to
+# find by default. You do so by writing special module files; see [1] for an in
+# depth explanation. This line specifies the directory in which we place module
+# files.
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
+
 INCLUDE(ExternalProject)
 INCLUDE(vendor/aws.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/boost.cmake NO_POLICY_SCOPE)
@@ -88,46 +106,13 @@ INCLUDE(vendor/googlelog.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/googletest.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/grpc.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/libpqxx.cmake NO_POLICY_SCOPE)
-INCLUDE(vendor/protobuf.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/range-v3.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/redox.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/zeromq.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/zeromqcpp.cmake NO_POLICY_SCOPE)
 
 INCLUDE_DIRECTORIES(.)
-INCLUDE_DIRECTORIES(${AWS_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${AWS_S3_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${BOOST_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${CASSANDRA_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${CEREAL_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${GBENCH_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${GLOG_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${GMOCK_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${GTEST_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${RANGEV3_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${ZEROMQCPP_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(${ZEROMQ_INCLUDE_DIRS})
-# We compile with the -Werror flag which means that warnings are turned into
-# errors. The following includes produce warnings (turned errors) which prevent
-# the code from building. By specifying them as a SYSTEM include, we ignore the
-# warnings and allow the code to build.
 INCLUDE_DIRECTORIES(SYSTEM ${CMAKE_CURRENT_BINARY_DIR})
-INCLUDE_DIRECTORIES(SYSTEM ${FMT_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(SYSTEM ${GRPC_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(SYSTEM ${LIBPQXX_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(SYSTEM ${PROTOBUF_INCLUDE_DIRS})
-INCLUDE_DIRECTORIES(SYSTEM ${REDOX_INCLUDE_DIRS})
-
-LINK_DIRECTORIES(${AWS_LINK_DIRS})
-LINK_DIRECTORIES(${AWS_S3_LINK_DIRS})
-LINK_DIRECTORIES(${CASSANDRA_LINK_DIRS})
-LINK_DIRECTORIES(${FMT_LINK_DIRS})
-LINK_DIRECTORIES(${GLOG_LINK_DIRS})
-LINK_DIRECTORIES(${GRPC_LINK_DIRS})
-LINK_DIRECTORIES(${LIBPQXX_LINK_DIRS})
-LINK_DIRECTORIES(${PROTOBUF_LINK_DIRS})
-LINK_DIRECTORIES(${REDOX_LINK_DIRS})
-LINK_DIRECTORIES(${ZEROMQ_LINK_DIRS})
 
 ENABLE_TESTING()
 ADD_SUBDIRECTORY(collections)

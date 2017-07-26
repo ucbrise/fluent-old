@@ -8,13 +8,12 @@ MACRO(CREATE_S3_EXECUTABLE NAME)
         common
         fluent
         fmt
-        googlelog)
+        glog)
     ADD_DEPENDENCIES(examples_s3_${NAME}
         aws_project
         common
         fluent
-        fmt
-        googlelog)
+        fmt_project)
 ENDMACRO(CREATE_S3_EXECUTABLE)
 
 CREATE_S3_EXECUTABLE(benchmark)

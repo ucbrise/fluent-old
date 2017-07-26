@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
                    std::string msg = fmt::format("write {} {}", start, data);
                    zmq_util::send_string(msg, &socket);
                    zmq_util::recv_string(&socket);
-                   return {src_addr, id};
+                   return std::make_tuple(src_addr, id);
                  }));
 
             auto read =
@@ -80,7 +80,7 @@ int main(int argc, char* argv[]) {
                    std::string msg = fmt::format("read {} {}", start, stop);
                    zmq_util::send_string(msg, &socket);
                    std::string data = zmq_util::recv_string(&socket);
-                   return {src_addr, id, std::move(data)};
+                   return std::make_tuple(src_addr, id, std::move(data));
                  }));
 
             return std::make_tuple(write, read);

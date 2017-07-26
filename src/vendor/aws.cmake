@@ -8,9 +8,7 @@ ExternalProject_Add(aws_project
 
 ExternalProject_Get_Property(aws_project SOURCE_DIR)
 ExternalProject_Get_Property(aws_project BINARY_DIR)
-
-SET(AWS_INCLUDE_DIRS ${SOURCE_DIR}/aws-cpp-sdk-core/include)
-SET(AWS_S3_INCLUDE_DIRS ${SOURCE_DIR}/aws-cpp-sdk-s3/include)
-
-SET(AWS_LINK_DIRS ${BINARY_DIR}/aws-cpp-sdk-core)
-SET(AWS_S3_LINK_DIRS ${BINARY_DIR}/aws-cpp-sdk-s3)
+INCLUDE_DIRECTORIES(SYSTEM ${SOURCE_DIR}/aws-cpp-sdk-core/include)
+INCLUDE_DIRECTORIES(SYSTEM ${SOURCE_DIR}/aws-cpp-sdk-s3/include)
+LINK_DIRECTORIES(${BINARY_DIR}/aws-cpp-sdk-core)
+LINK_DIRECTORIES(${BINARY_DIR}/aws-cpp-sdk-s3)

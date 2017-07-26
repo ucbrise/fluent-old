@@ -5,12 +5,11 @@ MACRO(CREATE_REDIS_EXECUTABLE NAME)
     TARGET_LINK_LIBRARIES(examples_redis_${NAME}
         ev
         fluent
-        googlelog
+        glog
         hiredis
         redox)
     ADD_DEPENDENCIES(examples_redis_${NAME}
         fluent
-        googlelog
         redox_project)
 ENDMACRO(CREATE_REDIS_EXECUTABLE)
 

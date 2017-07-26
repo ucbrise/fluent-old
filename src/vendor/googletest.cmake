@@ -10,33 +10,28 @@ ExternalProject_Add(googletest_project
 )
 
 ExternalProject_Get_Property(googletest_project SOURCE_DIR)
-SET(GTEST_INCLUDE_DIRS ${SOURCE_DIR}/googletest/include)
-
-ExternalProject_Get_Property(googletest_project SOURCE_DIR)
-SET(GMOCK_INCLUDE_DIRS ${SOURCE_DIR}/googlemock/include)
-
 ExternalProject_Get_Property(googletest_project BINARY_DIR)
-SET(GTEST_LIBS_DIR ${BINARY_DIR}/googlemock/gtest)
+INCLUDE_DIRECTORIES(SYSTEM ${SOURCE_DIR}/googletest/include)
+INCLUDE_DIRECTORIES(SYSTEM ${SOURCE_DIR}/googlemock/include)
+LINK_DIRECTORIES(${BINARY_DIR}/googlemock/gtest)
+LINK_DIRECTORIES(${BINARY_DIR}/googlemock)
 
-ExternalProject_Get_Property(googletest_project BINARY_DIR)
-SET(GMOCK_LIBS_DIR ${BINARY_DIR}/googlemock)
+ADD_LIBRARY(gtest STATIC IMPORTED)
+SET_PROPERTY(TARGET gtest
+    PROPERTY IMPORTED_LOCATION ${BINARY_DIR}/googlemock/gtest/libgtest.a)
+ADD_DEPENDENCIES(gtest googletest_project)
 
-ADD_LIBRARY(googletest STATIC IMPORTED)
-SET_PROPERTY(TARGET googletest
-             PROPERTY IMPORTED_LOCATION ${GTEST_LIBS_DIR}/libgtest.a)
-ADD_DEPENDENCIES(googletest googletest_project)
+ADD_LIBRARY(gtest_main STATIC IMPORTED)
+SET_PROPERTY(TARGET gtest_main
+    PROPERTY IMPORTED_LOCATION ${BINARY_DIR}/googlemock/gtest/libgtest_main.a)
+ADD_DEPENDENCIES(gtest_main googletest_project)
 
-ADD_LIBRARY(googletest_main STATIC IMPORTED)
-SET_PROPERTY(TARGET googletest_main
-             PROPERTY IMPORTED_LOCATION ${GTEST_LIBS_DIR}/libgtest_main.a)
-ADD_DEPENDENCIES(googletest_main googletest_project)
+ADD_LIBRARY(gmock STATIC IMPORTED)
+SET_PROPERTY(TARGET gmock
+    PROPERTY IMPORTED_LOCATION ${BINARY_DIR}/googlemock/libgmock.a)
+ADD_DEPENDENCIES(gmock googletest_project)
 
-ADD_LIBRARY(googlemock STATIC IMPORTED)
-SET_PROPERTY(TARGET googlemock
-             PROPERTY IMPORTED_LOCATION ${GMOCK_LIBS_DIR}/libgmock.a)
-ADD_DEPENDENCIES(googlemock googletest_project)
-
-ADD_LIBRARY(googlemock_main STATIC IMPORTED)
-SET_PROPERTY(TARGET googlemock_main
-             PROPERTY IMPORTED_LOCATION ${GMOCK_LIBS_DIR}/libgmock_main.a)
-ADD_DEPENDENCIES(googlemock_main googletest_project)
+ADD_LIBRARY(gmock_main STATIC IMPORTED)
+SET_PROPERTY(TARGET gmock_main
+    PROPERTY IMPORTED_LOCATION ${BINARY_DIR}/googlemock/libgmock_main.a)
+ADD_DEPENDENCIES(gmock_main googletest_project)

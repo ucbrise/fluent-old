@@ -89,7 +89,8 @@ int main(int argc, char* argv[]) {
                            std::get<0>(parts_tuple);
                        const std::string& key = parts[1];
                        const std::int64_t id = id_gen.Generate();
-                       return {server_address, client_address, id, key};
+                       return std::make_tuple(server_address, client_address,
+                                              id, key);
                      }));
 
             auto send_set =
@@ -111,8 +112,8 @@ int main(int argc, char* argv[]) {
                            std::chrono::system_clock::now()
                                .time_since_epoch()
                                .count();
-                       return {server_address, client_address, id, key,
-                               value,          timestamp};
+                       return std::make_tuple(server_address, client_address,
+                                              id, key, value, timestamp);
                      }));
 
             auto print_get =

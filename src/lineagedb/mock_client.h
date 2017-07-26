@@ -5,6 +5,7 @@
 
 #include <array>
 #include <chrono>
+#include <memory>
 #include <string>
 #include <utility>
 

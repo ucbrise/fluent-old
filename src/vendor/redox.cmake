@@ -8,7 +8,6 @@ ExternalProject_Add(redox_project
 )
 
 ExternalProject_Get_Property(redox_project SOURCE_DIR)
-SET(REDOX_INCLUDE_DIRS ${SOURCE_DIR}/include)
-
 ExternalProject_Get_Property(redox_project BINARY_DIR)
-SET(REDOX_LINK_DIRS ${BINARY_DIR})
+INCLUDE_DIRECTORIES(SYSTEM ${SOURCE_DIR}/include)
+LINK_DIRECTORIES(${BINARY_DIR})

@@ -10,7 +10,7 @@ TARGET_LINK_LIBRARIES(fluent
     collections
     common
     fmt
-    googlelog
+    glog
     lineagedb
     pthread
     zmq_util)
@@ -18,8 +18,7 @@ TARGET_LINK_LIBRARIES(fluent
 ADD_DEPENDENCIES(fluent
     collections
     common
-    fmt
-    googlelog
+    fmt_project
     lineagedb
     zmq_util)
 

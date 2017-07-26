@@ -7,16 +7,14 @@ ADD_LIBRARY(lineagedb_object OBJECT ${LINEAGEDB_SOURCES})
 TARGET_LINK_LIBRARIES(lineagedb
     common
     fmt
-    googlelog
-    libpqxx
+    glog
+    pqxx
     pq
     pthread)
 
 SET(LINEAGEDB_DEPENDENCIES
     common
-    fmt
-    googlelog
-    libpqxx)
+    fmt_project)
 ADD_DEPENDENCIES(lineagedb ${LINEAGEDB_DEPENDENCIES})
 ADD_DEPENDENCIES(lineagedb_object ${LINEAGEDB_DEPENDENCIES})
 

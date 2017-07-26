@@ -3,7 +3,24 @@
 set -euo pipefail
 
 install_misc() {
-    sudo apt-get install libtool
+    # These dependencies are needed by a couple of different projects including
+    # redis, protobuf, grpc, etc.
+    sudo apt-get install \
+      ant \
+      autoconf \
+      automake \
+      curl \
+      g++ \
+      libcurl4-openssl-dev \
+      libev-dev\
+      libhiredis-dev \
+      libssl-dev \
+      libtool \
+      libuv-dev \
+      make \
+      unzip \
+      zlib1g-dev \
+
 }
 
 install_clang() {
@@ -38,19 +55,15 @@ install_cmake() {
     echo 'export PATH="$PATH:$HOME/cmake-3.6.2-Linux-x86_64/bin"' >> ~/.bash_path
 }
 
+install_boost() {
+    sudo apt-get install libboost-dev
+}
+
 install_postgres() {
     sudo bash -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
     wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
     sudo apt-get update
     sudo apt-get install -y postgresql-9.6 postgresql-server-dev-9.6 python-dev
-}
-
-install_redis() {
-    sudo apt-get install -y libhiredis-dev libev-dev
-}
-
-install_cassandra_deps() {
-    sudo apt-get install -y libuv-dev libssl-dev
 }
 
 main() {
@@ -60,8 +73,8 @@ main() {
     install_clang
     install_gpp
     install_cmake
-    install_redis
-    install_cassandra_deps
+    install_boost
+    install_postgres
     set +x
 }
 

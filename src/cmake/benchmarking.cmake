@@ -6,12 +6,9 @@ MACRO(CREATE_NAMED_BENCHMARK NAME FILENAME)
     ADD_EXECUTABLE(${NAME} ${FILENAME})
     ADD_TEST(NAME ${NAME} COMMAND ${NAME})
     SET_TESTS_PROPERTIES(${NAME} PROPERTIES LABELS "BENCHMARK")
-    ADD_DEPENDENCIES(${NAME}
-        googlebenchmark
-        googlelog)
     TARGET_LINK_LIBRARIES(${NAME}
-        googlebenchmark
-        googlelog
+        benchmark
+        glog
         pthread)
 ENDMACRO(CREATE_NAMED_BENCHMARK)
 

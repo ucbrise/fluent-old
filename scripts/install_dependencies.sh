@@ -55,20 +55,18 @@ install_redis() {
     sudo apt-get install -y libhiredis-dev libev-dev
 }
 
-install_gtools() {
-    sudo apt-get install -y libgflags2 libgflags-dev libgoogle-glog-dev
-}
-
 main() {
     set -x
     sudo apt-get -y update
     install_misc
+
     install_clang
     install_gpp
     install_cmake
+
     install_boost
+    install_postgres
     install_redis
-    install_gtools
     set +x
 }
 

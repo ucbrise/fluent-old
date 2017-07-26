@@ -9,7 +9,7 @@ ExternalProject_Add(grpc_project
     INSTALL_COMMAND ""
 )
 
-INCLUDE_DIRECTORIES("${CMAKE_CURRENT_BINARY_DIR}/src/grpc_project/include")
+INCLUDE_DIRECTORIES(SYSTEM "${CMAKE_CURRENT_BINARY_DIR}/src/grpc_project/include")
 LINK_DIRECTORIES("${CMAKE_CURRENT_BINARY_DIR}/src/grpc_project/libs/opt")
 SET(gRPC_CPP_PLUGIN_EXECUTABLE
     "${CMAKE_CURRENT_BINARY_DIR}/src/grpc_project/bins/opt/grpc_cpp_plugin")

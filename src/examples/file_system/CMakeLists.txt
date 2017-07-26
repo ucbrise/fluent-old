@@ -20,8 +20,7 @@ CREATE_FILE_SYSTEM_EXECUTABLE(server)
 MACRO(CREATE_FILE_SYSTEM_TEST NAME)
     CREATE_NAMED_TEST(examples_file_system_${NAME} ${NAME})
     TARGET_LINK_LIBRARIES(examples_file_system_${NAME}
-    	examples_file_system
-    	gflags)
+    	examples_file_system)
 ENDMACRO(CREATE_FILE_SYSTEM_TEST)
 
 CREATE_FILE_SYSTEM_TEST(string_store_test)

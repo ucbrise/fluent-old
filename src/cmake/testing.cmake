@@ -9,19 +9,14 @@ MACRO(CREATE_NAMED_TEST NAME FILENAME)
     ADD_EXECUTABLE(${NAME} ${FILENAME})
     ADD_TEST(NAME ${NAME} COMMAND ${NAME})
     SET_TESTS_PROPERTIES(${NAME} PROPERTIES LABELS "UNITTEST")
-    ADD_DEPENDENCIES(${NAME}
-        googlemock
-        googlemock_main
-        googletest
-        googletest_main)
     TARGET_LINK_LIBRARIES(${NAME}
-        gflags
         glog
-        googlemock
-        googlemock_main
-        googletest
-        googletest_main
+        gmock
+        gmock_main
+        gtest
+        gtest_main
         pthread)
+    ADD_DEPENDENCIES(${NAME} googletest_project)
 ENDMACRO(CREATE_NAMED_TEST)
 
 # CREATE_TEST(foo) creates a test named `foo` from the file `foo.cc`.

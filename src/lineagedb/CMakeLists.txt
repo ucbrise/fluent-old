@@ -8,13 +8,13 @@ TARGET_LINK_LIBRARIES(lineagedb
     common
     fmt
     glog
-    libpqxx
+    pqxx
     pq
     pthread)
 
 SET(LINEAGEDB_DEPENDENCIES
     common
-    fmt)
+    fmt_project)
 ADD_DEPENDENCIES(lineagedb ${LINEAGEDB_DEPENDENCIES})
 ADD_DEPENDENCIES(lineagedb_object ${LINEAGEDB_DEPENDENCIES})
 

@@ -10,7 +10,6 @@ TARGET_LINK_LIBRARIES(fluent
     collections
     common
     fmt
-    gflags
     glog
     lineagedb
     pthread
@@ -19,7 +18,7 @@ TARGET_LINK_LIBRARIES(fluent
 ADD_DEPENDENCIES(fluent
     collections
     common
-    fmt
+    fmt_project
     lineagedb
     zmq_util)
 

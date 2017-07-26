@@ -11,12 +11,7 @@ ExternalProject_Add(protobuf_project
     INSTALL_COMMAND ""
 )
 
-SET(PROTOBUF_INCLUDE_DIRS
-    ${CMAKE_CURRENT_BINARY_DIR}/src/protobuf_project/src)
-SET(PROTOBUF_LINK_DIRS
-    ${CMAKE_CURRENT_BINARY_DIR}/src/protobuf_project/src/.libs)
-
-SET(Protobuf_SRC_ROOT_FOLDER
-    ${CMAKE_CURRENT_BINARY_DIR}/src/protobuf_project)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/src/protobuf_project/src)
+LINK_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/src/protobuf_project/src/.libs)
 SET(Protobuf_PROTOC_EXECUTABLE
     ${CMAKE_CURRENT_BINARY_DIR}/src/protobuf_project/src/protoc)

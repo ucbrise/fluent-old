@@ -3,7 +3,9 @@
 set -euo pipefail
 
 install_misc() {
-    sudo apt-get install libtool
+    # These dependencies are needed by a couple of different projects including
+    # protobuf and grpc.
+    sudo apt-get install autoconf automake libtool curl make g++ unzip
 }
 
 install_clang() {

@@ -5,7 +5,6 @@ ADD_LIBRARY(collections ${COLLECTIONS_SOURCES})
 ADD_LIBRARY(collections_object OBJECT ${COLLECTIONS_SOURCES})
 
 TARGET_LINK_LIBRARIES(collections
-    gflags
     glog
     pthread
     zmq_util)

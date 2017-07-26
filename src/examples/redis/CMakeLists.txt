@@ -9,8 +9,9 @@ MACRO(CREATE_REDIS_EXECUTABLE NAME)
         hiredis
         redox)
     ADD_DEPENDENCIES(examples_redis_${NAME}
-        fluent
-        redox_project)
+        ${GOOGLELOG_PROJECT}
+        ${REDOX_PROJECT}
+        fluent)
 ENDMACRO(CREATE_REDIS_EXECUTABLE)
 
 CREATE_REDIS_EXECUTABLE(client)

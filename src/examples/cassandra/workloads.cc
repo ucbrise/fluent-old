@@ -1,5 +1,7 @@
 #include "examples/cassandra/workloads.h"
 
+#include <stdexcept>
+
 #include "glog/logging.h"
 
 #include "common/rand_util.h"
@@ -12,7 +14,10 @@ std::string WorkloadToString(const Workload& workload) {
     case Workload::ZIPFIAN: {
       return "ZIPFIAN";
     }
-    default: { CHECK(false) << "Unreachable code."; }
+    default: {
+      CHECK(false) << "Unreachable code.";
+      throw std::runtime_error("Unreachable");
+    }
   }
 }
 
@@ -23,6 +28,7 @@ Workload StringToWorkload(const std::string& s) {
     return Workload::ZIPFIAN;
   } else {
     CHECK(false) << "Invalid workload " << s;
+    throw std::runtime_error("Unreachable");
   }
 }
 
@@ -36,6 +42,9 @@ std::discrete_distribution<int> WorkloadToDistribution(const Workload& workload,
     case Workload::ZIPFIAN: {
       return fluent::ZipfDistribution(num_keys, 1.0);
     }
-    default: { CHECK(false) << "Unreachable code."; }
+    default: {
+      CHECK(false) << "Unreachable code.";
+      throw std::runtime_error("Unreachable");
+    }
   }
 }

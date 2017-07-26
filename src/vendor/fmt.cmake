@@ -5,6 +5,7 @@ ExternalProject_Add(fmt_project
     CMAKE_ARGS -DBUILD_SHARED_LIBS=true
     INSTALL_COMMAND ""
 )
+SET(FMT_PROJECT fmt_project)
 
 ExternalProject_Get_Property(fmt_project SOURCE_DIR)
 ExternalProject_Get_Property(fmt_project BINARY_DIR)

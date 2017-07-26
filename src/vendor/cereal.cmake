@@ -8,6 +8,7 @@ ExternalProject_Add(cereal_project
     BUILD_COMMAND ""
     INSTALL_COMMAND ""
 )
+SET(CEREAL_PROJECT cereal_project)
 
 ExternalProject_Get_Property(cereal_project SOURCE_DIR)
 INCLUDE_DIRECTORIES(SYSTEM ${SOURCE_DIR}/include)

@@ -4,7 +4,6 @@ IF (Boost_FOUND)
     INCLUDE_DIRECTORIES(SYSTEM ${Boost_INCLUDE_DIRS})
     SET(BOOST_PROJECT "")
 ELSE ()
-    MESSAGE(STATUS ">>>")
     ExternalProject_Add(boost_project
         URL "http://kent.dl.sourceforge.net/project/boost/boost/1.63.0/boost_1_63_0.tar.gz"
         PREFIX ${CMAKE_CURRENT_BINARY_DIR}

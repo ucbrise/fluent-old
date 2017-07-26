@@ -8,6 +8,7 @@ ExternalProject_Add(grpc_project
     BUILD_COMMAND make
     INSTALL_COMMAND ""
 )
+SET(GRPC_PROJECT grpc_project)
 
 SET(GRPC_DIR ${CMAKE_CURRENT_BINARY_DIR}/src/grpc_project)
 SET(PROTOBUF_DIR ${GRPC_DIR}/third_party/protobuf)

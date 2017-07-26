@@ -8,5 +8,6 @@ ExternalProject_Add(range-v3_project
     BUILD_COMMAND ""
     INSTALL_COMMAND ""
 )
+SET(RANGE-V3_PROJECT range-v3_project)
 
 INCLUDE_DIRECTORIES(SYSTEM ${CMAKE_CURRENT_BINARY_DIR}/src/range-v3_project/include)

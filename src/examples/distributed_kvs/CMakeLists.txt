@@ -21,9 +21,10 @@ MACRO(CREATE_DISTRIBUTED_KEY_VALUE_STORE_EXECUTABLE NAME)
         protobuf
         pthread)
     ADD_DEPENDENCIES(examples_distributed_kvs_${NAME}
+        ${GOOGLELOG_PROJECT}
+        ${GRPC_PROJECT}
         examples_distributed_kvs_proto
-        fluent
-        grpc_project)
+        fluent)
 ENDMACRO(CREATE_DISTRIBUTED_KEY_VALUE_STORE_EXECUTABLE)
 
 CREATE_DISTRIBUTED_KEY_VALUE_STORE_EXECUTABLE(command_line_client client)

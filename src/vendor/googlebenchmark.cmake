@@ -9,6 +9,7 @@ ExternalProject_Add(googlebenchmark_project
     CMAKE_ARGS -DBUILD_SHARED_LIBS=true
     INSTALL_COMMAND ""
 )
+SET(GOOGLEBENCHMARK_PROJECT googlebenchmark_project)
 
 ExternalProject_Get_Property(googlebenchmark_project SOURCE_DIR)
 ExternalProject_Get_Property(googlebenchmark_project BINARY_DIR)

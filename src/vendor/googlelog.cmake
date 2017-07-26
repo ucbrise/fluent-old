@@ -5,6 +5,7 @@ ExternalProject_Add(googlelog_project
     CMAKE_ARGS -DBUILD_SHARED_LIBS=true
     INSTALL_COMMAND ""
 )
+SET(GOOGLELOG_PROJECT googlelog_project)
 
 ExternalProject_Get_Property(googlelog_project SOURCE_DIR)
 ExternalProject_Get_Property(googlelog_project BINARY_DIR)

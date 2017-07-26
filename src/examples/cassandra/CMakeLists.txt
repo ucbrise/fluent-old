@@ -6,7 +6,7 @@ MACRO(CREATE_CASSANDRA_EXECUTABLE NAME)
         cassandra
         fluent)
     ADD_DEPENDENCIES(examples_cassandra_${NAME}
-        cassandra_project
+        ${CASSANDRA_PROJECT}
         fluent)
 ENDMACRO(CREATE_CASSANDRA_EXECUTABLE)
 

@@ -10,6 +10,9 @@ MACRO(CREATE_NAMED_BENCHMARK NAME FILENAME)
         benchmark
         glog
         pthread)
+    ADD_DEPENDENCIES(${NAME}
+        ${GOOGLEBENCHMARK_PROJECT}
+        ${GOOGLELOG_PROJECT})
 ENDMACRO(CREATE_NAMED_BENCHMARK)
 
 # CREATE_BENCHMARK(foo) creates a benchmark named `foo` from the file `foo.cc`.

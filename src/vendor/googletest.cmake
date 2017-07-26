@@ -8,6 +8,7 @@ ExternalProject_Add(googletest_project
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}
     INSTALL_COMMAND ""
 )
+SET(GOOGLETEST_PROJECT googletest_project)
 
 ExternalProject_Get_Property(googletest_project SOURCE_DIR)
 ExternalProject_Get_Property(googletest_project BINARY_DIR)

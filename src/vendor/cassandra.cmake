@@ -4,6 +4,7 @@ ExternalProject_Add(cassandra_project
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}
     INSTALL_COMMAND ""
 )
+SET(CASSANDRA_PROJECT cassandra_project)
 
 ExternalProject_Get_Property(cassandra_project SOURCE_DIR)
 ExternalProject_Get_Property(cassandra_project BINARY_DIR)

@@ -10,10 +10,11 @@ MACRO(CREATE_S3_EXECUTABLE NAME)
         fmt
         glog)
     ADD_DEPENDENCIES(examples_s3_${NAME}
-        aws_project
+        ${AWS_PROJECT}
+        ${FMT_PROJECT}
+        ${GOOGLELOG_PROJECT}
         common
-        fluent
-        fmt_project)
+        fluent)
 ENDMACRO(CREATE_S3_EXECUTABLE)
 
 CREATE_S3_EXECUTABLE(benchmark)

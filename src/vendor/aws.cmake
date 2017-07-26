@@ -5,6 +5,7 @@ ExternalProject_Add(aws_project
     CMAKE_ARGS "-DBUILD_ONLY=s3"
     INSTALL_COMMAND ""
 )
+SET(AWS_PROJECT aws_project)
 
 ExternalProject_Get_Property(aws_project SOURCE_DIR)
 ExternalProject_Get_Property(aws_project BINARY_DIR)

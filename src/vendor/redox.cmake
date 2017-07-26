@@ -6,6 +6,7 @@ ExternalProject_Add(redox_project
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}
     INSTALL_COMMAND ""
 )
+SET(REDOX_PROJECT redox_project)
 
 ExternalProject_Get_Property(redox_project SOURCE_DIR)
 ExternalProject_Get_Property(redox_project BINARY_DIR)

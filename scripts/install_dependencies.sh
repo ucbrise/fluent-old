@@ -3,7 +3,9 @@
 set -euo pipefail
 
 install_misc() {
-    sudo apt-get install libtool
+    # These dependencies are needed by a couple of different projects including
+    # protobuf and grpc.
+    sudo apt-get install autoconf automake libtool curl make g++ unzip
 }
 
 install_clang() {
@@ -38,6 +40,10 @@ install_cmake() {
     echo 'export PATH="$PATH:$HOME/cmake-3.6.2-Linux-x86_64/bin"' >> ~/.bash_path
 }
 
+install_boost() {
+    sudo apt-get install libboost-dev
+}
+
 install_postgres() {
     sudo bash -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
     wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
@@ -53,9 +59,13 @@ main() {
     set -x
     sudo apt-get -y update
     install_misc
+
     install_clang
     install_gpp
     install_cmake
+
+    install_boost
+    install_postgres
     install_redis
     set +x
 }

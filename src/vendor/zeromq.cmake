@@ -14,5 +14,5 @@ ExternalProject_Add(zeromq_project
     INSTALL_COMMAND ""
 )
 
-SET(ZEROMQ_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR}/src/zeromq_project/include)
-SET(ZEROMQ_LINK_DIRS ${CMAKE_CURRENT_BINARY_DIR}/src/zeromq_project/.libs)
+INCLUDE_DIRECTORIES(SYSTEM ${CMAKE_CURRENT_BINARY_DIR}/src/zeromq_project/include)
+LINK_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/src/zeromq_project/.libs)

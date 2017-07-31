@@ -10,4 +10,4 @@ ExternalProject_Add(cereal_project
 )
 
 ExternalProject_Get_Property(cereal_project SOURCE_DIR)
-SET(CEREAL_INCLUDE_DIRS ${SOURCE_DIR}/include)
+INCLUDE_DIRECTORIES(SYSTEM ${SOURCE_DIR}/include)

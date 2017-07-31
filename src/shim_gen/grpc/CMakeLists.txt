@@ -12,4 +12,6 @@ TARGET_LINK_LIBRARIES(shim_gen_grpc_fluent_plugin
     pthread)
 
 ADD_DEPENDENCIES(shim_gen_grpc_fluent_plugin
-    fmt_project)
+    ${FMT_PROJECT}
+    ${GOOGLELOG_PROJECT}
+    ${GRPC_PROJECT})

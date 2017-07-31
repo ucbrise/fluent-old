@@ -4,8 +4,23 @@ set -euo pipefail
 
 install_misc() {
     # These dependencies are needed by a couple of different projects including
-    # protobuf and grpc.
-    sudo apt-get install autoconf automake libtool curl make g++ unzip
+    # redis, protobuf, grpc, etc.
+    sudo apt-get install \
+      ant \
+      autoconf \
+      automake \
+      curl \
+      g++ \
+      libcurl4-openssl-dev \
+      libev-dev\
+      libhiredis-dev \
+      libssl-dev \
+      libtool \
+      libuv-dev \
+      make \
+      unzip \
+      zlib1g-dev \
+
 }
 
 install_clang() {
@@ -51,22 +66,15 @@ install_postgres() {
     sudo apt-get install -y postgresql-9.6 postgresql-server-dev-9.6 python-dev
 }
 
-install_redis() {
-    sudo apt-get install -y libhiredis-dev libev-dev
-}
-
 main() {
     set -x
     sudo apt-get -y update
     install_misc
-
     install_clang
     install_gpp
     install_cmake
-
     install_boost
     install_postgres
-    install_redis
     set +x
 }
 

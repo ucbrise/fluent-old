@@ -4,16 +4,16 @@ dist: trusty
 osx_image: xcode8.3
 compiler:
 - clang
-- gcc
-os: 
+# - gcc
+os:
 - linux
 # - osx
 env:
 - TEST_TYPE=Debug
 - TEST_TYPE=Release
 install:
-- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then 
-    ./scripts/install_dependencies_osx.sh; 
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+    ./scripts/install_dependencies_osx.sh;
   else
     ./scripts/install_dependencies.sh;
   fi

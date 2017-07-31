@@ -46,16 +46,15 @@ class MockPqxxClient : public InjectablePqxxClient<MockConnection, MockWork,
                                                    Hash, ToSql, Clock> {
  public:
   DISALLOW_COPY_AND_ASSIGN(MockPqxxClient);
-  MockPqxxClient(MockPqxxClient&&) = default;
-  MockPqxxClient& operator=(MockPqxxClient&&) = default;
+  DISALLOW_MOVE_AND_ASSIGN(MockPqxxClient);
   virtual ~MockPqxxClient() = default;
 
-  static WARN_UNUSED StatusOr<MockPqxxClient> Make(
+  static WARN_UNUSED StatusOr<std::unique_ptr<MockPqxxClient>> Make(
       std::string name, std::size_t id, std::string address,
       const ConnectionConfig& connection_config) {
-    MockPqxxClient mock_client(std::move(name), id, std::move(address),
-                               connection_config);
-    RETURN_IF_ERROR(mock_client.Init());
+    std::unique_ptr<MockPqxxClient> mock_client(new MockPqxxClient(
+        std::move(name), id, std::move(address), connection_config));
+    RETURN_IF_ERROR(mock_client->Init());
     return std::move(mock_client);
   }
 

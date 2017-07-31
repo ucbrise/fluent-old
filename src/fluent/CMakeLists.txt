@@ -16,9 +16,9 @@ TARGET_LINK_LIBRARIES(fluent
     zmq_util)
 
 ADD_DEPENDENCIES(fluent
+    ${FMT_PROJECT}
     collections
     common
-    fmt_project
     lineagedb
     zmq_util)
 

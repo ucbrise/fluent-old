@@ -17,9 +17,10 @@ MACRO(CREATE_GRPC_EXECUTABLE NAME)
         protobuf
         pthread)
     ADD_DEPENDENCIES(examples_grpc_${NAME}
+        ${GOOGLELOGPROJECT}
+        ${GRPC_PROJECT}
         examples_grcp_proto
-        fluent
-        grpc_project)
+        fluent)
 ENDMACRO(CREATE_GRPC_EXECUTABLE)
 
 CREATE_GRPC_EXECUTABLE(client)

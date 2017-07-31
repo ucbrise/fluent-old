@@ -16,7 +16,9 @@ MACRO(CREATE_NAMED_TEST NAME FILENAME)
         gtest
         gtest_main
         pthread)
-    ADD_DEPENDENCIES(${NAME} googletest_project)
+    ADD_DEPENDENCIES(${NAME}
+        ${GOOGLELOG_PROJECT}
+        ${GOOGLETEST_PROJECT})
 ENDMACRO(CREATE_NAMED_TEST)
 
 # CREATE_TEST(foo) creates a test named `foo` from the file `foo.cc`.

@@ -102,17 +102,16 @@ template <typename Connection, typename Work, template <typename> class Hash,
 class InjectablePqxxClient {
  public:
   DISALLOW_COPY_AND_ASSIGN(InjectablePqxxClient);
-  InjectablePqxxClient(InjectablePqxxClient&&) = default;
-  InjectablePqxxClient& operator=(InjectablePqxxClient&&) = default;
+  DISALLOW_MOVE_AND_ASSIGN(InjectablePqxxClient);
   virtual ~InjectablePqxxClient() = default;
 
-  static WARN_UNUSED StatusOr<InjectablePqxxClient> Make(
+  static WARN_UNUSED StatusOr<std::unique_ptr<InjectablePqxxClient>> Make(
       std::string name, std::size_t id, std::string address,
       const ConnectionConfig& connection_config) {
     try {
-      InjectablePqxxClient client(std::move(name), id, std::move(address),
-                                  connection_config);
-      RETURN_IF_ERROR(client.Init());
+      std::unique_ptr<InjectablePqxxClient> client(new InjectablePqxxClient(
+          std::move(name), id, std::move(address), connection_config));
+      RETURN_IF_ERROR(client->Init());
       return std::move(client);
     } catch (const pqxx::pqxx_exception& e) {
       return Status(ErrorCode::INVALID_ARGUMENT, e.base().what());
@@ -357,6 +356,8 @@ class InjectablePqxxClient {
       return Status(ErrorCode::INVALID_ARGUMENT, e.base().what());
     }
   }
+
+  Connection& GetConnection() { return *connection_; }
 
  private:
   template <typename T>

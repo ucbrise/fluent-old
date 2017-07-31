@@ -58,7 +58,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     #
     # Current CMAKE bug prevents using sanitizers under Xcode
     # https://gitlab.kitware.com/cmake/cmake/issues/16010
-    if(NOT CMAKE_GENERATOR STREQUAL Xcode)
+    if(NOT CMAKE_GENERATOR STREQUAL Xcode AND CMAKE_BUILD_TYPE MATCHES RELEASE)
         SET(CMAKE_CXX_FLAGS_COMMON
             "${CMAKE_CXX_FLAGS_COMMON} \
             -fsanitize=address \
@@ -96,7 +96,9 @@ SET(CMAKE_CXX_FLAGS_RELEASE
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
 INCLUDE(ExternalProject)
+INCLUDE(vendor/aws.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/boost.cmake NO_POLICY_SCOPE)
+INCLUDE(vendor/cassandra.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/cereal.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/fmt.cmake NO_POLICY_SCOPE)
 INCLUDE(vendor/googlebenchmark.cmake NO_POLICY_SCOPE)
@@ -111,6 +113,17 @@ INCLUDE(vendor/zeromqcpp.cmake NO_POLICY_SCOPE)
 
 INCLUDE_DIRECTORIES(.)
 INCLUDE_DIRECTORIES(SYSTEM ${CMAKE_CURRENT_BINARY_DIR})
+
+GET_DIRECTORY_PROPERTY(include_dirs INCLUDE_DIRECTORIES)
+MESSAGE(STATUS "[include directories]")
+FOREACH(dir ${include_dirs})
+    MESSAGE(STATUS "  " ${dir})
+ENDFOREACH(dir)
+GET_DIRECTORY_PROPERTY(link_dirs LINK_DIRECTORIES)
+MESSAGE(STATUS "[link directories]")
+FOREACH(dir ${link_dirs})
+    MESSAGE(STATUS "  " ${dir})
+ENDFOREACH(dir)
 
 ENABLE_TESTING()
 ADD_SUBDIRECTORY(collections)

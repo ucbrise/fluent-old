@@ -25,12 +25,11 @@ template <template <typename> class Hash, template <typename> class ToSql,
 class NoopClient {
  public:
   DISALLOW_COPY_AND_ASSIGN(NoopClient);
-  NoopClient(NoopClient&&) = default;
-  NoopClient& operator=(NoopClient&&) = default;
+  DISALLOW_MOVE_AND_ASSIGN(NoopClient);
 
-  static WARN_UNUSED StatusOr<NoopClient> WARN_UNUSED
-  Make(std::string, std::size_t, std::string, const ConnectionConfig&) {
-    return NoopClient();
+  static WARN_UNUSED StatusOr<std::unique_ptr<NoopClient>> Make(
+      std::string, std::size_t, std::string, const ConnectionConfig&) {
+    return std::unique_ptr<NoopClient>(new NoopClient());
   }
 
   template <typename... Ts>

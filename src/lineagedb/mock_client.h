@@ -5,6 +5,7 @@
 
 #include <array>
 #include <chrono>
+#include <memory>
 #include <string>
 #include <utility>
 
@@ -36,14 +37,14 @@ template <template <typename> class Hash, template <typename> class ToSql,
 class MockClient {
  public:
   DISALLOW_COPY_AND_ASSIGN(MockClient);
-  MockClient(MockClient&&) = default;
-  MockClient& operator=(MockClient&&) = default;
+  DISALLOW_MOVE_AND_ASSIGN(MockClient);
 
   // Client Mocks //////////////////////////////////////////////////////////////
-  static WARN_UNUSED StatusOr<MockClient> Make(std::string name, std::size_t id,
-                                               std::string address,
-                                               const ConnectionConfig& config) {
-    return MockClient(std::move(name), id, std::move(address), config);
+  static WARN_UNUSED StatusOr<std::unique_ptr<MockClient>> Make(
+      std::string name, std::size_t id, std::string address,
+      const ConnectionConfig& config) {
+    return std::unique_ptr<MockClient>(
+        new MockClient(std::move(name), id, std::move(address), config));
   }
 
   template <typename... Ts>

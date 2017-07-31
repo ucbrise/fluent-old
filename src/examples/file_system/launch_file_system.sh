@@ -26,12 +26,12 @@ main() {
 
     server=""
     server+="$glog "
-    server+="./build/bin/examples_file_system_server "
+    server+="./build/Debug/bin/examples_file_system_server "
     server+="$server_addr"
 
     fluent_server=""
     fluent_server+="$glog "
-    fluent_server+="./build/bin/examples_file_system_fluent_server "
+    fluent_server+="./build/Debug/bin/examples_file_system_fluent_server "
     fluent_server+="$db_config "
     fluent_server+="$server_addr "
     fluent_server+="$fluent_server_addr "
@@ -39,7 +39,7 @@ main() {
 
     fluent_client=""
     fluent_client+="$glog "
-    fluent_client+="./build/bin/examples_file_system_fluent_client "
+    fluent_client+="./build/Debug/bin/examples_file_system_fluent_client "
     fluent_client+="$db_config "
     fluent_client+="$fluent_server_addr"
 

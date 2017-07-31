@@ -8,6 +8,7 @@ ExternalProject_Add(libpqxx_project
     BUILD_COMMAND make
     INSTALL_COMMAND ""
 )
+SET(LIBPQXX_PROJECT libpqxx_project)
 
 INCLUDE_DIRECTORIES(SYSTEM ${CMAKE_CURRENT_BINARY_DIR}/src/libpqxx_project/include)
 LINK_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR}/src/libpqxx_project/src/.libs)

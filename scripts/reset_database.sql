@@ -44,7 +44,7 @@ LANGUAGE SQL;
 
 -- <=
 CREATE FUNCTION VectorClockLe(lhs integer[], rhs integer[]) RETURNS boolean AS
-$$SELECT bool_and(x <= y) FROM UNNEST(lhs) AS x, UNNEST(rhs) as y;$$
+$$SELECT bool_and(x <= y) FROM (SELECT UNNEST(lhs) AS x, UNNEST(rhs) as y) t;$$
 LANGUAGE SQL;
 
 -- <
@@ -54,7 +54,7 @@ LANGUAGE SQL;
 
 -- >=
 CREATE FUNCTION VectorClockGe(lhs integer[], rhs integer[]) RETURNS boolean AS
-$$SELECT bool_and(x >= y) FROM UNNEST(lhs) AS x, UNNEST(rhs) as y;$$
+$$SELECT bool_and(x >= y) FROM (SELECT UNNEST(lhs) AS x, UNNEST(rhs) as y) t;$$
 LANGUAGE SQL;
 
 -- >

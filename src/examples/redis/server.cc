@@ -109,7 +109,11 @@ int main(int argc, char* argv[]) {
           )
 
           -- Most recent SET.
-          SELECT CAST('redis_server_set_request' as TEXT), hash, time_inserted
+          SELECT CAST('redis_server' as TEXT),
+                 CAST('set_request' as TEXT),
+                 hash,
+                 time_inserted,
+                 physical_time_inserted
           FROM redis_server_set_request, max_set_time
           WHERE key = {} AND time_inserted = max_set_time.max_set_time
           UNION
@@ -118,7 +122,8 @@ int main(int argc, char* argv[]) {
           SELECT CAST('redis_server' as TEXT),
                  CAST('append_request' as TEXT),
                  hash,
-                 time_inserted
+                 time_inserted,
+                 physical_time_inserted
           FROM redis_server_append_request, max_set_time
           WHERE key={} AND time_inserted >= max_set_time.max_set_time;
         )",

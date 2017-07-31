@@ -2,8 +2,13 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
 
 MACRO(CREATE_RA_PHYSICAL_TEST NAME)
     CREATE_NAMED_TEST(ra_physical_${NAME} ${NAME})
-    TARGET_LINK_LIBRARIES(ra_physical_${NAME} common fmt)
-    ADD_DEPENDENCIES(ra_physical_${NAME} common fmt_project)
+    TARGET_LINK_LIBRARIES(ra_physical_${NAME}
+        common
+        fmt)
+    ADD_DEPENDENCIES(ra_physical_${NAME}
+        ${FMT_PROJECT}
+        ${RANGE-V3_PROJECT}
+        common)
 ENDMACRO(CREATE_RA_PHYSICAL_TEST)
 
 CREATE_RA_PHYSICAL_TEST(cross_test)
@@ -17,8 +22,13 @@ CREATE_RA_PHYSICAL_TEST(project_test)
 
 MACRO(CREATE_RA_PHYSICAL_BENCHMARK NAME)
     CREATE_NAMED_BENCHMARK(ra_physical_${NAME} ${NAME})
-    TARGET_LINK_LIBRARIES(ra_physical_${NAME} common fmt)
-    ADD_DEPENDENCIES(ra_physical_${NAME} common fmt_project)
+    TARGET_LINK_LIBRARIES(ra_physical_${NAME}
+        common
+        fmt)
+    ADD_DEPENDENCIES(ra_physical_${NAME}
+        ${FMT_PROJECT}
+        ${RANGE-V3_PROJECT}
+        common)
 ENDMACRO(CREATE_RA_PHYSICAL_BENCHMARK)
 
 CREATE_RA_PHYSICAL_BENCHMARK(cross_bench)

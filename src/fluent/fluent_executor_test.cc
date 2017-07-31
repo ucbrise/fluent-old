@@ -655,7 +655,8 @@ TEST(FluentExecutor, BlackBoxLineage) {
   EXPECT_EQ(CrunchWhitespace(std::get<1>(t)[0]), CrunchWhitespace(R"(
     CREATE FUNCTION name_f_response_lineage_impl(integer, int, int)
     RETURNS TABLE(node_name text, collection_name text, hash bigint,
-                  time_inserted integer)
+                  time_inserted integer, physical_time_inserted timestamp with
+                  time zone)
     AS $$hello world$$ LANGUAGE SQL;
   )"));
   EXPECT_EQ(CrunchWhitespace(std::get<1>(t)[1]), CrunchWhitespace(R"(
@@ -663,19 +664,43 @@ TEST(FluentExecutor, BlackBoxLineage) {
     RETURNS TABLE(node_name text, collection_name text, hash bigint,
                   time_inserted integer)
     AS $$
-      SELECT L.*
-      FROM name_f_request Req,
-           name_f_response Resp,
-           name_f_response_lineage_impl(Req.time_inserted, Req.x, Resp.y) AS L
-      WHERE Req.id = $1 AND Resp.id = $1
-      UNION
-      SELECT
-        CAST('name' AS TEXT),
-        CAST('f_request' AS TEXT),
-        hash,
-        time_inserted
-      FROM name_f_request
-      WHERE id = $1
+      WITH
+      user_specified_lineage(node_name,
+                           collection_name,
+                           hash,
+                           time_inserted,
+                           physical_time_inserted) AS (
+        SELECT L.*
+        FROM name_f_request Req,
+             name_f_response Resp,
+             name_f_response_lineage_impl(
+                 Req.time_inserted, Req.x, Resp.y) AS L
+        WHERE Req.id = $1 AND Resp.id = $1
+      ),
+
+      request_lineage(node_name,
+                      collection_name,
+                      hash,
+                      time_inserted,
+                      physical_time_inserted) AS (
+        SELECT
+          CAST('name' AS text),
+          CAST('f_request' AS text),
+          hash,
+          time_inserted,
+          physical_time_inserted
+        FROM name_f_request
+        WHERE id = $1
+      ),
+
+      lineage AS (
+        SELECT * FROM user_specified_lineage UNION
+        SELECT * FROM request_lineage
+      )
+
+      SELECT node_name, collection_name, hash, time_inserted
+      FROM lineage
+      ORDER BY physical_time_inserted DESC
     $$ LANGUAGE SQL;
   )"));
 }

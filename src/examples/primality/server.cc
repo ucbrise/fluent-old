@@ -72,7 +72,8 @@ int main(int argc, char* argv[]) {
           FROM (VALUES (CAST(NULL AS text),
                         CAST(NULL AS text),
                         CAST(NULL as bigint),
-                        CAST(NULL as integer))) AS T
+                        CAST(NULL as integer),
+                        CAST(NULL as timestamp with time zone))) AS T
           WHERE false;
         )";
       });

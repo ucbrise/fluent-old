@@ -77,15 +77,13 @@ class Channel : public Collection {
     UNUSED(hash);
 
     using zmq_util::string_to_message;
-    std::vector<zmq::message_t> msgs;
-    msgs.push_back(string_to_message(ToString(id_)));
-    msgs.push_back(string_to_message(ToString(name_)));
-    msgs.push_back(string_to_message(ToString(logical_time_inserted)));
+    std::vector<zmq::message_t> msgs(3 + 1 + sizeof...(Ts));
+    msgs[0] = string_to_message(ToString(id_));
+    msgs[1] = string_to_message(ToString(name_));
+    msgs[2] = string_to_message(ToString(logical_time_inserted));
 
-    auto to_string = [this](const auto& x) { return this->ToString(x); };
-    const auto strings = TupleMap(t, to_string);
-    TupleIter(strings, [&msgs](const std::string& s) {
-      msgs.push_back(zmq_util::string_to_message(s));
+    TupleIteri(t, [this, &msgs](std::size_t i, const auto& x) {
+      msgs[i + 3] = zmq_util::string_to_message(this->ToString(x));
     });
 
     zmq::socket_t& socket = socket_cache_->At(std::get<0>(t));

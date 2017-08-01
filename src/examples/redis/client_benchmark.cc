@@ -24,9 +24,9 @@ namespace lra = fluent::ra::logical;
 namespace ldb = fluent::lineagedb;
 
 using fluent::common::Hash;
-using fluent::ldb::ToSql;
-using fluent::ldb::NoopClient;
 using fluent::common::MockPickler;
+using fluent::lineagedb::NoopClient;
+using fluent::lineagedb::ToSql;
 
 using set_req_tuple = std::tuple<std::string, std::string, std::int64_t,
                                  std::string, std::string>;

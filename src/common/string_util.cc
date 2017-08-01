@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <string>
 
 namespace fluent {
 namespace common {
@@ -12,6 +13,16 @@ std::vector<std::string> Split(const std::string& s) {
   std::istream_iterator<std::string> begin(ss);
   std::istream_iterator<std::string> end;
   return {begin, end};
+}
+
+std::string ToLower(std::string s) {
+  std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+  return s;
+}
+
+std::string ToUpper(std::string s) {
+  std::transform(s.begin(), s.end(), s.begin(), ::toupper);
+  return s;
 }
 
 std::string CrunchWhitespace(std::string s) {

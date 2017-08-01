@@ -10,6 +10,10 @@ main() {
     fi
 
     # Make sure to start a redis server first.
+    if ! ps aux | grep "[r]edis-server"; then
+        echo "ERROR: no running redis-server found."
+        return 1;
+    fi
 
     session="$(tmux display-message -p '#S')"
     tmux new-window -t "$session" -n "redis"

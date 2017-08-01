@@ -68,6 +68,16 @@ std::string Join(const std::array<std::string, N>& ss) {
 // - Split("  a   b   c  ") == ["a", "b", "c"]
 std::vector<std::string> Split(const std::string& s);
 
+// ToLower("foo") == "foo"
+// ToLower("FOO") == "foo"
+// ToLower("Foo") == "foo"
+std::string ToLower(std::string s);
+
+// ToUpper("foo") == "FOO"
+// ToUpper("FOO") == "FOO"
+// ToUpper("Foo") == "FOO"
+std::string ToUpper(std::string s);
+
 // CrunchWhitespace converts newlines to spaces and then destutters spaces.
 //
 // CrunchWhitespace("")       == ""

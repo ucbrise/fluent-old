@@ -45,6 +45,24 @@ TEST(StringUtil, Split) {
   EXPECT_EQ((stringvec{"foo", "bar", "baz"}), Split("   foo   bar  baz "));
 }
 
+TEST(StringUtil, ToLower) {
+  EXPECT_EQ(ToLower("foo"), "foo");
+  EXPECT_EQ(ToLower("Foo"), "foo");
+  EXPECT_EQ(ToLower("FOo"), "foo");
+  EXPECT_EQ(ToLower("FOO"), "foo");
+  EXPECT_EQ(ToLower("fOO"), "foo");
+  EXPECT_EQ(ToLower("foO"), "foo");
+}
+
+TEST(StringUtil, ToUpper) {
+  EXPECT_EQ(ToUpper("foo"), "FOO");
+  EXPECT_EQ(ToUpper("Foo"), "FOO");
+  EXPECT_EQ(ToUpper("FOo"), "FOO");
+  EXPECT_EQ(ToUpper("FOO"), "FOO");
+  EXPECT_EQ(ToUpper("fOO"), "FOO");
+  EXPECT_EQ(ToUpper("foO"), "FOO");
+}
+
 TEST(StringUtil, CrunchWhitespace) {
   using namespace std::literals::string_literals;
   EXPECT_EQ(CrunchWhitespace(""), ""s);

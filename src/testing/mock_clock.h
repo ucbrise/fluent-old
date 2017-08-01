@@ -7,6 +7,7 @@
 #include <ratio>
 
 namespace fluent {
+namespace testing {
 
 // # Usage
 //
@@ -78,6 +79,7 @@ class MockClock {
   static time_point now_;
 };
 
+}  // namespace testing
 }  // namespace fluent
 
 #endif  // TESTING_MOCK_CLOCK_H_

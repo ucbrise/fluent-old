@@ -26,8 +26,9 @@ TEST(Map, SimpleCompileCheck) {
   type hash_join = lra::make_hash_join<leftks, rightks>(ixs, iys);
 
   using actual = decltype(hash_join)::column_types;
-  using expected = TypeList<int, int>;
-  static_assert(StaticAssert<std::is_same<actual, expected>>::value, "");
+  using expected = common::TypeList<int, int>;
+  static_assert(common::StaticAssert<std::is_same<actual, expected>>::value,
+                "");
 }
 
 }  // namespace fluent

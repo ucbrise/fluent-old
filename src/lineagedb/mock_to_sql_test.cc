@@ -16,7 +16,7 @@ namespace fluent {
 namespace lineagedb {
 
 TEST(MockToSql, ToSqlType) {
-  using time_point = std::chrono::time_point<MockClock>;
+  using time_point = std::chrono::time_point<testing::MockClock>;
 
   EXPECT_EQ(MockToSql<bool>().Type(), "bool");
   EXPECT_EQ(MockToSql<char>().Type(), "char");
@@ -33,7 +33,7 @@ TEST(MockToSql, ToSqlType) {
 }
 
 TEST(MockToSql, ToSqlValue) {
-  using time_point = std::chrono::time_point<MockClock>;
+  using time_point = std::chrono::time_point<testing::MockClock>;
 
   EXPECT_EQ(MockToSql<bool>().Value(true), "true");
   EXPECT_EQ(MockToSql<char>().Value('a'), "a");

@@ -4,6 +4,7 @@
 #include <iterator>
 
 namespace fluent {
+namespace common {
 
 std::vector<std::string> Split(const std::string& s) {
   // http://stackoverflow.com/a/5607650/3187068
@@ -25,4 +26,5 @@ std::string CrunchWhitespace(std::string s) {
   return s;
 }
 
+}  // namespace common
 }  // namespace fluent

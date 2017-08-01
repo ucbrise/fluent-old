@@ -9,6 +9,7 @@
 #include "common/type_traits.h"
 
 namespace fluent {
+namespace common {
 
 // A SizetList<Is...> is analagous to a TypeList<Ts...>, except that a
 // SizetList holds a bunch of std::size_t and a TypeList holds a bunch of
@@ -94,6 +95,7 @@ struct SizetListRange {
   using type = typename SizetListDrop<sizet_list, LowInclusive>::type;
 };
 
+}  // namespace common
 }  // namespace fluent
 
 #endif  //  COMMON_SIZET_LIST_H_

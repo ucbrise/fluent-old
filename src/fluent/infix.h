@@ -51,51 +51,56 @@ namespace infix {
 
 // Table <=
 template <typename... Ts, typename LogicalRa>
-Rule<Table<Ts...>, MergeTag, typename std::decay<LogicalRa>::type> operator<=(
-    Table<Ts...>& t, LogicalRa&& rhs) {
+Rule<collections::Table<Ts...>, MergeTag, typename std::decay<LogicalRa>::type>
+operator<=(collections::Table<Ts...>& t, LogicalRa&& rhs) {
   return {&t, MergeTag(), std::forward<LogicalRa>(rhs)};
 }
 
 // Table +=
 template <typename... Ts, typename LogicalRa>
-Rule<Table<Ts...>, DeferredMergeTag, typename std::decay<LogicalRa>::type>
-operator+=(Table<Ts...>& t, LogicalRa&& rhs) {
+Rule<collections::Table<Ts...>, DeferredMergeTag,
+     typename std::decay<LogicalRa>::type>
+operator+=(collections::Table<Ts...>& t, LogicalRa&& rhs) {
   return {&t, DeferredMergeTag(), std::forward<LogicalRa>(rhs)};
 }
 
 // Table -=
 template <typename... Ts, typename LogicalRa>
-Rule<Table<Ts...>, DeferredDeleteTag, typename std::decay<LogicalRa>::type>
-operator-=(Table<Ts...>& t, LogicalRa&& rhs) {
+Rule<collections::Table<Ts...>, DeferredDeleteTag,
+     typename std::decay<LogicalRa>::type>
+operator-=(collections::Table<Ts...>& t, LogicalRa&& rhs) {
   return {&t, DeferredDeleteTag(), std::forward<LogicalRa>(rhs)};
 }
 
 // Channel <=
 template <template <typename> class Pickler, typename T, typename... Ts,
           typename LogicalRa>
-Rule<Channel<Pickler, T, Ts...>, MergeTag, typename std::decay<LogicalRa>::type>
-operator<=(Channel<Pickler, T, Ts...>& c, LogicalRa&& rhs) {
+Rule<collections::Channel<Pickler, T, Ts...>, MergeTag,
+     typename std::decay<LogicalRa>::type>
+operator<=(collections::Channel<Pickler, T, Ts...>& c, LogicalRa&& rhs) {
   return {&c, MergeTag(), std::forward<LogicalRa>(rhs)};
 }
 
 // Scratch <=
 template <typename... Ts, typename LogicalRa>
-Rule<Scratch<Ts...>, MergeTag, typename std::decay<LogicalRa>::type> operator<=(
-    Scratch<Ts...>& s, LogicalRa&& rhs) {
+Rule<collections::Scratch<Ts...>, MergeTag,
+     typename std::decay<LogicalRa>::type>
+operator<=(collections::Scratch<Ts...>& s, LogicalRa&& rhs) {
   return {&s, MergeTag(), std::forward<LogicalRa>(rhs)};
 }
 
 // Stdout <=
 template <typename... Ts, typename LogicalRa>
-Rule<Stdout, MergeTag, typename std::decay<LogicalRa>::type> operator<=(
-    Stdout& o, LogicalRa&& rhs) {
+Rule<collections::Stdout, MergeTag, typename std::decay<LogicalRa>::type>
+operator<=(collections::Stdout& o, LogicalRa&& rhs) {
   return {&o, MergeTag(), std::forward<LogicalRa>(rhs)};
 }
 
 // Stdout +=
 template <typename LogicalRa>
-Rule<Stdout, DeferredMergeTag, typename std::decay<LogicalRa>::type> operator+=(
-    Stdout& o, LogicalRa&& rhs) {
+Rule<collections::Stdout, DeferredMergeTag,
+     typename std::decay<LogicalRa>::type>
+operator+=(collections::Stdout& o, LogicalRa&& rhs) {
   return {&o, DeferredMergeTag(), std::forward<LogicalRa>(rhs)};
 }
 

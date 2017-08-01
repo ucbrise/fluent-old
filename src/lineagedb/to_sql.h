@@ -142,7 +142,7 @@ struct ToSql<std::vector<T>> {
     for (const T& x : xs) {
       values.push_back(ToSql<T>().Value(x));
     }
-    return fmt::format("ARRAY[{}]", Join(values));
+    return fmt::format("ARRAY[{}]", common::Join(values));
   }
 };
 
@@ -155,7 +155,7 @@ struct ToSql<std::array<T, N>> {
     for (const T& x : xs) {
       values.push_back(ToSql<T>().Value(x));
     }
-    return fmt::format("ARRAY[{}]", Join(values));
+    return fmt::format("ARRAY[{}]", common::Join(values));
   }
 };
 

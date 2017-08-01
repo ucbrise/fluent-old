@@ -86,9 +86,11 @@ int main(int argc, char* argv[]) {
             return std::make_tuple(write, read);
           })
           .ConsumeValueOrDie();
-  const std::string script = fluent::Slurp(lineage_file).ConsumeValueOrDie();
-  CHECK_EQ(fluent::Status::OK, fe.RegisterBlackBoxPythonLineageScript(script));
-  CHECK_EQ(fluent::Status::OK,
+  const std::string script =
+      fluent::common::Slurp(lineage_file).ConsumeValueOrDie();
+  CHECK_EQ(fluent::common::Status::OK,
+           fe.RegisterBlackBoxPythonLineageScript(script));
+  CHECK_EQ(fluent::common::Status::OK,
            (fe.RegisterBlackBoxPythonLineage<2, 3>("read_lineage")));
-  CHECK_EQ(fluent::Status::OK, fe.Run());
+  CHECK_EQ(fluent::common::Status::OK, fe.Run());
 }

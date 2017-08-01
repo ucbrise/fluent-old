@@ -10,9 +10,11 @@
 #include "fluent/rule_tags.h"
 #include "ra/logical/all.h"
 
-namespace lra = fluent::ra::logical;
-
 namespace fluent {
+
+namespace lra = ra::logical;
+
+using collections::Table;
 
 TEST(Rule, ToDebugString) {
   Table<int> t("t", {{"x"}});

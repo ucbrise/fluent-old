@@ -16,14 +16,17 @@ namespace logical {
 
 template <typename Ra, std::size_t... Is>
 struct Project : public LogicalRa {
-  static_assert(StaticAssert<std::is_base_of<LogicalRa, Ra>>::value, "");
+  static_assert(common::StaticAssert<std::is_base_of<LogicalRa, Ra>>::value,
+                "");
   using child_column_types = typename Ra::column_types;
-  using child_len_t = typename TypeListLen<child_column_types>::type;
+  using child_len_t = typename common::TypeListLen<child_column_types>::type;
   static constexpr std::size_t child_len = child_len_t::value;
-  static_assert(StaticAssert<All<InRange<Is, 0, child_len>...>>::value, "");
+  static_assert(common::StaticAssert<
+                    common::All<common::InRange<Is, 0, child_len>...>>::value,
+                "");
 
   using column_types =
-      typename TypeListProject<child_column_types, Is...>::type;
+      typename common::TypeListProject<child_column_types, Is...>::type;
   explicit Project(Ra child_) : child(std::move(child_)) {}
   Ra child;
 };

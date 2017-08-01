@@ -22,7 +22,7 @@ TEST(FlatMap, EmptyFlatMapSource) {
   auto f = [](const std::tuple<int>& t) -> ret { return {t, t, t}; };
   auto flat_map = pra::make_flat_map<ret>(std::move(iterable), f);
   std::set<std::tuple<int>> expected;
-  ExpectRngsUnorderedEqual(flat_map.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(flat_map.ToRange(), expected);
 }
 
 TEST(FlatMap, EmptyFlatMapReturn) {
@@ -32,7 +32,7 @@ TEST(FlatMap, EmptyFlatMapReturn) {
   auto f = [](const std::tuple<int>&) -> ret { return {}; };
   auto flat_map = pra::make_flat_map<ret>(std::move(iterable), f);
   std::set<std::tuple<int>> expected;
-  ExpectRngsUnorderedEqual(flat_map.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(flat_map.ToRange(), expected);
 }
 
 TEST(FlatMap, NonEmptyFlatMap) {
@@ -43,7 +43,7 @@ TEST(FlatMap, NonEmptyFlatMap) {
   auto flat_map = pra::make_flat_map<ret>(std::move(iterable), f);
   std::set<std::tuple<int>> expected = {{0}, {0}, {0}, {1}, {1},
                                         {1}, {2}, {2}, {2}};
-  ExpectRngsUnorderedEqual(flat_map.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(flat_map.ToRange(), expected);
 }
 
 }  // namespace fluent

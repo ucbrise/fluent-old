@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 
 namespace fluent {
+namespace common {
 
 class CopyableAndAssignable {
  public:
@@ -51,6 +52,7 @@ TEST(Macros, Unused) {
   UNUSED(x);
 }
 
+}  // namespace common
 }  // namespace fluent
 
 int main(int argc, char **argv) {

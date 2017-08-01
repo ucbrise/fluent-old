@@ -13,9 +13,15 @@
 #include "fluent/rule_tags.h"
 #include "ra/logical/all.h"
 
-namespace lra = fluent::ra::logical;
-
 namespace fluent {
+
+namespace lra = ra::logical;
+
+using collections::Table;
+using collections::Channel;
+using collections::Scratch;
+using collections::Stdout;
+using common::MockPickler;
 
 TEST(Infix, Table) {
   Table<int> t("t", {{"x"}});

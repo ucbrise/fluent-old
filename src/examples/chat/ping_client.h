@@ -32,7 +32,7 @@ int PingClientMain(const PingClientArgs& args,
       std::make_tuple(args.server_address, args.client_address, args.nickname)};
 
   zmq::context_t context(1);
-  fluent::Status status =
+  fluent::common::Status status =
       fluent::fluent<LineageDbClient>("chat_ping_client", args.client_address,
                                       &context, connection_config)
           .ConsumeValueOrDie()
@@ -56,7 +56,7 @@ int PingClientMain(const PingClientArgs& args,
           })
           .ConsumeValueOrDie()
           .Run();
-  CHECK_EQ(fluent::Status::OK, status);
+  CHECK_EQ(fluent::common::Status::OK, status);
 
   return 0;
 }

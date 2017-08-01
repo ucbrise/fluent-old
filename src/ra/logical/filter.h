@@ -14,12 +14,16 @@ namespace logical {
 
 template <typename Ra, typename F>
 struct Filter : public LogicalRa {
-  static_assert(StaticAssert<std::is_base_of<LogicalRa, Ra>>::value, "");
+  static_assert(common::StaticAssert<std::is_base_of<LogicalRa, Ra>>::value,
+                "");
   using child_column_types = typename Ra::column_types;
-  using child_column_tuple = typename TypeListToTuple<child_column_types>::type;
-  static_assert(StaticAssert<IsInvocable<F, child_column_tuple>>::value, "");
+  using child_column_tuple =
+      typename common::TypeListToTuple<child_column_types>::type;
+  static_assert(
+      common::StaticAssert<common::IsInvocable<F, child_column_tuple>>::value,
+      "");
   using f_return = typename std::result_of<F(child_column_tuple)>::type;
-  static_assert(StaticAssert<std::is_same<f_return, bool>>::value, "");
+  static_assert(common::StaticAssert<std::is_same<f_return, bool>>::value, "");
 
   using column_types = child_column_types;
   Filter(Ra child_, F f_) : child(std::move(child_)), f(std::move(f_)) {}

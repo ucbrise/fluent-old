@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
 
   const std::string server_address = argv[4];
   const std::string client_address = argv[5];
-  fluent::RandomIdGenerator id_gen;
+  fluent::common::RandomIdGenerator id_gen;
 
   zmq::context_t context(1);
   ldb::ConnectionConfig config{"localhost", 5432, argv[1], argv[2], argv[3]};
@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
                 .stdin()
                 .stdout()
                 .scratch<std::vector<std::string>>("split", {{"parts"}});
-  fluent::Status status =
+  fluent::common::Status status =
       AddKvsApi(std::move(fb))
           .RegisterRules([&](auto& stdin, auto& stdout, auto& split,
                              auto& set_req, auto& set_resp, auto& get_req,
@@ -59,7 +59,7 @@ int main(int argc, char* argv[]) {
                 split <= (lra::make_collection(&stdin) |
                           lra::map([](const std::tuple<std::string>& s)
                                        -> std::tuple<std::vector<std::string>> {
-                            return {fluent::Split(std::get<0>(s))};
+                            return {fluent::common::Split(std::get<0>(s))};
                           }));
 
             auto get_request =
@@ -109,5 +109,5 @@ int main(int argc, char* argv[]) {
           })
           .ConsumeValueOrDie()
           .Run();
-  CHECK_EQ(status, fluent::Status::OK);
+  CHECK_EQ(status, fluent::common::Status::OK);
 }

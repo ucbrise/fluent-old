@@ -39,17 +39,18 @@ int main(int argc, char* argv[]) {
   const std::string db_dbname = argv[3];
   const std::string server_address = argv[4];
   const std::string client_address = argv[5];
-  fluent::RandomIdGenerator id_gen;
+  fluent::common::RandomIdGenerator id_gen;
 
   zmq::context_t context(1);
   ldb::ConnectionConfig config{"localhost", 5432, db_user, db_pass, db_dbname};
-  auto fb = fluent::fluent<ldb::PqxxClient>(
-                "handwritten_fluent_client_" + fluent::RandomAlphanum(10),
-                client_address, &context, config)
-                .ConsumeValueOrDie()
-                .stdin()
-                .stdout();
-  fluent::Status status =
+  auto fb =
+      fluent::fluent<ldb::PqxxClient>(
+          "handwritten_fluent_client_" + fluent::common::RandomAlphanum(10),
+          client_address, &context, config)
+          .ConsumeValueOrDie()
+          .stdin()
+          .stdout();
+  fluent::common::Status status =
       AddEchoServiceApi(std::move(fb))
           .RegisterRules([&](auto& stdin, auto& stdout, auto& echo_request,
                              auto& echo_reply) {
@@ -72,5 +73,5 @@ int main(int argc, char* argv[]) {
           })
           .ConsumeValueOrDie()
           .Run();
-  CHECK_EQ(status, fluent::Status::OK);
+  CHECK_EQ(status, fluent::common::Status::OK);
 }

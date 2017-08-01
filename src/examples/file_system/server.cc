@@ -45,7 +45,7 @@ void worker(zmq::context_t* context) {
 
   while (true) {
     const std::string msg = zmq_util::recv_string(&socket);
-    std::vector<std::string> parts = fluent::Split(msg);
+    std::vector<std::string> parts = fluent::common::Split(msg);
 
     if (parts.size() == 3 && parts[0] == "write") {
       const int off = std::stoi(parts[1]);

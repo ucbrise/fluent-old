@@ -23,10 +23,11 @@ TEST(GroupBy, SimpleCount) {
   auto it = pra::make_iterable(&xs);
   using keys = ra::Keys<0>;
   using key_tuple = std::tuple<int>;
-  using agg_impls = std::tuple<ra::agg::CountImpl<SizetList<1>, TypeList<int>>>;
+  using agg_impls = std::tuple<
+      ra::agg::CountImpl<common::SizetList<1>, common::TypeList<int>>>;
   auto group_by = pra::make_group_by<keys, key_tuple, agg_impls>(std::move(it));
   std::set<std::tuple<int, std::size_t>> expected = {{0, 2}, {1, 3}, {2, 1}};
-  ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
 }
 
 TEST(GroupBy, VariadicCount) {
@@ -36,12 +37,12 @@ TEST(GroupBy, VariadicCount) {
   auto it = pra::make_iterable(&xs);
   using keys = ra::Keys<0>;
   using key_tuple = std::tuple<int>;
-  using agg_impls =
-      std::tuple<ra::agg::CountImpl<SizetList<1, 2, 3, 1, 2, 3>,
-                                    TypeList<int, int, int, int, int, int>>>;
+  using agg_impls = std::tuple<
+      ra::agg::CountImpl<common::SizetList<1, 2, 3, 1, 2, 3>,
+                         common::TypeList<int, int, int, int, int, int>>>;
   auto group_by = pra::make_group_by<keys, key_tuple, agg_impls>(std::move(it));
   std::set<std::tuple<int, std::size_t>> expected = {{0, 2}, {1, 3}, {2, 1}};
-  ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
 }
 
 TEST(GroupBy, EmptyCount) {
@@ -51,10 +52,11 @@ TEST(GroupBy, EmptyCount) {
   auto it = pra::make_iterable(&xs);
   using keys = ra::Keys<0>;
   using key_tuple = std::tuple<int>;
-  using agg_impls = std::tuple<ra::agg::CountImpl<SizetList<>, TypeList<>>>;
+  using agg_impls =
+      std::tuple<ra::agg::CountImpl<common::SizetList<>, common::TypeList<>>>;
   auto group_by = pra::make_group_by<keys, key_tuple, agg_impls>(std::move(it));
   std::set<std::tuple<int, std::size_t>> expected = {{0, 2}, {1, 3}, {2, 1}};
-  ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
 }
 
 TEST(GroupBy, SimpleSum) {
@@ -63,10 +65,11 @@ TEST(GroupBy, SimpleSum) {
   auto it = pra::make_iterable(&xs);
   using keys = ra::Keys<0>;
   using key_tuple = std::tuple<int>;
-  using agg_impls = std::tuple<ra::agg::SumImpl<SizetList<1>, TypeList<int>>>;
+  using agg_impls =
+      std::tuple<ra::agg::SumImpl<common::SizetList<1>, common::TypeList<int>>>;
   auto group_by = pra::make_group_by<keys, key_tuple, agg_impls>(std::move(it));
   std::set<std::tuple<int, int>> expected = {{0, 1}, {1, 9}, {2, 5}};
-  ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
 }
 
 TEST(GroupBy, VariadicSum) {
@@ -76,12 +79,12 @@ TEST(GroupBy, VariadicSum) {
   auto it = pra::make_iterable(&xs);
   using keys = ra::Keys<0>;
   using key_tuple = std::tuple<int>;
-  using agg_impls =
-      std::tuple<ra::agg::SumImpl<SizetList<1, 2, 3, 1, 2, 3>,
-                                  TypeList<int, int, int, int, int, int>>>;
+  using agg_impls = std::tuple<
+      ra::agg::SumImpl<common::SizetList<1, 2, 3, 1, 2, 3>,
+                       common::TypeList<int, int, int, int, int, int>>>;
   auto group_by = pra::make_group_by<keys, key_tuple, agg_impls>(std::move(it));
   std::set<std::tuple<int, int>> expected = {{0, 6}, {1, 54}, {2, 30}};
-  ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
 }
 
 TEST(GroupBy, SimpleAvg) {
@@ -90,10 +93,11 @@ TEST(GroupBy, SimpleAvg) {
   auto it = pra::make_iterable(&xs);
   using keys = ra::Keys<0>;
   using key_tuple = std::tuple<int>;
-  using agg_impls = std::tuple<ra::agg::AvgImpl<SizetList<1>, TypeList<int>>>;
+  using agg_impls =
+      std::tuple<ra::agg::AvgImpl<common::SizetList<1>, common::TypeList<int>>>;
   auto group_by = pra::make_group_by<keys, key_tuple, agg_impls>(std::move(it));
   std::set<std::tuple<int, int>> expected = {{0, 0.5}, {1, 3.0}, {2, 5.0}};
-  ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
 }
 
 TEST(GroupBy, VariadicAvg) {
@@ -102,11 +106,11 @@ TEST(GroupBy, VariadicAvg) {
   auto it = pra::make_iterable(&xs);
   using keys = ra::Keys<0>;
   using key_tuple = std::tuple<int>;
-  using agg_impls =
-      std::tuple<ra::agg::AvgImpl<SizetList<1, 2>, TypeList<int, int>>>;
+  using agg_impls = std::tuple<
+      ra::agg::AvgImpl<common::SizetList<1, 2>, common::TypeList<int, int>>>;
   auto group_by = pra::make_group_by<keys, key_tuple, agg_impls>(std::move(it));
   std::set<std::tuple<int, int>> expected = {{0, 1.5}, {1, 4.5}, {2, 5.0}};
-  ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
 }
 
 TEST(GroupBy, SimpleUnion) {
@@ -121,13 +125,14 @@ TEST(GroupBy, SimpleUnion) {
   using keys = ra::Keys<0>;
   using key_tuple = std::tuple<int>;
   using agg_impls =
-      std::tuple<ra::agg::UnionImpl<SizetList<1>, TypeList<std::set<int>>>>;
+      std::tuple<ra::agg::UnionImpl<common::SizetList<1>,
+                                    common::TypeList<std::set<int>>>>;
   auto group_by = pra::make_group_by<keys, key_tuple, agg_impls>(std::move(it));
   std::set<std::tuple<int, std::set<int>>> expected = {
       std::make_tuple(0, std::set<int>({0, 1})),
       std::make_tuple(1, std::set<int>({2, 3, 4})),
       std::make_tuple(2, std::set<int>({5}))};
-  ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
 }
 
 TEST(GroupBy, VariadicUnion) {
@@ -141,15 +146,14 @@ TEST(GroupBy, VariadicUnion) {
   auto it = pra::make_iterable(&xs);
   using keys = ra::Keys<0>;
   using key_tuple = std::tuple<int>;
-  using agg_impls =
-      std::tuple<ra::agg::UnionImpl<SizetList<1, 2>,
-                                    TypeList<std::set<int>, std::set<int>>>>;
+  using agg_impls = std::tuple<ra::agg::UnionImpl<
+      common::SizetList<1, 2>, common::TypeList<std::set<int>, std::set<int>>>>;
   auto group_by = pra::make_group_by<keys, key_tuple, agg_impls>(std::move(it));
   std::set<std::tuple<int, std::set<int>>> expected = {
       std::make_tuple(0, std::set<int>({0, 1, 2, 3})),
       std::make_tuple(1, std::set<int>({2, 3, 4, 5, 6, 7})),
       std::make_tuple(2, std::set<int>({5}))};
-  ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
 }
 
 TEST(GroupBy, SimpleSumCountAvg) {
@@ -160,13 +164,14 @@ TEST(GroupBy, SimpleSumCountAvg) {
   auto it = pra::make_iterable(&xs);
   using keys = ra::Keys<0>;
   using key_tuple = std::tuple<int>;
-  using agg_impls = std::tuple<ra::agg::SumImpl<SizetList<1>, TypeList<int>>,
-                               ra::agg::CountImpl<SizetList<2>, TypeList<int>>,
-                               ra::agg::AvgImpl<SizetList<3>, TypeList<int>>>;
+  using agg_impls = std::tuple<
+      ra::agg::SumImpl<common::SizetList<1>, common::TypeList<int>>,
+      ra::agg::CountImpl<common::SizetList<2>, common::TypeList<int>>,
+      ra::agg::AvgImpl<common::SizetList<3>, common::TypeList<int>>>;
   auto group_by = pra::make_group_by<keys, key_tuple, agg_impls>(std::move(it));
   std::set<std::tuple<int, int, std::size_t, double>> expected = {
       {1, 6, 3, 2.0}, {2, 11, 3, 4.0}, {3, 6, 5, 6.0}};
-  ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
 }
 
 TEST(GroupBy, NoKeys) {
@@ -174,10 +179,11 @@ TEST(GroupBy, NoKeys) {
   auto it = pra::make_iterable(&xs);
   using keys = ra::Keys<>;
   using key_tuple = std::tuple<>;
-  using agg_impls = std::tuple<ra::agg::CountImpl<SizetList<0>, TypeList<int>>>;
+  using agg_impls = std::tuple<
+      ra::agg::CountImpl<common::SizetList<0>, common::TypeList<int>>>;
   auto group_by = pra::make_group_by<keys, key_tuple, agg_impls>(std::move(it));
   std::set<std::tuple<std::size_t>> expected = {{5}};
-  ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
 }
 
 TEST(GroupBy, EmptyChildNoKeys) {
@@ -185,10 +191,11 @@ TEST(GroupBy, EmptyChildNoKeys) {
   auto it = pra::make_iterable(&xs);
   using keys = ra::Keys<>;
   using key_tuple = std::tuple<>;
-  using agg_impls = std::tuple<ra::agg::CountImpl<SizetList<0>, TypeList<int>>>;
+  using agg_impls = std::tuple<
+      ra::agg::CountImpl<common::SizetList<0>, common::TypeList<int>>>;
   auto group_by = pra::make_group_by<keys, key_tuple, agg_impls>(std::move(it));
   std::set<std::tuple<std::size_t>> expected;
-  ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(group_by.ToRange(), expected);
 }
 
 }  // namespace fluent

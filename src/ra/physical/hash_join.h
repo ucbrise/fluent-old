@@ -26,10 +26,14 @@ template <typename Left, std::size_t... LeftKs, typename Right,
           typename LeftKeyColumnTuple>
 class HashJoin<Left, LeftKeys<LeftKs...>, Right, RightKeys<RightKs...>,
                LeftColumnTuple, LeftKeyColumnTuple> : public PhysicalRa {
-  static_assert(StaticAssert<std::is_base_of<PhysicalRa, Left>>::value, "");
-  static_assert(StaticAssert<std::is_base_of<PhysicalRa, Right>>::value, "");
-  static_assert(StaticAssert<IsTuple<LeftColumnTuple>>::value, "");
-  static_assert(StaticAssert<IsTuple<LeftKeyColumnTuple>>::value, "");
+  static_assert(common::StaticAssert<std::is_base_of<PhysicalRa, Left>>::value,
+                "");
+  static_assert(common::StaticAssert<std::is_base_of<PhysicalRa, Right>>::value,
+                "");
+  static_assert(common::StaticAssert<common::IsTuple<LeftColumnTuple>>::value,
+                "");
+  static_assert(
+      common::StaticAssert<common::IsTuple<LeftKeyColumnTuple>>::value, "");
 
  public:
   HashJoin(Left left, Right right)
@@ -41,19 +45,20 @@ class HashJoin<Left, LeftKeys<LeftKs...>, Right, RightKeys<RightKs...>,
     left_hash_.clear();
 
     ranges::for_each(left_.ToRange(), [this](const auto& t) {
-      const auto keys = TupleProject<LeftKs...>(t);
+      const auto keys = common::TupleProject<LeftKs...>(t);
       using column = typename std::decay<decltype(t)>::type;
       using key = typename std::decay<decltype(keys)>::type;
       using column_matches = std::is_convertible<column, LeftColumnTuple>;
       using key_matches = std::is_convertible<key, LeftKeyColumnTuple>;
-      static_assert(StaticAssert<column_matches>::value, "");
-      static_assert(StaticAssert<key_matches>::value, "");
+      static_assert(common::StaticAssert<column_matches>::value, "");
+      static_assert(common::StaticAssert<key_matches>::value, "");
       left_hash_[std::move(keys)].push_back(t);
     });
 
     return ranges::view::for_each(right_.ToRange(), [this](const auto& right) {
       return ranges::yield_from(
-          ranges::view::all(left_hash_[TupleProject<RightKs...>(right)]) |
+          ranges::view::all(
+              left_hash_[common::TupleProject<RightKs...>(right)]) |
           ranges::view::transform([right](const auto& left) {
             return std::tuple_cat(left, right);
           }));

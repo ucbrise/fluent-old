@@ -11,6 +11,7 @@
 #include "collections/collection_tuple_ids.h"
 
 namespace fluent {
+namespace collections {
 
 template <typename... Ts>
 void MergeCollectionTuple(const std::tuple<Ts...>& t, const std::size_t hash,
@@ -26,6 +27,7 @@ void MergeCollectionTuple(const std::tuple<Ts...>& t, const std::size_t hash,
   }
 }
 
+}  // namespace collections
 }  // namespace fluent
 
 #endif  // COLLECTIONS_UTIL_H_

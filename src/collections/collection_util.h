@@ -8,6 +8,7 @@
 #include "common/type_list.h"
 
 namespace fluent {
+namespace collections {
 
 // `CollectionTypes` returns the types of the columns of a collection.
 //
@@ -22,34 +23,34 @@ struct CollectionTypes;
 
 template <typename... Ts>
 struct CollectionTypes<Table<Ts...>> {
-  using type = TypeList<Ts...>;
+  using type = common::TypeList<Ts...>;
 };
 
 template <typename... Ts>
 struct CollectionTypes<Scratch<Ts...>> {
-  using type = TypeList<Ts...>;
+  using type = common::TypeList<Ts...>;
 };
 
 template <template <typename> class Pickler, typename T, typename... Ts>
 struct CollectionTypes<Channel<Pickler, T, Ts...>> {
-  using type = TypeList<T, Ts...>;
+  using type = common::TypeList<T, Ts...>;
 };
 
 template <>
 struct CollectionTypes<Stdin> {
-  using type = TypeList<std::string>;
+  using type = common::TypeList<std::string>;
 };
 
 template <>
 struct CollectionTypes<Stdout> {
-  using type = TypeList<std::string>;
+  using type = common::TypeList<std::string>;
 };
 
 template <typename Clock>
 struct CollectionTypes<Periodic<Clock>> {
   using id = typename Periodic<Clock>::id;
   using time = std::chrono::time_point<Clock>;
-  using type = TypeList<id, time>;
+  using type = common::TypeList<id, time>;
 };
 
 // Sometimes we want to be able to write code like this:
@@ -113,6 +114,7 @@ struct GetCollectionType<Periodic<Clock>>
 
 std::string CollectionTypeToString(CollectionType type);
 
+}  // namespace collections
 }  // namespace fluent
 
 #endif  // COLLECTIONS_COLLECTION_UTIL_H_

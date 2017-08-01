@@ -9,13 +9,13 @@ namespace fluent {
 namespace ra {
 
 template <std::size_t... Is>
-using Keys = SizetList<Is...>;
+using Keys = common::SizetList<Is...>;
 
 template <std::size_t... Is>
-using LeftKeys = SizetList<Is...>;
+using LeftKeys = common::SizetList<Is...>;
 
 template <std::size_t... Is>
-using RightKeys = SizetList<Is...>;
+using RightKeys = common::SizetList<Is...>;
 
 }  // namespace ra
 }  // namespace fluent

@@ -22,8 +22,9 @@ TEST(Map, SimpleCompileCheck) {
   UNUSED(map);
 
   using actual = decltype(map)::column_types;
-  using expected = TypeList<int>;
-  static_assert(StaticAssert<std::is_same<actual, expected>>::value, "");
+  using expected = common::TypeList<int>;
+  static_assert(common::StaticAssert<std::is_same<actual, expected>>::value,
+                "");
 }
 
 TEST(Map, FunctionsReturningTuplesWithModifiers) {
@@ -38,8 +39,9 @@ TEST(Map, FunctionsReturningTuplesWithModifiers) {
     UNUSED(map);
 
     using actual = decltype(map)::column_types;
-    using expected = TypeList<int, bool>;
-    static_assert(StaticAssert<std::is_same<actual, expected>>::value, "");
+    using expected = common::TypeList<int, bool>;
+    static_assert(common::StaticAssert<std::is_same<actual, expected>>::value,
+                  "");
   }
 
   {
@@ -50,8 +52,9 @@ TEST(Map, FunctionsReturningTuplesWithModifiers) {
     UNUSED(map);
 
     using actual = decltype(map)::column_types;
-    using expected = TypeList<int>;
-    static_assert(StaticAssert<std::is_same<actual, expected>>::value, "");
+    using expected = common::TypeList<int>;
+    static_assert(common::StaticAssert<std::is_same<actual, expected>>::value,
+                  "");
   }
 }
 

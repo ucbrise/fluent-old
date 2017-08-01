@@ -16,7 +16,8 @@ namespace physical {
 
 template <typename Ra, std::size_t... Is>
 class Project : public PhysicalRa {
-  static_assert(StaticAssert<std::is_base_of<PhysicalRa, Ra>>::value, "");
+  static_assert(common::StaticAssert<std::is_base_of<PhysicalRa, Ra>>::value,
+                "");
 
  public:
   explicit Project(Ra child) : child_(std::move(child)) {}
@@ -25,7 +26,7 @@ class Project : public PhysicalRa {
 
   auto ToRange() {
     return child_.ToRange() | ranges::view::transform([](const auto& t) {
-             return TupleProject<Is...>(t);
+             return common::TupleProject<Is...>(t);
            });
   }
 

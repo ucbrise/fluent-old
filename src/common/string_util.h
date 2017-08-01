@@ -9,6 +9,7 @@
 #include <vector>
 
 namespace fluent {
+namespace common {
 namespace detail {
 
 template <typename Iterator>
@@ -86,6 +87,7 @@ std::vector<std::string> Split(const std::string& s);
 // CrunchWhitespace("\n \n")  == " "
 std::string CrunchWhitespace(std::string s);
 
+}  // namespace common
 }  // namespace fluent
 
 #endif  //  COMMON_STRING_UTIL_H_

@@ -77,5 +77,5 @@ int main(int argc, char* argv[]) {
 
             return make_tuple(get, set_delete, set_add, set_ack);
           });
-  CHECK_EQ(fluent::Status::OK, f.ConsumeValueOrDie().Run());
+  CHECK_EQ(fluent::common::Status::OK, f.ConsumeValueOrDie().Run());
 }

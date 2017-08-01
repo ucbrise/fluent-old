@@ -49,6 +49,7 @@
 //   std::vector<int> int_vector = TupletoVector(int_tuple);
 
 namespace fluent {
+namespace common {
 namespace detail {
 
 // Iteri (non-const)
@@ -269,6 +270,7 @@ std::ostream& operator<<(std::ostream& out, const std::tuple<Ts...>& t) {
   return out;
 }
 
+}  // namespace common
 }  // namespace fluent
 
 #endif  //  COMMON_TUPLE_UTIL_H_

@@ -14,6 +14,7 @@
 // <type_traits> header.
 
 namespace fluent {
+namespace common {
 
 // sizet_constant
 template <std::size_t I>
@@ -145,6 +146,7 @@ struct IsInvocable {
   static constexpr bool value = decltype(check<F, Args...>(0))();
 };
 
+}  // namespace common
 }  // namespace fluent
 
 #endif  //  COMMON_TYPE_TRAITS_H_

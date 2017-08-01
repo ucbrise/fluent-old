@@ -9,71 +9,75 @@
 #include "testing/mock_clock.h"
 
 namespace fluent {
+namespace collections {
+
+using common::MockPickler;
+using testing::MockClock;
 
 TEST(CollectionUtil, CollectionTypes) {
   // Tables.
   static_assert(std::is_same<                        //
                     CollectionTypes<Table<>>::type,  //
-                    TypeList<>>::value,              //
+                    common::TypeList<>>::value,      //
                 "");
   static_assert(std::is_same<                           //
                     CollectionTypes<Table<int>>::type,  //
-                    TypeList<int>>::value,              //
+                    common::TypeList<int>>::value,      //
                 "");
   static_assert(std::is_same<                                       //
                     CollectionTypes<Table<int, char, bool>>::type,  //
-                    TypeList<int, char, bool>>::value,              //
+                    common::TypeList<int, char, bool>>::value,      //
                 "");
 
   // Scratches.
   static_assert(std::is_same<                          //
                     CollectionTypes<Scratch<>>::type,  //
-                    TypeList<>>::value,                //
+                    common::TypeList<>>::value,        //
                 "");
   static_assert(std::is_same<                             //
                     CollectionTypes<Scratch<int>>::type,  //
-                    TypeList<int>>::value,                //
+                    common::TypeList<int>>::value,        //
                 "");
   static_assert(std::is_same<                                         //
                     CollectionTypes<Scratch<int, char, bool>>::type,  //
-                    TypeList<int, char, bool>>::value,                //
+                    common::TypeList<int, char, bool>>::value,        //
                 "");
 
   // Channels.
   static_assert(
       std::is_same<                                                  //
           CollectionTypes<Channel<MockPickler, std::string>>::type,  //
-          TypeList<std::string>>::value,                             //
+          common::TypeList<std::string>>::value,                     //
       "");
   static_assert(
       std::is_same<                                                       //
           CollectionTypes<Channel<MockPickler, std::string, int>>::type,  //
-          TypeList<std::string, int>>::value,                             //
+          common::TypeList<std::string, int>>::value,                     //
       "");
   static_assert(
       std::is_same<  //
           CollectionTypes<
               Channel<MockPickler, std::string, int, char, bool>>::type,  //
-          TypeList<std::string, int, char, bool>>::value,                 //
+          common::TypeList<std::string, int, char, bool>>::value,         //
       "");
 
   // Stdin.
-  static_assert(std::is_same<                       //
-                    CollectionTypes<Stdin>::type,   //
-                    TypeList<std::string>>::value,  //
+  static_assert(std::is_same<                               //
+                    CollectionTypes<Stdin>::type,           //
+                    common::TypeList<std::string>>::value,  //
                 "");
 
   // Stdout.
-  static_assert(std::is_same<                       //
-                    CollectionTypes<Stdout>::type,  //
-                    TypeList<std::string>>::value,  //
+  static_assert(std::is_same<                               //
+                    CollectionTypes<Stdout>::type,          //
+                    common::TypeList<std::string>>::value,  //
                 "");
 
   // Periodic.
   static_assert(std::is_same<                                    //
                     CollectionTypes<Periodic<MockClock>>::type,  //
-                    TypeList<Periodic<MockClock>::id,
-                             Periodic<MockClock>::time>>::value,  //
+                    common::TypeList<Periodic<MockClock>::id,
+                                     Periodic<MockClock>::time>>::value,  //
                 "");
 }
 
@@ -108,6 +112,7 @@ TEST(CollectionUtil, CollectionTypeToString) {
   EXPECT_STREQ("Periodic", to_string(CollectionType::PERIODIC).c_str());
 }
 
+}  // namespace collections
 }  // namespace fluent
 
 int main(int argc, char** argv) {

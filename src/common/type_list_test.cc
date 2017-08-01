@@ -8,6 +8,7 @@
 #include "gtest/gtest.h"
 
 namespace fluent {
+namespace common {
 namespace detail {
 
 template <typename... Ts>
@@ -259,6 +260,7 @@ TEST(TypeList, TupleToTypleList) {
   }
 }
 
+}  // namespace common
 }  // namespace fluent
 
 int main(int argc, char** argv) {

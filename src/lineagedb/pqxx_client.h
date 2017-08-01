@@ -62,7 +62,8 @@ inline std::int64_t size_t_to_int64(std::size_t hash) {
 //   std::string name = "seanconnery";
 //   std::size_t id = 42;
 //   std::string address = "inproc://zardoz";
-//   StatusOr<Client> client_or = Client::Make(name, id, address, config);
+//   common::StatusOr<Client> client_or = Client::Make(name, id, address,
+//   config);
 //   Client client = client_or.ConsumeValueOrDie();
 //
 //   // Add the types of our collections.
@@ -105,21 +106,22 @@ class InjectablePqxxClient {
   DISALLOW_MOVE_AND_ASSIGN(InjectablePqxxClient);
   virtual ~InjectablePqxxClient() = default;
 
-  static WARN_UNUSED StatusOr<std::unique_ptr<InjectablePqxxClient>> Make(
-      std::string name, std::size_t id, std::string address,
-      const ConnectionConfig& connection_config) {
+  static WARN_UNUSED common::StatusOr<std::unique_ptr<InjectablePqxxClient>>
+  Make(std::string name, std::size_t id, std::string address,
+       const ConnectionConfig& connection_config) {
     try {
       std::unique_ptr<InjectablePqxxClient> client(new InjectablePqxxClient(
           std::move(name), id, std::move(address), connection_config));
       RETURN_IF_ERROR(client->Init());
       return std::move(client);
     } catch (const pqxx::pqxx_exception& e) {
-      return Status(ErrorCode::INVALID_ARGUMENT, e.base().what());
+      return common::Status(common::ErrorCode::INVALID_ARGUMENT,
+                            e.base().what());
     }
   }
 
   template <typename... Ts>
-  WARN_UNUSED Status AddCollection(
+  WARN_UNUSED common::Status AddCollection(
       const std::string& collection_name, const std::string& collection_type,
       const std::array<std::string, sizeof...(Ts)>& column_names) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >= 1 column.");
@@ -128,8 +130,8 @@ class InjectablePqxxClient {
     // `n_c`. We also make a relation for the lineage of `n` called
     // `n_lineage`. Thus, we have a naming conflict if `c == lineage`.
     if (collection_name == "lineage") {
-      return Status(ErrorCode::INVALID_ARGUMENT,
-                    "Lineage is a reserved collection name.");
+      return common::Status(common::ErrorCode::INVALID_ARGUMENT,
+                            "Lineage is a reserved collection name.");
     }
 
     RETURN_IF_ERROR(ExecuteQuery(
@@ -141,8 +143,8 @@ class InjectablePqxxClient {
                                python_lineage_method)
       VALUES ({}, 'regular', NULL);
     )",
-            Join(SqlValues(std::make_tuple(id_, collection_name,
-                                           collection_type, column_names))))));
+            common::Join(SqlValues(std::make_tuple(
+                id_, collection_name, collection_type, column_names))))));
 
     std::vector<std::string> types = SqlTypes<Ts...>();
     std::vector<std::string> columns;
@@ -150,8 +152,9 @@ class InjectablePqxxClient {
       columns.push_back(
           fmt::format("{} {} NOT NULL", column_names[i], types[i]));
     }
-    return ExecuteQuery("AddCollectionTable",
-                        fmt::format(R"(
+    return ExecuteQuery(
+        "AddCollectionTable",
+        fmt::format(R"(
       CREATE TABLE {}_{} (
         hash                   bigint                   NOT NULL,
         time_inserted          integer                  NOT NULL,
@@ -162,26 +165,26 @@ class InjectablePqxxClient {
         PRIMARY KEY (hash, time_inserted)
       );
     )",
-                                    name_, collection_name, Join(columns)));
+                    name_, collection_name, common::Join(columns)));
   }
 
-  WARN_UNUSED Status AddRule(std::size_t rule_number, bool is_bootstrap,
-                             const std::string& rule_string) {
+  WARN_UNUSED common::Status AddRule(std::size_t rule_number, bool is_bootstrap,
+                                     const std::string& rule_string) {
     return ExecuteQuery(
         "AddRule",
         fmt::format(R"(
       INSERT INTO Rules (node_id, rule_number, is_bootstrap, rule)
       VALUES ({});
     )",
-                    Join(SqlValues(std::make_tuple(
+                    common::Join(SqlValues(std::make_tuple(
                         id_, rule_number, is_bootstrap, rule_string)))));
   }
 
   template <typename... Ts>
-  WARN_UNUSED Status
-  InsertTuple(const std::string& collection_name, int time_inserted,
-              const std::chrono::time_point<Clock>& physical_time_inserted,
-              const std::tuple<Ts...>& t) {
+  WARN_UNUSED common::Status InsertTuple(
+      const std::string& collection_name, int time_inserted,
+      const std::chrono::time_point<Clock>& physical_time_inserted,
+      const std::tuple<Ts...>& t) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >=1 column.");
     std::int64_t hash = detail::size_t_to_int64(Hash<std::tuple<Ts...>>()(t));
     return ExecuteQuery(
@@ -192,14 +195,14 @@ class InjectablePqxxClient {
     )",
                     name_, collection_name, SqlValue(hash),
                     SqlValue(time_inserted), SqlValue(physical_time_inserted),
-                    Join(SqlValues(t))));
+                    common::Join(SqlValues(t))));
   }
 
   template <typename... Ts>
-  WARN_UNUSED Status
-  DeleteTuple(const std::string& collection_name, int time_deleted,
-              const std::chrono::time_point<Clock>& physical_time_deleted,
-              const std::tuple<Ts...>& t) {
+  WARN_UNUSED common::Status DeleteTuple(
+      const std::string& collection_name, int time_deleted,
+      const std::chrono::time_point<Clock>& physical_time_deleted,
+      const std::tuple<Ts...>& t) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >=1 column.");
     std::int64_t hash = detail::size_t_to_int64(Hash<std::tuple<Ts...>>()(t));
     return ExecuteQuery(
@@ -214,9 +217,9 @@ class InjectablePqxxClient {
   }
 
   // TODO(mwhittaker): Add physical time to network lineage.
-  WARN_UNUSED Status AddNetworkedLineage(std::size_t dep_node_id, int dep_time,
-                                         const std::string& collection_name,
-                                         std::size_t tuple_hash, int time) {
+  WARN_UNUSED common::Status AddNetworkedLineage(
+      std::size_t dep_node_id, int dep_time, const std::string& collection_name,
+      std::size_t tuple_hash, int time) {
     return ExecuteQuery(
         "AddLineage",
         fmt::format(
@@ -226,36 +229,37 @@ class InjectablePqxxClient {
                               tuple_hash, time)
       VALUES ({}, NULL, {});
     )",
-            name_, Join(SqlValues(std::make_tuple(
+            name_, common::Join(SqlValues(std::make_tuple(
                        detail::size_t_to_int64(dep_node_id), collection_name,
                        detail::size_t_to_int64(tuple_hash), dep_time))),
-            Join(SqlValues(std::make_tuple(true /*inserted*/, collection_name,
-                                           detail::size_t_to_int64(tuple_hash),
-                                           time)))));
+            common::Join(SqlValues(
+                std::make_tuple(true /*inserted*/, collection_name,
+                                detail::size_t_to_int64(tuple_hash), time)))));
   }
 
-  WARN_UNUSED Status
-  AddDerivedLineage(const LocalTupleId& dep_id, int rule_number, bool inserted,
-                    const std::chrono::time_point<Clock>& physical_time,
-                    const LocalTupleId& id) {
+  WARN_UNUSED common::Status AddDerivedLineage(
+      const LocalTupleId& dep_id, int rule_number, bool inserted,
+      const std::chrono::time_point<Clock>& physical_time,
+      const LocalTupleId& id) {
     auto values = std::make_tuple(
         detail::size_t_to_int64(id_), dep_id.collection_name,
         detail::size_t_to_int64(dep_id.hash), dep_id.logical_time_inserted,
         rule_number, inserted, physical_time, id.collection_name,
         detail::size_t_to_int64(id.hash), id.logical_time_inserted);
-    return ExecuteQuery("AddLineage",
-                        fmt::format(R"(
+    return ExecuteQuery(
+        "AddLineage",
+        fmt::format(R"(
       INSERT INTO {}_lineage (dep_node_id, dep_collection_name, dep_tuple_hash,
                               dep_time, rule_number, inserted, physical_time,
                               collection_name, tuple_hash, time)
       VALUES ({});
     )",
-                                    name_, Join(SqlValues(std::move(values)))));
+                    name_, common::Join(SqlValues(std::move(values)))));
   }
 
-  WARN_UNUSED Status
-  RegisterBlackBoxLineage(const std::string& collection_name,
-                          const std::vector<std::string>& lineage_commands) {
+  WARN_UNUSED common::Status RegisterBlackBoxLineage(
+      const std::string& collection_name,
+      const std::vector<std::string>& lineage_commands) {
     const std::string query_template = R"(
       UPDATE Collections
       SET lineage_type = 'sql'
@@ -270,12 +274,12 @@ class InjectablePqxxClient {
       RETURN_IF_ERROR(ExecuteQuery("LineageCommand", lineage_command));
     }
 
-    return Status::OK;
+    return common::Status::OK;
   }
 
   // TODO(mwhittaker): Escape python_file string.
-  WARN_UNUSED Status
-  RegisterBlackBoxPythonLineageScript(const std::string& script) {
+  WARN_UNUSED common::Status RegisterBlackBoxPythonLineageScript(
+      const std::string& script) {
     // The 'E' makes the python_lineage_file an escaped string. See
     // https://stackoverflow.com/a/26638775/3187068 for details.
     const std::string query_template = R"(
@@ -287,10 +291,10 @@ class InjectablePqxxClient {
         fmt::format(query_template, SqlValue(script),
                     SqlValue(detail::size_t_to_int64(id_)));
     RETURN_IF_ERROR(ExecuteQuery("SetBlackBoxPythonLineageScript", query));
-    return Status::OK;
+    return common::Status::OK;
   }
 
-  WARN_UNUSED Status RegisterBlackBoxPythonLineage(
+  WARN_UNUSED common::Status RegisterBlackBoxPythonLineage(
       const std::string& collection_name, const std::string& method) {
     const std::string query_template = R"(
       UPDATE Collections
@@ -301,7 +305,7 @@ class InjectablePqxxClient {
         query_template, SqlValue(method),
         SqlValue(detail::size_t_to_int64(id_)), SqlValue(collection_name));
     RETURN_IF_ERROR(ExecuteQuery("SetBlackBoxPythonLineage", query));
-    return Status::OK;
+    return common::Status::OK;
   }
 
  protected:
@@ -317,14 +321,14 @@ class InjectablePqxxClient {
   }
 
   // TODO(mwhittaker): Handle hash collisions.
-  WARN_UNUSED Status Init() {
-    RETURN_IF_ERROR(ExecuteQuery(
-        "Init",
-        fmt::format(R"(
+  WARN_UNUSED common::Status Init() {
+    RETURN_IF_ERROR(
+        ExecuteQuery("Init", fmt::format(R"(
       INSERT INTO Nodes (id, name, address, python_lineage_script)
       VALUES ({}, NULL);
     )",
-                    Join(SqlValues(std::make_tuple(id_, name_, address_))))));
+                                         common::Join(SqlValues(std::make_tuple(
+                                             id_, name_, address_))))));
 
     return ExecuteQuery("CreateLineageTable", fmt::format(R"(
       CREATE TABLE {}_lineage (
@@ -344,16 +348,17 @@ class InjectablePqxxClient {
   }
 
   // Transactionally execute the query `query` named `name`.
-  virtual WARN_UNUSED Status ExecuteQuery(const std::string& name,
-                                          const std::string& query) {
+  virtual WARN_UNUSED common::Status ExecuteQuery(const std::string& name,
+                                                  const std::string& query) {
     try {
       Work txn(*connection_, name);
       VLOG(1) << "Executing query: " << query;
       txn.exec(query);
       txn.commit();
-      return Status::OK;
+      return common::Status::OK;
     } catch (const pqxx::pqxx_exception& e) {
-      return Status(ErrorCode::INVALID_ARGUMENT, e.base().what());
+      return common::Status(common::ErrorCode::INVALID_ARGUMENT,
+                            e.base().what());
     }
   }
 
@@ -367,7 +372,8 @@ class InjectablePqxxClient {
   // [ToSql<T1>.Type(), ..., ToSql<Tn>().Type()]
   template <typename... Ts>
   std::vector<std::string> SqlTypes() {
-    return TupleToVector(TypeListMapToTuple<TypeList<Ts...>, Type>()());
+    return common::TupleToVector(
+        common::TypeListMapToTuple<common::TypeList<Ts...>, Type>()());
   }
 
   // SqlValue(x: t) is a shorthand for ToSql<t>().Value(x);
@@ -379,13 +385,14 @@ class InjectablePqxxClient {
   // SqlValues((a, ..., z)) returns the vector [SqlValue(a), ..., SqlValue(z)].
   template <typename... Ts>
   std::vector<std::string> SqlValues(const std::tuple<Ts...>& t) {
-    return TupleToVector(
-        TupleMap(t, [this](const auto& x) { return this->SqlValue(x); }));
+    return common::TupleToVector(common::TupleMap(
+        t, [this](const auto& x) { return this->SqlValue(x); }));
   }
 
   // A connection to lineage database. Note that we'd like InjectablePqxxClient
   // to be default constructible so that we can return a
-  // StatusOr<InjectablePqxxClient>, but a pqxx::connection is not default
+  // common::StatusOr<InjectablePqxxClient>, but a pqxx::connection is not
+  // default
   // constructible. We make connection_ a unique pointer so that
   // InjectablePqxxClient is default constructible even if Connection is not.
   std::unique_ptr<Connection> connection_;

@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
   const std::string client_addr = argv[2];
 
   // Random id generator.
-  fluent::RandomIdGenerator id_gen;
+  fluent::common::RandomIdGenerator id_gen;
 
   // ZeroMQ context.
   zmq::context_t context(1);
@@ -73,10 +73,10 @@ int main(int argc, char* argv[]) {
 
   ldb::ConnectionConfig confg;
   const std::string name = "s3_client_benchmark";
-  auto fb =
-      fluent::fluent<ldb::NoopClient, fluent::Hash, ldb::ToSql,
-                     fluent::MockPickler>(name, client_addr, &context, confg)
-          .ConsumeValueOrDie();
+  auto fb = fluent::fluent<ldb::NoopClient, fluent::common::Hash, ldb::ToSql,
+                           fluent::common::MockPickler>(name, client_addr,
+                                                        &context, confg)
+                .ConsumeValueOrDie();
   auto f =
       AddS3Api(std::move(fb))
           .RegisterRules([&](auto& echo_req, auto& echo_resp, auto& rm_req,
@@ -116,11 +116,11 @@ int main(int argc, char* argv[]) {
     echo_req_t.clear();
     const std::int64_t id = id_gen.Generate();
     std::string key = fmt::format("{:>04}.txt", i);
-    std::string part = fluent::RandomAlphanum(1024);
+    std::string part = fluent::common::RandomAlphanum(1024);
     echo_req_t.push_back({server_addr, client_addr, id, bucket, key, part});
 
-    CHECK_EQ(f.Tick(), fluent::Status::OK);
-    CHECK_EQ(f.Receive(), fluent::Status::OK);
+    CHECK_EQ(f.Tick(), fluent::common::Status::OK);
+    CHECK_EQ(f.Receive(), fluent::common::Status::OK);
   }
   echo_req_t.clear();
 
@@ -131,8 +131,8 @@ int main(int argc, char* argv[]) {
     std::string key = fmt::format("{:>04}.txt", i);
     cat_req_t.push_back({server_addr, client_addr, id, bucket, key});
 
-    CHECK_EQ(f.Tick(), fluent::Status::OK);
-    CHECK_EQ(f.Receive(), fluent::Status::OK);
+    CHECK_EQ(f.Tick(), fluent::common::Status::OK);
+    CHECK_EQ(f.Receive(), fluent::common::Status::OK);
   }
   cat_req_t.clear();
 
@@ -143,8 +143,8 @@ int main(int argc, char* argv[]) {
     std::string key = fmt::format("{:>04}.txt", i);
     rm_req_t.push_back({server_addr, client_addr, id, bucket, key});
 
-    CHECK_EQ(f.Tick(), fluent::Status::OK);
-    CHECK_EQ(f.Receive(), fluent::Status::OK);
+    CHECK_EQ(f.Tick(), fluent::common::Status::OK);
+    CHECK_EQ(f.Receive(), fluent::common::Status::OK);
   }
   rm_req_t.clear();
 

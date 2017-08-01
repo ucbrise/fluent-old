@@ -19,13 +19,15 @@ namespace ra {
 namespace logical {
 namespace detail {
 
-// ProjectBySizetList
+// ProjectBycommon::SizetList
 template <typename Typelist, typename SizetList>
 struct TypeListProjectBySizetList;
 
 template <typename... Ts, std::size_t... Is>
-struct TypeListProjectBySizetList<TypeList<Ts...>, SizetList<Is...>> {
-  using type = typename TypeListProject<TypeList<Ts...>, Is...>::type;
+struct TypeListProjectBySizetList<common::TypeList<Ts...>,
+                                  common::SizetList<Is...>> {
+  using type =
+      typename common::TypeListProject<common::TypeList<Ts...>, Is...>::type;
 };
 
 // TypeOfGet
@@ -41,26 +43,31 @@ struct GroupBy;
 
 template <typename Ra, std::size_t... Ks, typename... Aggregates>
 struct GroupBy<Ra, Keys<Ks...>, Aggregates...> : public LogicalRa {
-  static_assert(StaticAssert<std::is_base_of<LogicalRa, Ra>>::value, "");
+  static_assert(common::StaticAssert<std::is_base_of<LogicalRa, Ra>>::value,
+                "");
   using child_column_types = typename Ra::column_types;
-  using child_len_t = typename TypeListLen<child_column_types>::type;
+  using child_len_t = typename common::TypeListLen<child_column_types>::type;
   static constexpr std::size_t child_len = child_len_t::value;
-  static_assert(StaticAssert<All<InRange<Ks, 0, child_len>...>>::value, "");
+  static_assert(common::StaticAssert<
+                    common::All<common::InRange<Ks, 0, child_len>...>>::value,
+                "");
   static_assert(
-      StaticAssert<All<std::is_base_of<agg::Aggregate, Aggregates>...>>::value,
+      common::StaticAssert<
+          common::All<std::is_base_of<agg::Aggregate, Aggregates>...>>::value,
       "");
-  using key_types = typename TypeListProject<child_column_types, Ks...>::type;
-  using aggregate_impl_types = TypeList<  //
+  using key_types =
+      typename common::TypeListProject<child_column_types, Ks...>::type;
+  using aggregate_impl_types = common::TypeList<  //
       typename Aggregates::template type<
           typename detail::TypeListProjectBySizetList<
               child_column_types,
-              typename SizetListFrom<Aggregates>::type>::type>...  //
+              typename common::SizetListFrom<Aggregates>::type>::type>...  //
       >;
-  using aggregate_types =
-      typename TypeListMap<aggregate_impl_types, detail::TypeOfGet>::type;
+  using aggregate_types = typename common::TypeListMap<aggregate_impl_types,
+                                                       detail::TypeOfGet>::type;
 
   using column_types =
-      typename TypeListConcat<key_types, aggregate_types>::type;
+      typename common::TypeListConcat<key_types, aggregate_types>::type;
   explicit GroupBy(Ra child_) : child(std::move(child_)) {}
   Ra child;
 };

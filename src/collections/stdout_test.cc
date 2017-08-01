@@ -14,10 +14,11 @@
 #include "testing/captured_stdout.h"
 
 namespace fluent {
+namespace collections {
 
 TEST(Stdout, Merge) {
   Stdout stdout_;
-  CapturedStdout captured;
+  testing::CapturedStdout captured;
 
   EXPECT_STREQ("", captured.Get().c_str());
   stdout_.Merge({"hello"}, 0x0, 0);
@@ -28,7 +29,7 @@ TEST(Stdout, Merge) {
 
 TEST(Table, DeferredMerge) {
   Stdout stdout_;
-  CapturedStdout captured;
+  testing::CapturedStdout captured;
 
   EXPECT_STREQ("", captured.Get().c_str());
   stdout_.DeferredMerge({"hello"}, 0x0, 0);
@@ -39,6 +40,7 @@ TEST(Table, DeferredMerge) {
   EXPECT_STREQ("hello\nworld\n", captured.Get().c_str());
 }
 
+}  // namespace collections
 }  // namespace fluent
 
 int main(int argc, char** argv) {

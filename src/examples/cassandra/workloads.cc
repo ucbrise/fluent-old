@@ -40,7 +40,7 @@ std::discrete_distribution<int> WorkloadToDistribution(const Workload& workload,
       return std::discrete_distribution<int>(weights.begin(), weights.end());
     }
     case Workload::ZIPFIAN: {
-      return fluent::ZipfDistribution(num_keys, 1.0);
+      return fluent::common::ZipfDistribution(num_keys, 1.0);
     }
     default: {
       CHECK(false) << "Unreachable code.";

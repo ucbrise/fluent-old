@@ -8,6 +8,7 @@
 #include <string>
 
 namespace fluent {
+namespace common {
 
 // Returns a random integer in the range [low, high).
 int RandInt(int low, int high);
@@ -44,6 +45,7 @@ class RandomIdGenerator {
   std::uniform_int_distribution<std::int64_t> distribution_;
 };
 
+}  // namespace common
 }  // namespace fluent
 
 #endif  // COMMON_RAND_UTIL_H_

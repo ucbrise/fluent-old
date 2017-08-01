@@ -3,6 +3,7 @@
 #include "glog/logging.h"
 
 namespace fluent {
+namespace common {
 
 std::string ErrorCodeToString(ErrorCode error) {
   switch (error) {
@@ -45,4 +46,5 @@ std::string ErrorCodeToString(ErrorCode error) {
   }
 }
 
+}  // namespace common
 }  // namespace fluent

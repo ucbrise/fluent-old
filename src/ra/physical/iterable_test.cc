@@ -18,14 +18,14 @@ TEST(Relalg, EmptyIterable) {
   std::set<std::tuple<int>> xs = {};
   pra::Iterable<std::set<std::tuple<int>>> iter = pra::make_iterable(&xs);
   std::set<std::tuple<int>> expected = {};
-  ExpectRngsUnorderedEqual(iter.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(iter.ToRange(), expected);
 }
 
 TEST(Relalg, NonEmptyIterable) {
   std::set<std::tuple<int>> xs = {{1}, {2}, {3}};
   pra::Iterable<std::set<std::tuple<int>>> iter = pra::make_iterable(&xs);
   std::set<std::tuple<int>> expected = {{1}, {2}, {3}};
-  ExpectRngsUnorderedEqual(iter.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(iter.ToRange(), expected);
 }
 
 }  // namespace fluent

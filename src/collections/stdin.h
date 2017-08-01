@@ -20,6 +20,7 @@
 #include "common/type_traits.h"
 
 namespace fluent {
+namespace collections {
 
 class Stdin : public Collection {
  public:
@@ -67,6 +68,7 @@ class Stdin : public Collection {
   std::map<std::tuple<std::string>, CollectionTupleIds> lines_;
 };
 
+}  // namespace collections
 }  // namespace fluent
 
 #endif  // COLLECTIONS_STDIN_H_

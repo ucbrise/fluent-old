@@ -11,10 +11,10 @@
 #include "collections/collection_tuple_ids.h"
 #include "collections/util.h"
 #include "common/macros.h"
-#include "common/macros.h"
 #include "common/type_traits.h"
 
 namespace fluent {
+namespace collections {
 
 template <typename... Ts>
 class Scratch : public Collection {
@@ -51,6 +51,7 @@ class Scratch : public Collection {
   std::map<std::tuple<Ts...>, CollectionTupleIds> ts_;
 };
 
+}  // namespace collections
 }  // namespace fluent
 
 #endif  // COLLECTIONS_SCRATCH_H_

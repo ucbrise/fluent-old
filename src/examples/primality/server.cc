@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
                   return std::make_tuple(rule);
                 })
                 .ConsumeValueOrDie();
-  fluent::Status status = fe.RegisterBlackBoxLineage<0, 1>(
+  fluent::common::Status status = fe.RegisterBlackBoxLineage<0, 1>(
       [](const std::string& time_inserted, const std::string& x,
          const std::string& is_prime) {
         (void)time_inserted;
@@ -77,6 +77,6 @@ int main(int argc, char* argv[]) {
           WHERE false;
         )";
       });
-  CHECK_EQ(fluent::Status::OK, status);
-  CHECK_EQ(fluent::Status::OK, fe.Run());
+  CHECK_EQ(fluent::common::Status::OK, status);
+  CHECK_EQ(fluent::common::Status::OK, fe.Run());
 }

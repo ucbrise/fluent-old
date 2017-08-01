@@ -12,10 +12,19 @@
 #include "ra/physical/all.h"
 #include "testing/test_util.h"
 
-namespace lra = fluent::ra::logical;
-namespace pra = fluent::ra::physical;
-
 namespace fluent {
+
+namespace lra = ra::logical;
+namespace pra = ra::physical;
+
+using collections::Channel;
+using collections::Periodic;
+using collections::Scratch;
+using collections::Stdin;
+using collections::Stdout;
+using collections::Table;
+using testing::ExpectRngsUnorderedEqual;
+
 namespace {
 
 template <typename T>

@@ -9,6 +9,7 @@
 #include "common/type_traits.h"
 
 namespace fluent {
+namespace common {
 
 // TODO(mwhittaker): Namespace these functions so they aren't so long?
 
@@ -229,6 +230,7 @@ struct TupleToTypeList {
   using type = typename TypeListFrom<Tuple>::type;
 };
 
+}  // namespace common
 }  // namespace fluent
 
 #endif  //  COMMON_TYPE_LIST_H_

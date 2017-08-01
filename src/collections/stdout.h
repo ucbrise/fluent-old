@@ -18,6 +18,7 @@
 #include "common/type_traits.h"
 
 namespace fluent {
+namespace collections {
 
 class Stdout : public Collection {
  public:
@@ -61,6 +62,7 @@ class Stdout : public Collection {
   std::set<std::tuple<std::string>> deferred_merge_;
 };
 
+}  // namespace collections
 }  // namespace fluent
 
 #endif  // COLLECTIONS_STDOUT_H_

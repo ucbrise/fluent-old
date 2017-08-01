@@ -8,6 +8,7 @@
 #include "common/macros.h"
 
 namespace fluent {
+namespace common {
 
 template <typename T>
 class ConcurrentQueue {
@@ -39,6 +40,7 @@ class ConcurrentQueue {
   std::vector<T> xs_;
 };
 
+}  // namespace common
 }  // namespace fluent
 
 #endif  // COMMON_CONCURRENT_QUEUE_H_

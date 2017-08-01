@@ -23,6 +23,7 @@
 #include "zmq_util/zmq_util.h"
 
 namespace fluent {
+namespace collections {
 namespace detail {
 
 // See `GetParser`.
@@ -47,7 +48,7 @@ std::tuple<Ts...> parse_tuple(const std::vector<std::string>& columns) {
 // 1, 2, 3) to the node at address ("inproc//a", 1, 2, 3).
 template <template <typename> class Pickler, typename T, typename... Ts>
 class Channel : public Collection {
-  static_assert(StaticAssert<std::is_same<std::string, T>>::value,
+  static_assert(common::StaticAssert<std::is_same<std::string, T>>::value,
                 "The first column of a channel must be a string specifying a "
                 "ZeroMQ address (e.g. tcp://localhost:9999).");
 
@@ -82,7 +83,7 @@ class Channel : public Collection {
     msgs[1] = string_to_message(ToString(name_));
     msgs[2] = string_to_message(ToString(logical_time_inserted));
 
-    TupleIteri(t, [this, &msgs](std::size_t i, const auto& x) {
+    common::TupleIteri(t, [this, &msgs](std::size_t i, const auto& x) {
       msgs[i + 3] = zmq_util::string_to_message(this->ToString(x));
     });
 
@@ -123,6 +124,7 @@ class Channel : public Collection {
   FRIEND_TEST(Channel, TickClearsChannel);
 };
 
+}  // namespace collections
 }  // namespace fluent
 
 #endif  // COLLETIONS_CHANNEL_H_

@@ -15,12 +15,13 @@ namespace logical {
 
 template <typename C>
 struct MetaCollection : public LogicalRa {
-  using is_base_of = std::is_base_of<fluent::Collection, C>;
-  static_assert(StaticAssert<is_base_of>::value, "");
-  using collection_types = typename CollectionTypes<C>::type;
-  using collection_tuple = typename TypeListToTuple<collection_types>::type;
+  using is_base_of = std::is_base_of<collections::Collection, C>;
+  static_assert(common::StaticAssert<is_base_of>::value, "");
+  using collection_types = typename collections::CollectionTypes<C>::type;
+  using collection_tuple =
+      typename common::TypeListToTuple<collection_types>::type;
 
-  using column_types = TypeList<collection_tuple, LocalTupleId>;
+  using column_types = common::TypeList<collection_tuple, LocalTupleId>;
   explicit MetaCollection(const C* collection_) : collection(collection_) {}
   const C* collection;
 };

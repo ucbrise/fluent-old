@@ -78,23 +78,23 @@ void UpdateCollection(Collection* collection, const std::tuple<Ts...>& t,
 template <typename Collection>
 struct ProcessChannelImpl {
   template <typename F>
-  Status operator()(Collection* c, F f) {
+  common::Status operator()(Collection* c, F f) {
     UNUSED(f);
     UNUSED(c);
-    return Status::OK;
+    return common::Status::OK;
   }
 };
 
 template <template <typename> class Pickler, typename T, typename... Ts>
-struct ProcessChannelImpl<Channel<Pickler, T, Ts...>> {
+struct ProcessChannelImpl<collections::Channel<Pickler, T, Ts...>> {
   template <typename F>
-  Status operator()(Channel<Pickler, T, Ts...>* c, F f) {
+  common::Status operator()(collections::Channel<Pickler, T, Ts...>* c, F f) {
     return f(c);
   }
 };
 
 template <typename Collection, typename F>
-Status ProcessChannel(Collection* c, F f) {
+common::Status ProcessChannel(Collection* c, F f) {
   return ProcessChannelImpl<Collection>()(c, f);
 }
 
@@ -117,27 +117,28 @@ template <typename... Collections, typename... BootstrapCollections,
           class LineageDbClient,
           template <typename> class Hash, template <typename> class ToSql,
           template <typename> class Pickler, typename Clock>
-class FluentExecutor<
-    TypeList<Collections...>,
-    TypeList<Rule<BootstrapCollections, BootstrapRuleTags, BootstrapRas>...>,
-    TypeList<Rule<RuleCollections, RuleTags, Ras>...>, LineageDbClient, Hash,
-    ToSql, Pickler, Clock> {
+class FluentExecutor<common::TypeList<Collections...>,
+                     common::TypeList<Rule<BootstrapCollections,
+                                           BootstrapRuleTags, BootstrapRas>...>,
+                     common::TypeList<Rule<RuleCollections, RuleTags, Ras>...>,
+                     LineageDbClient, Hash, ToSql, Pickler, Clock> {
  public:
-  using BootstrapRules =
-      TypeList<Rule<BootstrapCollections, BootstrapRuleTags, BootstrapRas>...>;
-  using Rules = TypeList<Rule<RuleCollections, RuleTags, Ras>...>;
-  using BootstrapRulesTuple = typename TypeListToTuple<BootstrapRules>::type;
-  using RulesTuple = typename TypeListToTuple<Rules>::type;
+  using BootstrapRules = common::TypeList<
+      Rule<BootstrapCollections, BootstrapRuleTags, BootstrapRas>...>;
+  using Rules = common::TypeList<Rule<RuleCollections, RuleTags, Ras>...>;
+  using BootstrapRulesTuple =
+      typename common::TypeListToTuple<BootstrapRules>::type;
+  using RulesTuple = typename common::TypeListToTuple<Rules>::type;
   using Time = std::chrono::time_point<Clock>;
-  using PeriodicId = typename Periodic<Clock>::id;
+  using PeriodicId = typename collections::Periodic<Clock>::id;
 
-  static WARN_UNUSED StatusOr<FluentExecutor> Make(
+  static WARN_UNUSED common::StatusOr<FluentExecutor> Make(
       std::string name, std::size_t id,
       std::tuple<std::unique_ptr<Collections>...> collections,
       BootstrapRulesTuple bootstrap_rules,
       std::unique_ptr<TimestampWrapper> logical_time_wrapper,
-      std::unique_ptr<NetworkState> network_state, Stdin* stdin,
-      std::vector<Periodic<Clock>*> periodics,
+      std::unique_ptr<NetworkState> network_state, collections::Stdin* stdin,
+      std::vector<collections::Periodic<Clock>*> periodics,
       std::unique_ptr<LineageDbClient<Hash, ToSql, Clock>> lineagedb_client,
       RulesTuple rules) {
     FluentExecutor f(
@@ -153,8 +154,8 @@ class FluentExecutor<
       std::tuple<std::unique_ptr<Collections>...> collections,
       BootstrapRulesTuple bootstrap_rules,
       std::unique_ptr<TimestampWrapper> logical_time_wrapper,
-      std::unique_ptr<NetworkState> network_state, Stdin* stdin,
-      std::vector<Periodic<Clock>*> periodics,
+      std::unique_ptr<NetworkState> network_state, collections::Stdin* stdin,
+      std::vector<collections::Periodic<Clock>*> periodics,
       std::unique_ptr<LineageDbClient<Hash, ToSql, Clock>> lineagedb_client,
       RulesTuple rules)
       : name_(std::move(name)),
@@ -170,7 +171,7 @@ class FluentExecutor<
     // Initialize periodic timeouts. See the comment above `PeriodicTimeout`
     // below for more information.
     Time now = Clock::now();
-    for (Periodic<Clock>* p : periodics_) {
+    for (collections::Periodic<Clock>* p : periodics_) {
       timeout_queue_.push(PeriodicTimeout{now + p->Period(), p});
     }
   }
@@ -387,21 +388,22 @@ class FluentExecutor<
   //
   // [1]: https://goo.gl/yGmr78
   template <std::size_t RequestIndex, std::size_t ResponseIndex, typename F>
-  WARN_UNUSED Status RegisterBlackBoxLineage(F f) {
+  WARN_UNUSED common::Status RegisterBlackBoxLineage(F f) {
     ValidateBlackBoxIndexes<RequestIndex, ResponseIndex>();
     return RegisterBlackBoxLineageImpl(Get<RequestIndex>(),
                                        Get<ResponseIndex>(), f);
   }
 
   // TODO(mwhittaker): Document.
-  WARN_UNUSED Status
-  RegisterBlackBoxPythonLineageScript(const std::string& script) {
+  WARN_UNUSED common::Status RegisterBlackBoxPythonLineageScript(
+      const std::string& script) {
     return lineagedb_client_->RegisterBlackBoxPythonLineageScript(script);
   }
 
   // TODO(mwhittaker): Document.
   template <std::size_t RequestIndex, std::size_t ResponseIndex>
-  WARN_UNUSED Status RegisterBlackBoxPythonLineage(const std::string& method) {
+  WARN_UNUSED common::Status RegisterBlackBoxPythonLineage(
+      const std::string& method) {
     ValidateBlackBoxIndexes<RequestIndex, ResponseIndex>();
     const std::string collection_name = Get<ResponseIndex>().Name();
     return lineagedb_client_->RegisterBlackBoxPythonLineage(collection_name,
@@ -410,37 +412,37 @@ class FluentExecutor<
 
   // Sequentially execute each registered bootstrap query and then invoke the
   // `Tick` method of every collection.
-  WARN_UNUSED Status BootstrapTick() {
-    if (TypeListLen<BootstrapRules>::value == 0) {
-      return Status::OK;
+  WARN_UNUSED common::Status BootstrapTick() {
+    if (common::TypeListLen<BootstrapRules>::value == 0) {
+      return common::Status::OK;
     }
 
-    RETURN_IF_ERROR(TupleIteriStatus(
+    RETURN_IF_ERROR(common::TupleIteriStatus(
         bootstrap_rules_, [this](std::size_t rule_number, auto& rule) {
           return this->ExecuteRule(rule_number, &rule);
         }));
     time_++;
-    return TupleIterStatus(collections_, [this](auto& c) {
+    return common::TupleIterStatus(collections_, [this](auto& c) {
       return this->TickCollection(c.get());
     });
   }
 
   // Sequentially execute each registered query and then invoke the `Tick`
   // method of every collection.
-  WARN_UNUSED Status Tick() {
-    RETURN_IF_ERROR(
-        TupleIteriStatus(rules_, [this](std::size_t rule_number, auto& rule) {
+  WARN_UNUSED common::Status Tick() {
+    RETURN_IF_ERROR(common::TupleIteriStatus(
+        rules_, [this](std::size_t rule_number, auto& rule) {
           return this->ExecuteRule(rule_number, &rule);
         }));
     time_++;
-    return TupleIterStatus(collections_, [this](auto& c) {
+    return common::TupleIterStatus(collections_, [this](auto& c) {
       return this->TickCollection(c.get());
     });
   }
 
   // (Potentially) block and receive messages sent by other Fluent nodes.
   // Receiving a message will insert it into the appropriate channel.
-  WARN_UNUSED Status Receive() {
+  WARN_UNUSED common::Status Receive() {
     time_++;
 
     zmq::pollitem_t sock_pollitem = {static_cast<void*>(network_state_->socket),
@@ -478,14 +480,14 @@ class FluentExecutor<
           Pickler<std::string>().Load(channel_name_str);
       const int dep_time = Pickler<int>().Load(dep_time_str);
 
-      RETURN_IF_ERROR(TupleIterStatus(
+      RETURN_IF_ERROR(common::TupleIterStatus(
           collections_,  //
           [&, dep_node_id, dep_time](auto& collection_ptr) {
             return detail::ProcessChannel(
                 collection_ptr.get(),
                 [&, dep_node_id, dep_time](auto* channel) {
                   if (channel->Name() != channel_name) {
-                    return Status::OK;
+                    return common::Status::OK;
                   }
 
                   const auto t = channel->Parse(strings);
@@ -495,7 +497,7 @@ class FluentExecutor<
                       channel->Name(), time_, Clock::now(), t));
                   RETURN_IF_ERROR(lineagedb_client_->AddNetworkedLineage(
                       dep_node_id, dep_time, channel->Name(), hash(t), time_));
-                  return Status::OK;
+                  return common::Status::OK;
 
                 });
           }));
@@ -512,11 +514,11 @@ class FluentExecutor<
     // Trigger periodics.
     RETURN_IF_ERROR(TockPeriodics());
 
-    return Status::OK;
+    return common::Status::OK;
   }
 
   // Runs a fluent program.
-  WARN_UNUSED Status Run() {
+  WARN_UNUSED common::Status Run() {
     RETURN_IF_ERROR(BootstrapTick());
     while (true) {
       RETURN_IF_ERROR(Receive());
@@ -534,51 +536,53 @@ class FluentExecutor<
 
  private:
   // Initialize a node with the lineagedb database.
-  WARN_UNUSED Status InitLineageDbClient() {
+  WARN_UNUSED common::Status InitLineageDbClient() {
     // Collections.
     RETURN_IF_ERROR(
-        TupleIterStatus(collections_, [this](const auto& collection) {
+        common::TupleIterStatus(collections_, [this](const auto& collection) {
           // collection is of type `const unique_ptr<collection_type>&`.
-          using collection_type = typename Unwrap<
+          using collection_type = typename common::Unwrap<
               typename std::decay<decltype(collection)>::type>::type;
           return this->AddCollection(
-              collection, typename CollectionTypes<collection_type>::type{});
+              collection,
+              typename collections::CollectionTypes<collection_type>::type{});
         }));
 
     // Rules.
-    RETURN_IF_ERROR(TupleIteriStatus(
+    RETURN_IF_ERROR(common::TupleIteriStatus(
         bootstrap_rules_, [this](std::size_t i, const auto& bootstrap_rule) {
           return lineagedb_client_->AddRule(i, true,
                                             bootstrap_rule.ToDebugString());
         }));
-    RETURN_IF_ERROR(
-        TupleIteriStatus(rules_, [this](std::size_t i, const auto& rule) {
+    RETURN_IF_ERROR(common::TupleIteriStatus(
+        rules_, [this](std::size_t i, const auto& rule) {
           return lineagedb_client_->AddRule(i, false, rule.ToDebugString());
         }));
 
-    return Status::OK;
+    return common::Status::OK;
   }
 
   // Register a collection with the lineagedb database.
   template <typename Collection, typename... Ts>
-  WARN_UNUSED Status AddCollection(const std::unique_ptr<Collection>& c,
-                                   TypeList<Ts...>) {
+  WARN_UNUSED common::Status AddCollection(const std::unique_ptr<Collection>& c,
+                                           common::TypeList<Ts...>) {
     return lineagedb_client_->template AddCollection<Ts...>(
-        c->Name(), CollectionTypeToString(GetCollectionType<Collection>::value),
+        c->Name(), CollectionTypeToString(
+                       collections::GetCollectionType<Collection>::value),
         c->ColumnNames());
   }
 
   // Tick a collection and insert the deleted tuples into the lineagedb
   // database.
   template <typename Collection>
-  WARN_UNUSED Status TickCollection(Collection* c) {
+  WARN_UNUSED common::Status TickCollection(Collection* c) {
     auto deleted = c->Tick();
     for (const auto& pair : deleted) {
       const auto& t = pair.first;
       RETURN_IF_ERROR(
           lineagedb_client_->DeleteTuple(c->Name(), time_, Clock::now(), t));
     }
-    return Status::OK;
+    return common::Status::OK;
   }
 
   // `GetPollTimeoutInMicros` returns the minimum time (in microseconds) that we
@@ -605,7 +609,7 @@ class FluentExecutor<
 
   // Call `Tock` on every Periodic that's ready to be tocked. See the comment
   // on `PeriodicTimeout` down below for more information.
-  WARN_UNUSED Status TockPeriodics() {
+  WARN_UNUSED common::Status TockPeriodics() {
     Time now = Clock::now();
     while (timeout_queue_.size() != 0 && timeout_queue_.top().timeout <= now) {
       PeriodicTimeout timeout = timeout_queue_.top();
@@ -621,32 +625,35 @@ class FluentExecutor<
       timeout.timeout = now + timeout.periodic->Period();
       timeout_queue_.push(timeout);
     }
-    return Status::OK;
+    return common::Status::OK;
   }
 
   template <std::size_t RequestIndex, std::size_t ResponseIndex>
   void ValidateBlackBoxIndexes() {
-    using num_collections = sizet_constant<sizeof...(Collections)>;
-    using req_index = sizet_constant<RequestIndex>;
-    using resp_index = sizet_constant<ResponseIndex>;
-    static_assert(StaticAssert<Lt<req_index, num_collections>>::value,
-                  "RequestIndex out of bounds.");
-    static_assert(StaticAssert<Lt<resp_index, num_collections>>::value,
-                  "ResponseIndex out of bounds.");
-    static_assert(StaticAssert<Ne<req_index, resp_index>>::value,
-                  "The same channel cannot be simultaneously a request and a "
-                  "response channel.");
+    using num_collections = common::sizet_constant<sizeof...(Collections)>;
+    using req_index = common::sizet_constant<RequestIndex>;
+    using resp_index = common::sizet_constant<ResponseIndex>;
+    static_assert(
+        common::StaticAssert<common::Lt<req_index, num_collections>>::value,
+        "RequestIndex out of bounds.");
+    static_assert(
+        common::StaticAssert<common::Lt<resp_index, num_collections>>::value,
+        "ResponseIndex out of bounds.");
+    static_assert(
+        common::StaticAssert<common::Ne<req_index, resp_index>>::value,
+        "The same channel cannot be simultaneously a request and a "
+        "response channel.");
 
     using RequestType =
         typename std::decay<decltype(Get<RequestIndex>())>::type;
     using ResponseType =
         typename std::decay<decltype(Get<ResponseIndex>())>::type;
-    static_assert(
-        GetCollectionType<RequestType>::value == CollectionType::CHANNEL,
-        "Request collection is not a channel.");
-    static_assert(
-        GetCollectionType<ResponseType>::value == CollectionType::CHANNEL,
-        "Request collection is not a channel.");
+    static_assert(collections::GetCollectionType<RequestType>::value ==
+                      collections::CollectionType::CHANNEL,
+                  "Request collection is not a channel.");
+    static_assert(collections::GetCollectionType<ResponseType>::value ==
+                      collections::CollectionType::CHANNEL,
+                  "Request collection is not a channel.");
   }
 
   // See RegisterBlackBoxLineage.
@@ -662,9 +669,9 @@ class FluentExecutor<
   // See RegisterBlackBoxLineage.
   template <template <typename> class Pickler_, typename... RequestTs,
             typename... ResponseTs, typename F>
-  WARN_UNUSED Status RegisterBlackBoxLineageImpl(
-      const Channel<Pickler_, RequestTs...>& request,
-      const Channel<Pickler_, ResponseTs...>& response, F f) {
+  WARN_UNUSED common::Status RegisterBlackBoxLineageImpl(
+      const collections::Channel<Pickler_, RequestTs...>& request,
+      const collections::Channel<Pickler_, ResponseTs...>& response, F f) {
     // Validate request types.
     if (request.ColumnNames().size() < static_cast<std::size_t>(3) ||
         request.ColumnNames()[0] != "dst_addr" ||
@@ -674,18 +681,19 @@ class FluentExecutor<
           "The first three columns of a request channel must be a dst_addr, "
           "src_addr, and id column. The remaining columns are the arguments to "
           "the request.";
-      return Status(ErrorCode::INVALID_ARGUMENT, request_columns_err);
+      return common::Status(common::ErrorCode::INVALID_ARGUMENT,
+                            request_columns_err);
     }
-    using RequestTypes = TypeList<RequestTs...>;
-    using RequestType0 = typename TypeListGet<RequestTypes, 0>::type;
-    using RequestType1 = typename TypeListGet<RequestTypes, 1>::type;
-    using RequestType2 = typename TypeListGet<RequestTypes, 2>::type;
+    using RequestTypes = common::TypeList<RequestTs...>;
+    using RequestType0 = typename common::TypeListGet<RequestTypes, 0>::type;
+    using RequestType1 = typename common::TypeListGet<RequestTypes, 1>::type;
+    using RequestType2 = typename common::TypeListGet<RequestTypes, 2>::type;
     using correct_req_type_0 = std::is_same<std::string, RequestType0>;
     using correct_req_type_1 = std::is_same<std::string, RequestType1>;
     using correct_req_type_2 = std::is_same<std::int64_t, RequestType2>;
-    static_assert(StaticAssert<correct_req_type_0>::value, "");
-    static_assert(StaticAssert<correct_req_type_1>::value, "");
-    static_assert(StaticAssert<correct_req_type_2>::value, "");
+    static_assert(common::StaticAssert<correct_req_type_0>::value, "");
+    static_assert(common::StaticAssert<correct_req_type_1>::value, "");
+    static_assert(common::StaticAssert<correct_req_type_2>::value, "");
 
     // Validate response types.
     if (response.ColumnNames().size() < static_cast<std::size_t>(2) ||
@@ -695,24 +703,27 @@ class FluentExecutor<
           "The first two columns of a response channel must be a addr and id "
           "column. The remaining columns are the return values of the "
           "response.";
-      return Status(ErrorCode::INVALID_ARGUMENT, response_columns_err);
+      return common::Status(common::ErrorCode::INVALID_ARGUMENT,
+                            response_columns_err);
     }
-    using ResponseTypes = TypeList<ResponseTs...>;
-    using ResponseType0 = typename TypeListGet<ResponseTypes, 0>::type;
-    using ResponseType1 = typename TypeListGet<ResponseTypes, 1>::type;
+    using ResponseTypes = common::TypeList<ResponseTs...>;
+    using ResponseType0 = typename common::TypeListGet<ResponseTypes, 0>::type;
+    using ResponseType1 = typename common::TypeListGet<ResponseTypes, 1>::type;
     using correct_resp_type_0 = std::is_same<std::string, ResponseType0>;
     using correct_resp_type_1 = std::is_same<std::int64_t, ResponseType1>;
-    static_assert(StaticAssert<correct_resp_type_0>::value, "");
-    static_assert(StaticAssert<correct_resp_type_1>::value, "");
+    static_assert(common::StaticAssert<correct_resp_type_0>::value, "");
+    static_assert(common::StaticAssert<correct_resp_type_1>::value, "");
 
     // Collect argument and return types.
-    using ArgTypes = typename TypeListDrop<RequestTypes, 3>::type;
-    using RetTypes = typename TypeListDrop<ResponseTypes, 2>::type;
+    using ArgTypes = typename common::TypeListDrop<RequestTypes, 3>::type;
+    using RetTypes = typename common::TypeListDrop<ResponseTypes, 2>::type;
     std::vector<std::string> types;
-    auto arg_types = TypeListMapToTuple<ArgTypes, SqlType>()();
-    auto ret_types = TypeListMapToTuple<RetTypes, SqlType>()();
-    TupleIter(arg_types, [&types](const auto& s) { types.push_back(s); });
-    TupleIter(ret_types, [&types](const auto& s) { types.push_back(s); });
+    auto arg_types = common::TypeListMapToTuple<ArgTypes, SqlType>()();
+    auto ret_types = common::TypeListMapToTuple<RetTypes, SqlType>()();
+    common::TupleIter(arg_types,
+                      [&types](const auto& s) { types.push_back(s); });
+    common::TupleIter(ret_types,
+                      [&types](const auto& s) { types.push_back(s); });
 
     // Collect argument and return column names.
     std::vector<std::string> column_names;
@@ -726,8 +737,8 @@ class FluentExecutor<
     }
 
     // Issue SQL queries.
-    constexpr std::size_t num_args = TypeListLen<ArgTypes>::value;
-    constexpr std::size_t num_rets = TypeListLen<RetTypes>::value;
+    constexpr std::size_t num_args = common::TypeListLen<ArgTypes>::value;
+    constexpr std::size_t num_rets = common::TypeListLen<RetTypes>::value;
     auto seq = std::make_index_sequence<1 + num_args + num_rets>();
     const std::string lineage_impl_command = fmt::format(
         R"(
@@ -739,7 +750,7 @@ class FluentExecutor<
                     physical_time_inserted timestamp with time zone)
       AS $${}$$ LANGUAGE SQL;
     )",
-        name_, response.Name(), Join(types),
+        name_, response.Name(), common::Join(types),
         CallBlackBoxLineageFunction(f, seq));
 
     const std::string lineage_command = fmt::format(
@@ -790,7 +801,7 @@ class FluentExecutor<
     )",
         fmt::arg("node_name", name_), fmt::arg("request_table", request.Name()),
         fmt::arg("response_table", response.Name()),
-        fmt::arg("column_names", Join(column_names)));
+        fmt::arg("column_names", common::Join(column_names)));
 
     return lineagedb_client_->RegisterBlackBoxLineage(
         response.Name(),
@@ -799,8 +810,8 @@ class FluentExecutor<
 
   // TODO(mwhittaker): Document.
   template <typename Collection, typename RuleTag, typename Ra>
-  WARN_UNUSED Status ExecuteRule(int rule_number,
-                                 Rule<Collection, RuleTag, Ra>* rule) {
+  WARN_UNUSED common::Status ExecuteRule(int rule_number,
+                                         Rule<Collection, RuleTag, Ra>* rule) {
     VLOG(1) << "Executing rule " << rule_number << ".";
 
     if (logical_time_wrapper_ != nullptr) {
@@ -809,7 +820,7 @@ class FluentExecutor<
     time_++;
 
     using column_types = typename Ra::column_types;
-    using tuple_type = typename TypeListToTuple<column_types>::type;
+    using tuple_type = typename common::TypeListToTuple<column_types>::type;
     Hash<tuple_type> hash;
     const bool is_insert = detail::IsRuleTagInsert<RuleTag>::value;
 
@@ -833,9 +844,9 @@ class FluentExecutor<
         RETURN_IF_ERROR(lineagedb_client_->InsertTuple(
             rule->collection->Name(), time_, Clock::now(), tuple));
 
-        switch (GetCollectionType<Collection>::value) {
-          case CollectionType::CHANNEL:
-          case CollectionType::STDOUT: {
+        switch (collections::GetCollectionType<Collection>::value) {
+          case collections::CollectionType::CHANNEL:
+          case collections::CollectionType::STDOUT: {
             // When a tuple is is_insert into a channel or stdout, it isn't
             // really is_insert at all. Channels send their tuples away and
             // stdout just prints the message to the screen. Thus, we insert
@@ -843,10 +854,10 @@ class FluentExecutor<
             RETURN_IF_ERROR(lineagedb_client_->DeleteTuple(
                 rule->collection->Name(), time_, Clock::now(), tuple));
           }
-          case CollectionType::TABLE:
-          case CollectionType::SCRATCH:
-          case CollectionType::STDIN:
-          case CollectionType::PERIODIC: {
+          case collections::CollectionType::TABLE:
+          case collections::CollectionType::SCRATCH:
+          case collections::CollectionType::STDIN:
+          case collections::CollectionType::PERIODIC: {
             // Do nothing.
           }
         }
@@ -868,7 +879,7 @@ class FluentExecutor<
       detail::UpdateCollection(rule->collection, t, hash(t), time_, RuleTag());
     }
 
-    return Status::OK;
+    return common::Status::OK;
   }
 
   // The logical time of the fluent program. The logical time begins at 0 and
@@ -883,8 +894,8 @@ class FluentExecutor<
   BootstrapRulesTuple bootstrap_rules_;
   std::unique_ptr<TimestampWrapper> logical_time_wrapper_;
   std::unique_ptr<NetworkState> network_state_;
-  Stdin* const stdin_;
-  std::vector<Periodic<Clock>*> periodics_;
+  collections::Stdin* const stdin_;
+  std::vector<collections::Periodic<Clock>*> periodics_;
   std::unique_ptr<LineageDbClient<Hash, ToSql, Clock>> lineagedb_client_;
 
   // A collection of rules (lhs, type, rhs) where
@@ -953,7 +964,7 @@ class FluentExecutor<
   //           +--------------+--------------+--------------+
   struct PeriodicTimeout {
     Time timeout;
-    Periodic<Clock>* periodic;
+    collections::Periodic<Clock>* periodic;
   };
 
   // See `PeriodicTimeout`.

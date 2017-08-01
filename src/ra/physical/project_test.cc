@@ -19,7 +19,7 @@ TEST(Project, EmptyProject) {
   auto iterable = pra::make_iterable(&xs);
   auto project = pra::make_project<0, 1, 2>(std::move(iterable));
   std::set<std::tuple<int, char, bool>> expected;
-  ExpectRngsUnorderedEqual(project.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(project.ToRange(), expected);
 }
 
 TEST(Project, ZeroColumnProject) {
@@ -27,7 +27,7 @@ TEST(Project, ZeroColumnProject) {
   auto iterable = pra::make_iterable(&xs);
   auto project = pra::make_project<>(std::move(iterable));
   std::set<std::tuple<>> expected = {{}};
-  ExpectRngsUnorderedEqual(project.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(project.ToRange(), expected);
 }
 
 TEST(Project, SimpleProject) {
@@ -35,7 +35,7 @@ TEST(Project, SimpleProject) {
   auto iterable = pra::make_iterable(&xs);
   auto project = pra::make_project<2, 1>(std::move(iterable));
   std::set<std::tuple<bool, char>> expected = {{true, 'a'}, {false, 'b'}};
-  ExpectRngsUnorderedEqual(project.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(project.ToRange(), expected);
 }
 
 TEST(Project, RepeatedColumnsProject) {
@@ -44,7 +44,7 @@ TEST(Project, RepeatedColumnsProject) {
   auto project = pra::make_project<0, 1, 2, 1, 0>(std::move(iterable));
   std::set<std::tuple<int, char, bool, char, int>> expected = {
       {1, 'a', true, 'a', 1}, {2, 'b', false, 'b', 2}};
-  ExpectRngsUnorderedEqual(project.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(project.ToRange(), expected);
 }
 
 }  // namespace fluent

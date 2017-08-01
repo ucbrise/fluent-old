@@ -14,15 +14,21 @@ namespace logical {
 
 template <typename Ra, typename F>
 struct Map : public LogicalRa {
-  static_assert(StaticAssert<std::is_base_of<LogicalRa, Ra>>::value, "");
+  static_assert(common::StaticAssert<std::is_base_of<LogicalRa, Ra>>::value,
+                "");
   using child_column_types = typename Ra::column_types;
-  using child_column_tuple = typename TypeListToTuple<child_column_types>::type;
-  static_assert(StaticAssert<IsInvocable<F, child_column_tuple>>::value, "");
+  using child_column_tuple =
+      typename common::TypeListToTuple<child_column_types>::type;
+  static_assert(
+      common::StaticAssert<common::IsInvocable<F, child_column_tuple>>::value,
+      "");
   using column_tuple = typename std::result_of<F(child_column_tuple)>::type;
   using column_tuple_decayed = typename std::decay<column_tuple>::type;
-  static_assert(StaticAssert<IsTuple<column_tuple_decayed>>::value, "");
+  static_assert(
+      common::StaticAssert<common::IsTuple<column_tuple_decayed>>::value, "");
 
-  using column_types = typename TupleToTypeList<column_tuple_decayed>::type;
+  using column_types =
+      typename common::TupleToTypeList<column_tuple_decayed>::type;
   Map(Ra child_, F f_) : child(std::move(child_)), f(std::move(f_)) {}
   Ra child;
   F f;

@@ -26,7 +26,7 @@ void IntIntJoin(const std::set<std::tuple<int>>& left,
   auto hash_join = pra::make_hash_join<left_keys, right_keys, left_column_tuple,
                                        left_key_column_tuple>(
       std::move(left_iterable), std::move(right_iterable));
-  ExpectRngsUnorderedEqual(hash_join.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(hash_join.ToRange(), expected);
 }
 
 TEST(HashJoin, EmptyEmptyJoin) {
@@ -67,7 +67,7 @@ TEST(HashJoin, NonEmptyJoin) {
   std::set<std::tuple<int, float, int, char>> expected = {
       {1, 1.0, 1, 'a'}, {1, 2.0, 1, 'a'}, {1, 1.0, 1, 'b'}, {1, 2.0, 1, 'b'},
       {2, 3.0, 2, 'c'}, {2, 3.0, 2, 'd'}, {3, 4.0, 3, 'e'}, {3, 5.0, 3, 'e'}};
-  ExpectRngsUnorderedEqual(hash_join.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(hash_join.ToRange(), expected);
 }
 
 TEST(HashJoin, MultiColumnJoin) {
@@ -84,7 +84,7 @@ TEST(HashJoin, MultiColumnJoin) {
       std::move(left_iterable), std::move(right_iterable));
   std::set<std::tuple<int, float, int, char>> expected = {{2, 2.0, 2.0, 2},
                                                           {3, 3.0, 3.0, 3}};
-  ExpectRngsUnorderedEqual(hash_join.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(hash_join.ToRange(), expected);
 }
 
 TEST(HashJoin, RepeatedColumnJoin) {
@@ -102,7 +102,7 @@ TEST(HashJoin, RepeatedColumnJoin) {
       std::move(left_iterable), std::move(right_iterable));
   std::set<std::tuple<int, int, int>> expected = {
       {1, 1, 1}, {2, 2, 2}, {3, 3, 3}};
-  ExpectRngsUnorderedEqual(hash_join.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(hash_join.ToRange(), expected);
 }
 
 }  // namespace fluent

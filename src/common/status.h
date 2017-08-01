@@ -22,6 +22,7 @@
 #include "common/error_code.h"
 
 namespace fluent {
+namespace common {
 
 // A Status is a combination of an error code and a string message (for non-OK
 // error codes).
@@ -72,6 +73,7 @@ inline bool Status::operator!=(const Status& other) const {
 
 extern ::std::ostream& operator<<(::std::ostream& os, const Status& other);
 
+}  // namespace common
 }  // namespace fluent
 
 #endif  // COMMON_STATUS_H_

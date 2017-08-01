@@ -25,6 +25,11 @@ namespace fluent {
 
 namespace ldb = lineagedb;
 
+using common::Status;
+using common::Hash;
+using common::MockPickler;
+using testing::MockClock;
+
 TEST(FluentBuilder, SimpleBuildCheckNoLogicalTimestamp) {
   zmq::context_t context(1);
   ldb::ConnectionConfig conf;

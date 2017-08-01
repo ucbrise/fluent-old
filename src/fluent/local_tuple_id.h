@@ -51,6 +51,7 @@ inline bool operator>=(const LocalTupleId& lhs, const LocalTupleId& rhs) {
 }
 
 inline std::ostream& operator<<(std::ostream& out, const LocalTupleId& id) {
+  using fluent::common::operator<<;
   out << ToTuple(id);
   return out;
 }

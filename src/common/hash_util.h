@@ -12,6 +12,7 @@
 #include "common/tuple_util.h"
 
 namespace fluent {
+namespace common {
 // The C++ standard library includes an `std::hash` struct template that can be
 // used to hash a bunch of standard types. For example `std::hash<int>` is a
 // struct which contains a call operator of type `std::size_t operator()(int
@@ -78,6 +79,7 @@ struct Hash<std::tuple<Ts...>> {
   }
 };
 
+}  // namespace common
 }  // namespace fluent
 
 #endif  //  COMMON_HASH_UTIL_H_

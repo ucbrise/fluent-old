@@ -9,6 +9,7 @@
 #include "common/tuple_util.h"
 
 namespace fluent {
+namespace collections {
 
 struct CollectionTupleIds {
   std::size_t hash;
@@ -57,10 +58,12 @@ inline bool operator>=(const CollectionTupleIds& lhs,
 
 inline std::ostream& operator<<(std::ostream& out,
                                 const CollectionTupleIds& ids) {
+  using fluent::common::operator<<;
   out << ToTuple(ids);
   return out;
 }
 
+}  // namespace collections
 }  // namespace fluent
 
 #endif  // COLLECTIONS_COLLECTION_TUPLE_IDS_H_

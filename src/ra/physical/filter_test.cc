@@ -20,7 +20,7 @@ TEST(Filter, EmptyFilter) {
   auto f = [](const std::tuple<int>&) { return true; };
   auto filter = pra::make_filter(std::move(iterable), f);
   std::set<std::tuple<int>> expected;
-  ExpectRngsUnorderedEqual(filter.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(filter.ToRange(), expected);
 }
 
 TEST(Filter, NonEmptyFilter) {
@@ -29,7 +29,7 @@ TEST(Filter, NonEmptyFilter) {
   auto f = [](const std::tuple<int>& t) { return std::get<0>(t) % 2 == 1; };
   auto filter = pra::make_filter(std::move(iterable), f);
   std::set<std::tuple<int>> expected = {{1}, {3}};
-  ExpectRngsUnorderedEqual(filter.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(filter.ToRange(), expected);
 }
 
 }  // namespace fluent

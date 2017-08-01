@@ -99,7 +99,7 @@ struct MockToSql<std::vector<T>> {
     for (const T& x : xs) {
       values.push_back(MockToSql<T>().Value(x));
     }
-    return fmt::format("[{}]", Join(values));
+    return fmt::format("[{}]", common::Join(values));
   }
 };
 
@@ -114,7 +114,7 @@ struct MockToSql<std::array<T, N>> {
     for (const T& x : xs) {
       values.push_back(MockToSql<T>().Value(x));
     }
-    return fmt::format("[{}]", Join(values));
+    return fmt::format("[{}]", common::Join(values));
   }
 };
 

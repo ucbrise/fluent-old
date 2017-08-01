@@ -10,10 +10,11 @@
 #include "common/string_util.h"
 
 namespace fluent {
+namespace testing {
 
 void ExpectStringsEqualIgnoreWhiteSpace(const std::string& x,
                                         const std::string& y) {
-  EXPECT_EQ(CrunchWhitespace(x), CrunchWhitespace(y))
+  EXPECT_EQ(common::CrunchWhitespace(x), common::CrunchWhitespace(y))
       << "CrunchWhitespace(" << x << ") != CrunchWhitespace(" << y << ").";
 }
 
@@ -42,9 +43,10 @@ void ExpectRngsEqual(Rng1 actual, Rng2 expected) {
 template <typename Rng, typename Container>
 void ExpectRngsUnorderedEqual(Rng actual, const Container& expected) {
   auto container = actual | ranges::to_<Container>();
-  EXPECT_THAT(container, testing::UnorderedElementsAreArray(expected));
+  EXPECT_THAT(container, ::testing::UnorderedElementsAreArray(expected));
 }
 
+}  // namespace testing
 }  // namespace fluent
 
 #endif  // TESTING_TEST_UTIL_H_

@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
 
   const std::string server_address = argv[4];
   const std::string client_address = argv[5];
-  fluent::RandomIdGenerator id_gen;
+  fluent::common::RandomIdGenerator id_gen;
 
   zmq::context_t context(1);
   ldb::ConnectionConfig config{"localhost", 5432, argv[1], argv[2], argv[3]};
@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
                 .ConsumeValueOrDie()
                 .stdin()
                 .stdout();
-  fluent::Status status =
+  fluent::common::Status status =
       AddPrimalityApi(std::move(fb))
           .RegisterRules([&](auto& stdin, auto& stdout, auto& req, auto& resp) {
             using namespace fluent::infix;
@@ -67,5 +67,5 @@ int main(int argc, char* argv[]) {
           })
           .ConsumeValueOrDie()
           .Run();
-  CHECK_EQ(fluent::Status::OK, status);
+  CHECK_EQ(fluent::common::Status::OK, status);
 }

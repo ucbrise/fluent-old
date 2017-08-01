@@ -6,6 +6,7 @@
 #include <string>
 
 namespace fluent {
+namespace common {
 
 template <typename Clock>
 std::ostream& operator<<(std::ostream& out,
@@ -16,6 +17,7 @@ std::ostream& operator<<(std::ostream& out,
   return out;
 }
 
+}  // namespace common
 }  // namespace fluent
 
 #endif  //  COMMON_TIME_UTIL_H_

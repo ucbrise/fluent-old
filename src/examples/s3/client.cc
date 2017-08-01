@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
   const std::string client_addr = argv[5];
 
   // Random id generator.
-  fluent::RandomIdGenerator id_gen;
+  fluent::common::RandomIdGenerator id_gen;
 
   // ZeroMQ context.
   zmq::context_t context(1);
@@ -49,13 +49,13 @@ int main(int argc, char* argv[]) {
   config.password = db_password;
   config.dbname = db_dbname;
 
-  const std::string name = "s3_client_" + fluent::RandomAlphanum(10);
+  const std::string name = "s3_client_" + fluent::common::RandomAlphanum(10);
   auto fb = fluent::fluent<ldb::PqxxClient>(name, client_addr, &context, config)
                 .ConsumeValueOrDie()
                 .stdin()
                 .stdout()
                 .scratch<std::vector<std::string>>("split", {{"parts"}});
-  fluent::Status status =
+  fluent::common::Status status =
       AddS3Api(std::move(fb))
           .RegisterRules([&](auto& stdin, auto& stdout, auto& split,
                              auto& mb_req, auto& mb_resp, auto& rb_req,
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
                 (lra::make_collection(&stdin) |
                  lra::map([](const std::tuple<std::string>& s) -> parts_tuple {
                    const std::string& line = std::get<0>(s);
-                   return {fluent::Split(line)};
+                   return {fluent::common::Split(line)};
                  }));
 
             auto send_mb =
@@ -172,7 +172,7 @@ int main(int argc, char* argv[]) {
                    if (err != "") {
                      return std::tuple<std::string>(err);
                    } else {
-                     return std::tuple<std::string>(fluent::Join(keys));
+                     return std::tuple<std::string>(fluent::common::Join(keys));
                    }
                  }));
 
@@ -234,5 +234,5 @@ int main(int argc, char* argv[]) {
           })
           .ConsumeValueOrDie()
           .Run();
-  CHECK_EQ(status, fluent::Status::OK);
+  CHECK_EQ(status, fluent::common::Status::OK);
 }

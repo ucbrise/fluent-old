@@ -23,7 +23,7 @@ template <template <template <typename> class, template <typename> class,
 int ServerMain(const ServerArgs& args,
                const fluent::lineagedb::ConnectionConfig& connection_config) {
   zmq::context_t context(1);
-  fluent::Status status =
+  fluent::common::Status status =
       fluent::fluent<LineageDbClient>("chat_server", args.server_address,
                                       &context, connection_config)
           .ConsumeValueOrDie()
@@ -51,7 +51,7 @@ int ServerMain(const ServerArgs& args,
           })
           .ConsumeValueOrDie()
           .Run();
-  CHECK_EQ(fluent::Status::OK, status);
+  CHECK_EQ(fluent::common::Status::OK, status);
 
   return 0;
 }

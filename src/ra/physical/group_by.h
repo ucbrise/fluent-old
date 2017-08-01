@@ -25,8 +25,10 @@ template <typename Ra, std::size_t... Ks, typename KeyColumnTuple,
           typename AggregateImplTuple>
 class GroupBy<Ra, Keys<Ks...>, KeyColumnTuple, AggregateImplTuple>
     : public PhysicalRa {
-  static_assert(StaticAssert<std::is_base_of<PhysicalRa, Ra>>::value, "");
-  static_assert(StaticAssert<IsTuple<AggregateImplTuple>>::value, "");
+  static_assert(common::StaticAssert<std::is_base_of<PhysicalRa, Ra>>::value,
+                "");
+  static_assert(
+      common::StaticAssert<common::IsTuple<AggregateImplTuple>>::value, "");
 
  public:
   explicit GroupBy(Ra child) : child_(std::move(child)) {}
@@ -37,7 +39,7 @@ class GroupBy<Ra, Keys<Ks...>, KeyColumnTuple, AggregateImplTuple>
     groups_.clear();
 
     ranges::for_each(child_.ToRange(), [this](const auto& t) {
-      auto& group = groups_[TupleProject<Ks...>(t)];
+      auto& group = groups_[common::TupleProject<Ks...>(t)];
       TupleIter(group, [this, &t](auto& agg) { this->UpdateAgg(&agg, t); });
     });
 
@@ -54,7 +56,7 @@ class GroupBy<Ra, Keys<Ks...>, KeyColumnTuple, AggregateImplTuple>
   template <template <typename, typename> class AggregateImpl,  //
             typename Columns, typename Ts, typename... Us>
   void UpdateAgg(AggregateImpl<Columns, Ts>* agg, const std::tuple<Us...>& t) {
-    agg->Update(TupleProjectBySizetList<Columns>(t));
+    agg->Update(common::TupleProjectBySizetList<Columns>(t));
   }
 
   Ra child_;

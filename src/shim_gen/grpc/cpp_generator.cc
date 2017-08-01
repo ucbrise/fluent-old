@@ -197,7 +197,7 @@ void PrintClientMethod(const fluent_generator::Method &method,
 
   // Method signature.
   vars["output_type"] =
-      fmt::format("std::tuple<{}>", fluent::Join(out_field_types));
+      fmt::format("std::tuple<{}>", fluent::common::Join(out_field_types));
   printer->Print(vars, "$output_type$ ");
   printer->Print(vars, "$method_name$(");
   for (std::size_t j = 0; j < in_field_types.size(); ++j) {
@@ -307,8 +307,8 @@ void PrintMethodCollections(const fluent_generator::Method &method,
   const std::vector<std::string> out_field_names = FieldNames(*out_type);
 
   std::map<std::string, std::string> vars;
-  vars["request_types"] = fluent::Join(in_field_types);
-  vars["reply_types"] = fluent::Join(out_field_types);
+  vars["request_types"] = fluent::common::Join(in_field_types);
+  vars["reply_types"] = fluent::common::Join(out_field_types);
   vars["method_name"] = method.name();
 
   // Request channel.

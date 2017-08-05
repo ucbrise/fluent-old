@@ -9,8 +9,7 @@ main() {
         return 1
     fi
 
-    session="$(tmux display-message -p '#S')"
-    tmux new-window -t "$session" -n "handwritten_grpc"
+    tmux new-window -n "handwritten_grpc"
     tmux split-window -h
     tmux select-pane -t 0
     tmux split-window -v

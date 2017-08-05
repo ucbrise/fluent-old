@@ -9,8 +9,7 @@ main() {
         return 1
     fi
 
-    session="$(tmux display-message -p '#S')"
-    tmux new-window -t "$session" -n "s3_benchmark"
+    tmux new-window -n "s3_benchmark"
     tmux split-window -v -p 99
     tmux select-layout even-vertical
     tmux select-pane -t 1

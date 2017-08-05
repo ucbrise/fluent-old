@@ -16,8 +16,7 @@ main() {
     #
     # first.
 
-    session="$(tmux display-message -p '#S')"
-    tmux new-window -t "$session" -n "cassandra"
+    tmux new-window -n "cassandra"
     tmux split-window -v -p 99
     tmux split-window -v -p 99
     tmux split-window -v -p 99

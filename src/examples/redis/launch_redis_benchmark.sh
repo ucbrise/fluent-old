@@ -11,8 +11,7 @@ main() {
 
     # Make sure to start a redis server first.
 
-    session="$(tmux display-message -p '#S')"
-    tmux new-window -t "$session" -n "redis"
+    tmux new-window -n "redis"
     tmux split-window -h
     tmux select-layout even-vertical
     tmux select-pane -t 1

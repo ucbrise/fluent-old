@@ -9,8 +9,7 @@ main() {
         return 1
     fi
 
-    session="$(tmux display-message -p '#S')"
-    tmux new-window -t "$session" -n "primality"
+    tmux new-window -n "primality"
     tmux split-window -h
     tmux split-window -h
     tmux select-pane -t 0

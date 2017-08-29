@@ -19,6 +19,11 @@
 namespace lra = fluent::ra::logical;
 namespace ldb = fluent::lineagedb;
 
+using fluent::common::Hash;
+using fluent::common::MockPickler;
+using fluent::lineagedb::AsyncPqxxClient;
+using fluent::lineagedb::ToSql;
+
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
 
@@ -60,9 +65,8 @@ int main(int argc, char* argv[]) {
 
   zmq::context_t context(1);
   auto f =
-      fluent::fluent<ldb::AsyncPqxxClient, fluent::common::Hash, ldb::ToSql,
-                     fluent::common::MockPickler>(
-          "redis_server_benchmark_lineage", address, &context, conf)
+      fluent::fluent<AsyncPqxxClient, Hash, ToSql, MockPickler>(
+          "redis_benchmark_lineage_server", address, &context, conf)
           .ConsumeValueOrDie()
           .channel<std::string, std::string, std::int64_t, std::string,
                    std::string>(

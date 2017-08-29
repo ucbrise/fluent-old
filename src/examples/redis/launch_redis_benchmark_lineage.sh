@@ -10,6 +10,10 @@ main() {
     fi
 
     # Make sure to start a redis server first.
+    if ! ps aux | grep "[r]edis-server"; then
+        echo "ERROR: no running redis-server found."
+        return 1;
+    fi
 
     session="$(tmux display-message -p '#S')"
     tmux new-window -t "$session" -n "redis"
@@ -24,8 +28,8 @@ main() {
     server_addr="tcp://0.0.0.0:9000"
     client_addr="tcp://0.0.0.0:9001"
     bindir="./build/Release/bin"
-    server="$bindir/examples_redis_server_benchmark_lineage"
-    client="$bindir/examples_redis_client_benchmark"
+    server="$bindir/examples_redis_benchmark_lineage_server"
+    client="$bindir/examples_redis_benchmark_client"
 
     tmux send-keys -t 2 "psql -f ./scripts/reset_database.sql" C-m
 
@@ -33,7 +37,7 @@ main() {
     tmux send-keys -t 0 "$glog $server $db_config $redis_config $server_addr" C-m
 
     tmux send-keys -t 1 "sleep 2" C-m
-    tmux send-keys -t 1 "$glog $client $server_addr $client_addr joe" C-m
+    tmux send-keys -t 1 "$glog $client $server_addr $client_addr" C-m
 }
 
 main

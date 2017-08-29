@@ -14,10 +14,15 @@ MACRO(CREATE_REDIS_EXECUTABLE NAME)
         fluent)
 ENDMACRO(CREATE_REDIS_EXECUTABLE)
 
-CREATE_REDIS_EXECUTABLE(client)
-CREATE_REDIS_EXECUTABLE(client_benchmark)
+# Redox example.
 CREATE_REDIS_EXECUTABLE(redox_example)
+
+# Client and server.
+CREATE_REDIS_EXECUTABLE(client)
 CREATE_REDIS_EXECUTABLE(server)
-CREATE_REDIS_EXECUTABLE(server_benchmark)
-CREATE_REDIS_EXECUTABLE(server_benchmark_lineage)
-CREATE_REDIS_EXECUTABLE(speed_test_sync)
+
+# Benchmarks.
+CREATE_REDIS_EXECUTABLE(benchmark_client)
+CREATE_REDIS_EXECUTABLE(benchmark_lineage_server)
+CREATE_REDIS_EXECUTABLE(benchmark_redox)
+CREATE_REDIS_EXECUTABLE(benchmark_server)

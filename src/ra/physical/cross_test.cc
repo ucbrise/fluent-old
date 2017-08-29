@@ -21,7 +21,7 @@ TEST(Cross, EmptyCross) {
   auto iterable_ys = pra::make_iterable(&ys);
   auto cross = pra::make_cross(std::move(iterable_xs), std::move(iterable_ys));
   std::set<std::tuple<int, char>> expected;
-  ExpectRngsUnorderedEqual(cross.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(cross.ToRange(), expected);
 }
 
 TEST(Cross, NonEmptyCross) {
@@ -33,7 +33,7 @@ TEST(Cross, NonEmptyCross) {
   std::set<std::tuple<int, char>> expected = {{1, 'a'}, {1, 'b'}, {1, 'c'},
                                               {2, 'a'}, {2, 'b'}, {2, 'c'},
                                               {3, 'a'}, {3, 'b'}, {3, 'c'}};
-  ExpectRngsUnorderedEqual(cross.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(cross.ToRange(), expected);
 }
 
 }  // namespace fluent

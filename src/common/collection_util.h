@@ -6,6 +6,7 @@
 #include <vector>
 
 namespace fluent {
+namespace common {
 
 // Pretty print an std::set (e.g. {1, 2, 3}).
 template <typename... Ts>
@@ -41,6 +42,7 @@ std::ostream& operator<<(std::ostream& out, const std::vector<Ts...>& xs) {
   return out;
 }
 
+}  // namespace common
 }  // namespace fluent
 
 #endif  //  COMMON_COLLECTION_UTIL_H_

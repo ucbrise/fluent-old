@@ -21,6 +21,7 @@
 #include "common/type_traits.h"
 
 namespace fluent {
+namespace collections {
 
 // A Periodic is a two-column collection where the first column is a unique id
 // of type `id` and the second column is a time point of type `time`. It looks
@@ -89,6 +90,7 @@ class Periodic : public Collection {
   std::map<std::tuple<id, time>, CollectionTupleIds> ts_;
 };
 
+}  // namespace collections
 }  // namespace fluent
 
 #endif  // COLLECTIONS_PERIODIC_H_

@@ -29,7 +29,7 @@ int ClientMain(const ClientArgs& args,
       std::make_tuple(args.server_address, args.client_address, args.nickname)};
 
   zmq::context_t context(1);
-  fluent::Status status =
+  fluent::common::Status status =
       fluent::fluent<LineageDbClient>("chat_client_" + args.nickname,
                                       args.client_address, &context,
                                       connection_config)
@@ -61,7 +61,7 @@ int ClientMain(const ClientArgs& args,
           })
           .ConsumeValueOrDie()
           .Run();
-  CHECK_EQ(fluent::Status::OK, status);
+  CHECK_EQ(fluent::common::Status::OK, status);
 
   return 0;
 }

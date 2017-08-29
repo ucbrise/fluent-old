@@ -10,6 +10,9 @@
 #include "testing/mock_clock.h"
 
 namespace fluent {
+namespace common {
+
+using testing::MockClock;
 
 TEST(Hash, HashBuiltins) {
   EXPECT_EQ(Hash<bool>()(true), std::hash<bool>()(true));
@@ -80,6 +83,7 @@ TEST(Hash, TupleTupleHash) {
   EXPECT_EQ(hash_x, hash_z);
 }
 
+}  // namespace common
 }  // namespace fluent
 
 int main(int argc, char** argv) {

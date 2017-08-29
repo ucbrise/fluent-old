@@ -14,13 +14,16 @@ namespace logical {
 
 template <typename Left, typename Right>
 struct Cross : public LogicalRa {
-  static_assert(StaticAssert<std::is_base_of<LogicalRa, Left>>::value, "");
-  static_assert(StaticAssert<std::is_base_of<LogicalRa, Right>>::value, "");
+  static_assert(common::StaticAssert<std::is_base_of<LogicalRa, Left>>::value,
+                "");
+  static_assert(common::StaticAssert<std::is_base_of<LogicalRa, Right>>::value,
+                "");
   using left_column_types = typename Left::column_types;
   using right_column_types = typename Right::column_types;
 
   using column_types =
-      typename TypeListConcat<left_column_types, right_column_types>::type;
+      typename common::TypeListConcat<left_column_types,
+                                      right_column_types>::type;
   Cross(Left left_, Right right_)
       : left(std::move(left_)), right(std::move(right_)) {}
   Left left;

@@ -38,7 +38,7 @@ class AsyncPqxxClient : public PqxxClient<Hash, ToSql, Clock> {
   DISALLOW_MOVE_AND_ASSIGN(AsyncPqxxClient);
   virtual ~AsyncPqxxClient() = default;
 
-  static WARN_UNUSED StatusOr<std::unique_ptr<AsyncPqxxClient>> Make(
+  static WARN_UNUSED common::StatusOr<std::unique_ptr<AsyncPqxxClient>> Make(
       std::string name, std::size_t id, std::string address,
       const ConnectionConfig& connection_config) {
     try {
@@ -47,7 +47,8 @@ class AsyncPqxxClient : public PqxxClient<Hash, ToSql, Clock> {
       RETURN_IF_ERROR(client->Init());
       return std::move(client);
     } catch (const pqxx::pqxx_exception& e) {
-      return Status(ErrorCode::INVALID_ARGUMENT, e.base().what());
+      return common::Status(common::ErrorCode::INVALID_ARGUMENT,
+                            e.base().what());
     }
   }
 
@@ -59,10 +60,10 @@ class AsyncPqxxClient : public PqxxClient<Hash, ToSql, Clock> {
     t_ = std::thread(&AsyncPqxxClient::ExecuteQueries, this);
   }
 
-  WARN_UNUSED Status ExecuteQuery(const std::string& name,
-                                  const std::string& query) override {
+  WARN_UNUSED common::Status ExecuteQuery(const std::string& name,
+                                          const std::string& query) override {
     queries_.Push({name, query});
-    return Status::OK;
+    return common::Status::OK;
   }
 
  private:
@@ -83,7 +84,7 @@ class AsyncPqxxClient : public PqxxClient<Hash, ToSql, Clock> {
     }
   }
 
-  ConcurrentQueue<std::pair<std::string, std::string>> queries_;
+  common::ConcurrentQueue<std::pair<std::string, std::string>> queries_;
   std::thread t_;
 };
 

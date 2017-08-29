@@ -4,6 +4,7 @@
 #include "gtest/gtest.h"
 
 namespace fluent {
+namespace common {
 
 TEST(StringUtil, Join) {
   EXPECT_EQ(Join(), "");
@@ -63,6 +64,7 @@ TEST(StringUtil, CrunchWhitespace) {
   EXPECT_EQ(CrunchWhitespace("\n \n"), " "s);
 }
 
+}  // namespace common
 }  // namespace fluent
 
 int main(int argc, char** argv) {

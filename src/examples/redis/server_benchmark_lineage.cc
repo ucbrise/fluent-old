@@ -60,9 +60,9 @@ int main(int argc, char* argv[]) {
 
   zmq::context_t context(1);
   auto f =
-      fluent::fluent<ldb::AsyncPqxxClient, fluent::Hash, ldb::ToSql,
-                     fluent::MockPickler>("redis_server_benchmark_lineage",
-                                          address, &context, conf)
+      fluent::fluent<ldb::AsyncPqxxClient, fluent::common::Hash, ldb::ToSql,
+                     fluent::common::MockPickler>(
+          "redis_server_benchmark_lineage", address, &context, conf)
           .ConsumeValueOrDie()
           .channel<std::string, std::string, std::int64_t, std::string,
                    std::string>(
@@ -84,5 +84,5 @@ int main(int argc, char* argv[]) {
             return std::make_tuple(set);
           })
           .ConsumeValueOrDie();
-  CHECK_EQ(fluent::Status::OK, f.Run());
+  CHECK_EQ(fluent::common::Status::OK, f.Run());
 }

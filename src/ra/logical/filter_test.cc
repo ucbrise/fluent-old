@@ -22,8 +22,9 @@ TEST(Filter, SimpleCompileCheck) {
   UNUSED(filter);
 
   using actual = decltype(filter)::column_types;
-  using expected = TypeList<int>;
-  static_assert(StaticAssert<std::is_same<actual, expected>>::value, "");
+  using expected = common::TypeList<int>;
+  static_assert(common::StaticAssert<std::is_same<actual, expected>>::value,
+                "");
 }
 
 // This code should NOT compile.

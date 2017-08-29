@@ -7,6 +7,7 @@
 #include "gtest/gtest.h"
 
 namespace fluent {
+namespace common {
 namespace {
 
 template <typename T>
@@ -30,6 +31,7 @@ TEST(CollectionUtil, VectorToString) {
   EXPECT_EQ("[1, 2, 3]", ToString(std::vector<int>{1, 2, 3}));
 }
 
+}  // namespace common
 }  // namespace fluent
 
 int main(int argc, char** argv) {

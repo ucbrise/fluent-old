@@ -95,8 +95,9 @@ int main(int argc, char* argv[]) {
 
   // Fluent builder.
   const std::string name = "s3_server_benchmark_lineage";
-  auto fb_or = fluent::fluent<ldb::AsyncPqxxClient, fluent::Hash, ldb::ToSql,
-                              fluent::MockPickler>(name, addr, &context, conf);
+  auto fb_or =
+      fluent::fluent<ldb::AsyncPqxxClient, fluent::common::Hash, ldb::ToSql,
+                     fluent::common::MockPickler>(name, addr, &context, conf);
   auto fb = fb_or.ConsumeValueOrDie();
 
   // Declare collections.
@@ -182,5 +183,5 @@ int main(int argc, char* argv[]) {
             return std::make_tuple(echo, rm, cat);
           });
   auto with_rules = with_rules_or.ConsumeValueOrDie();
-  CHECK_EQ(with_rules.Run(), fluent::Status::OK);
+  CHECK_EQ(with_rules.Run(), fluent::common::Status::OK);
 }

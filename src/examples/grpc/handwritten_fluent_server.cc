@@ -43,5 +43,5 @@ int main(int argc, char* argv[]) {
                                                address, &context, config);
   auto fb = fb_or.ConsumeValueOrDie();
   auto f = GetEchoServiceShim(std::move(fb), &client).ConsumeValueOrDie();
-  CHECK_EQ(fluent::Status::OK, f.Run());
+  CHECK_EQ(fluent::common::Status::OK, f.Run());
 }

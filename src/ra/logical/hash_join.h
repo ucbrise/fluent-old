@@ -22,16 +22,20 @@ template <typename Left, std::size_t... LeftKs, typename Right,
           std::size_t... RightKs>
 struct HashJoin<Left, LeftKeys<LeftKs...>, Right, RightKeys<RightKs...>>
     : public LogicalRa {
-  static_assert(StaticAssert<std::is_base_of<LogicalRa, Left>>::value, "");
-  static_assert(StaticAssert<std::is_base_of<LogicalRa, Right>>::value, "");
+  static_assert(common::StaticAssert<std::is_base_of<LogicalRa, Left>>::value,
+                "");
+  static_assert(common::StaticAssert<std::is_base_of<LogicalRa, Right>>::value,
+                "");
   using left_size = std::integral_constant<std::size_t, sizeof...(LeftKs)>;
   using right_size = std::integral_constant<std::size_t, sizeof...(RightKs)>;
-  static_assert(StaticAssert<std::is_same<left_size, right_size>>::value, "");
+  static_assert(
+      common::StaticAssert<std::is_same<left_size, right_size>>::value, "");
   using left_column_types = typename Left::column_types;
   using right_column_types = typename Right::column_types;
 
   using column_types =
-      typename TypeListConcat<left_column_types, right_column_types>::type;
+      typename common::TypeListConcat<left_column_types,
+                                      right_column_types>::type;
   HashJoin(Left left_, Right right_)
       : left(std::move(left_)), right(std::move(right_)) {}
   Left left;

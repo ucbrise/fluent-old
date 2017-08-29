@@ -23,6 +23,11 @@
 namespace lra = fluent::ra::logical;
 namespace ldb = fluent::lineagedb;
 
+using fluent::common::Hash;
+using fluent::common::MockPickler;
+using fluent::lineagedb::NoopClient;
+using fluent::lineagedb::ToSql;
+
 using set_req_tuple = std::tuple<std::string, std::string, std::int64_t,
                                  std::string, std::string>;
 using set_resp_tuple = std::tuple<std::string, std::int64_t, bool>;
@@ -44,7 +49,7 @@ int main(int argc, char* argv[]) {
   const std::string nickname = argv[3];
 
   const std::string name = "redis_client_benchmark_" + nickname;
-  fluent::RandomIdGenerator id_gen;
+  fluent::common::RandomIdGenerator id_gen;
   zmq::context_t context(1);
   fluent::lineagedb::ConnectionConfig conf;
   std::set<std::tuple<>> dummy = {std::tuple<>()};
@@ -52,8 +57,8 @@ int main(int argc, char* argv[]) {
 
   using std::string;
   auto f =
-      fluent::fluent<ldb::NoopClient, fluent::Hash, ldb::ToSql,
-                     fluent::MockPickler>(name, client_addr, &context, conf)
+      fluent::fluent<NoopClient, Hash, ToSql, MockPickler>(name, client_addr,
+                                                           &context, conf)
           .ConsumeValueOrDie()
           .channel<string, string, std::int64_t, string, string>(
               "set_request", {{"dst_addr", "src_addr", "id", "key", "value"}})
@@ -81,8 +86,8 @@ int main(int argc, char* argv[]) {
   int count = 1;
 
   for (count = 1; system_clock::now() < stop; ++count) {
-    CHECK_EQ(f.Tick(), fluent::Status::OK);
-    CHECK_EQ(f.Receive(), fluent::Status::OK);
+    CHECK_EQ(f.Tick(), fluent::common::Status::OK);
+    CHECK_EQ(f.Receive(), fluent::common::Status::OK);
   }
 
   nanoseconds elapsed = system_clock::now() - start;

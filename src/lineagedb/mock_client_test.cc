@@ -23,18 +23,22 @@
 namespace fluent {
 namespace lineagedb {
 
+using common::Hash;
+using testing::MockClock;
+
 TEST(MockClient, AddCollection) {
   using Client = MockClient<Hash, MockToSql, MockClock>;
-  StatusOr<std::unique_ptr<Client>> client_or =
+  common::StatusOr<std::unique_ptr<Client>> client_or =
       Client::Make("", 42, "", ConnectionConfig());
-  ASSERT_EQ(Status::OK, client_or.status());
+  ASSERT_EQ(common::Status::OK, client_or.status());
   std::unique_ptr<Client> client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, client->AddCollection<>("fee", "Fee", {{}}));
-  ASSERT_EQ(Status::OK, client->AddCollection<int>("fi", "Fi", {{"x"}}));
-  ASSERT_EQ(Status::OK,
+  ASSERT_EQ(common::Status::OK, client->AddCollection<>("fee", "Fee", {{}}));
+  ASSERT_EQ(common::Status::OK,
+            client->AddCollection<int>("fi", "Fi", {{"x"}}));
+  ASSERT_EQ(common::Status::OK,
             (client->AddCollection<int, bool>("fo", "Fo", {{"x", "y"}})));
-  ASSERT_EQ(Status::OK, (client->AddCollection<int, bool, char>(
-                            "fum", "Fum", {{"x", "y", "z"}})));
+  ASSERT_EQ(common::Status::OK, (client->AddCollection<int, bool, char>(
+                                    "fum", "Fum", {{"x", "y", "z"}})));
 
   using Tuple = MockClient<Hash, MockToSql, MockClock>::AddCollectionTuple;
   ASSERT_EQ(client->GetAddCollection().size(), static_cast<std::size_t>(4));
@@ -48,16 +52,16 @@ TEST(MockClient, AddCollection) {
 
 TEST(MockClient, AddRule) {
   using Client = MockClient<Hash, MockToSql, MockClock>;
-  StatusOr<std::unique_ptr<Client>> client_or =
+  common::StatusOr<std::unique_ptr<Client>> client_or =
       Client::Make("", 42, "", ConnectionConfig());
-  ASSERT_EQ(Status::OK, client_or.status());
+  ASSERT_EQ(common::Status::OK, client_or.status());
   std::unique_ptr<Client> client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, client->AddRule(0, true, "foo"));
-  ASSERT_EQ(Status::OK, client->AddRule(1, true, "bar"));
-  ASSERT_EQ(Status::OK, client->AddRule(2, true, "baz"));
-  ASSERT_EQ(Status::OK, client->AddRule(0, false, "foo"));
-  ASSERT_EQ(Status::OK, client->AddRule(1, false, "bar"));
-  ASSERT_EQ(Status::OK, client->AddRule(2, false, "baz"));
+  ASSERT_EQ(common::Status::OK, client->AddRule(0, true, "foo"));
+  ASSERT_EQ(common::Status::OK, client->AddRule(1, true, "bar"));
+  ASSERT_EQ(common::Status::OK, client->AddRule(2, true, "baz"));
+  ASSERT_EQ(common::Status::OK, client->AddRule(0, false, "foo"));
+  ASSERT_EQ(common::Status::OK, client->AddRule(1, false, "bar"));
+  ASSERT_EQ(common::Status::OK, client->AddRule(2, false, "baz"));
 
   using Tuple = MockClient<Hash, MockToSql, MockClock>::AddRuleTuple;
   ASSERT_EQ(client->GetAddRule().size(), static_cast<std::size_t>(6));
@@ -77,15 +81,15 @@ TEST(MockClient, InsertTuple) {
   time_point one_sec = time_point(std::chrono::seconds(1));
   time_point two_sec = time_point(std::chrono::seconds(2));
 
-  StatusOr<std::unique_ptr<Client>> client_or =
+  common::StatusOr<std::unique_ptr<Client>> client_or =
       Client::Make("", 42, "", ConnectionConfig());
-  ASSERT_EQ(Status::OK, client_or.status());
+  ASSERT_EQ(common::Status::OK, client_or.status());
   std::unique_ptr<Client> client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK,
+  ASSERT_EQ(common::Status::OK,
             (client->InsertTuple("a", 0, zero_sec, std::tuple<>{})));
-  ASSERT_EQ(Status::OK,
+  ASSERT_EQ(common::Status::OK,
             (client->InsertTuple("b", 1, one_sec, std::tuple<int>{10})));
-  ASSERT_EQ(Status::OK,
+  ASSERT_EQ(common::Status::OK,
             (client->InsertTuple("c", 2, two_sec,
                                  std::tuple<int, char, bool>{42, 'x', false})));
 
@@ -105,15 +109,15 @@ TEST(MockClient, DeleteTuple) {
   time_point one_sec = time_point(std::chrono::seconds(1));
   time_point two_sec = time_point(std::chrono::seconds(2));
 
-  StatusOr<std::unique_ptr<Client>> client_or =
+  common::StatusOr<std::unique_ptr<Client>> client_or =
       Client::Make("", 42, "", ConnectionConfig());
-  ASSERT_EQ(Status::OK, client_or.status());
+  ASSERT_EQ(common::Status::OK, client_or.status());
   std::unique_ptr<Client> client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK,
+  ASSERT_EQ(common::Status::OK,
             (client->DeleteTuple("a", 0, zero_sec, std::tuple<>{})));
-  ASSERT_EQ(Status::OK,
+  ASSERT_EQ(common::Status::OK,
             (client->DeleteTuple("b", 1, one_sec, std::tuple<int>{10})));
-  ASSERT_EQ(Status::OK,
+  ASSERT_EQ(common::Status::OK,
             (client->DeleteTuple("c", 2, two_sec,
                                  std::tuple<int, char, bool>{42, 'x', false})));
 
@@ -127,13 +131,15 @@ TEST(MockClient, DeleteTuple) {
 
 TEST(MockClient, AddNetworkedLineage) {
   using Client = MockClient<Hash, MockToSql, MockClock>;
-  StatusOr<std::unique_ptr<Client>> client_or =
+  common::StatusOr<std::unique_ptr<Client>> client_or =
       Client::Make("", 42, "", ConnectionConfig());
-  ASSERT_EQ(Status::OK, client_or.status());
+  ASSERT_EQ(common::Status::OK, client_or.status());
   std::unique_ptr<Client> client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, (client->AddNetworkedLineage(0, 1, "2", 3, 4)));
-  ASSERT_EQ(Status::OK, (client->AddNetworkedLineage(10, 11, "12", 13, 14)));
-  ASSERT_EQ(Status::OK, (client->AddNetworkedLineage(20, 21, "22", 23, 24)));
+  ASSERT_EQ(common::Status::OK, (client->AddNetworkedLineage(0, 1, "2", 3, 4)));
+  ASSERT_EQ(common::Status::OK,
+            (client->AddNetworkedLineage(10, 11, "12", 13, 14)));
+  ASSERT_EQ(common::Status::OK,
+            (client->AddNetworkedLineage(20, 21, "22", 23, 24)));
 
   using Tuple =
       MockClient<Hash, MockToSql, MockClock>::AddNetworkedLineageTuple;
@@ -149,20 +155,20 @@ TEST(MockClient, AddDerivedLineage) {
   using time_point = std::chrono::time_point<MockClock>;
   using std::chrono::seconds;
 
-  StatusOr<std::unique_ptr<Client>> client_or =
+  common::StatusOr<std::unique_ptr<Client>> client_or =
       Client::Make("", 42, "", ConnectionConfig());
-  ASSERT_EQ(Status::OK, client_or.status());
+  ASSERT_EQ(common::Status::OK, client_or.status());
   std::unique_ptr<Client> client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK,
+  ASSERT_EQ(common::Status::OK,
             (client->AddDerivedLineage(LocalTupleId{"0", 1, 2},          //
                                        3, true, time_point(seconds(1)),  //
                                        LocalTupleId{"4", 5, 6})));
-  ASSERT_EQ(Status::OK,
+  ASSERT_EQ(common::Status::OK,
             (client->AddDerivedLineage(LocalTupleId{"10", 11, 12},  //
                                        13, true,
                                        time_point(seconds(2)),  //
                                        LocalTupleId{"14", 15, 16})));
-  ASSERT_EQ(Status::OK,
+  ASSERT_EQ(common::Status::OK,
             (client->AddDerivedLineage(LocalTupleId{"20", 21, 22},  //
                                        23, true,
                                        time_point(seconds(3)),  //
@@ -186,13 +192,15 @@ TEST(MockClient, AddDerivedLineage) {
 
 TEST(MockClient, RegisterBlackBoxLineage) {
   using Client = MockClient<Hash, MockToSql, MockClock>;
-  StatusOr<std::unique_ptr<Client>> client_or =
+  common::StatusOr<std::unique_ptr<Client>> client_or =
       Client::Make("", 42, "", ConnectionConfig());
-  ASSERT_EQ(Status::OK, client_or.status());
+  ASSERT_EQ(common::Status::OK, client_or.status());
   std::unique_ptr<Client> client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, (client->RegisterBlackBoxLineage("foo", {})));
-  ASSERT_EQ(Status::OK, (client->RegisterBlackBoxLineage("bar", {"1"})));
-  ASSERT_EQ(Status::OK, (client->RegisterBlackBoxLineage("baz", {"1", "2"})));
+  ASSERT_EQ(common::Status::OK, (client->RegisterBlackBoxLineage("foo", {})));
+  ASSERT_EQ(common::Status::OK,
+            (client->RegisterBlackBoxLineage("bar", {"1"})));
+  ASSERT_EQ(common::Status::OK,
+            (client->RegisterBlackBoxLineage("baz", {"1", "2"})));
 
   using Tuple = Client::RegisterBlackBoxLineageTuple;
   ASSERT_EQ(client->GetRegisterBlackBoxLineage().size(),
@@ -204,14 +212,14 @@ TEST(MockClient, RegisterBlackBoxLineage) {
 
 TEST(MockClient, RegisterBlackBoxPythonLineageScript) {
   using Client = MockClient<Hash, MockToSql, MockClock>;
-  StatusOr<std::unique_ptr<Client>> client_or =
+  common::StatusOr<std::unique_ptr<Client>> client_or =
       Client::Make("", 42, "", ConnectionConfig());
-  ASSERT_EQ(Status::OK, client_or.status());
+  ASSERT_EQ(common::Status::OK, client_or.status());
   std::unique_ptr<Client> client = client_or.ConsumeValueOrDie();
   ASSERT_EQ(
-      Status::OK,
+      common::Status::OK,
       (client->RegisterBlackBoxPythonLineageScript("bonnie\nand\nclyde")));
-  ASSERT_EQ(Status::OK,
+  ASSERT_EQ(common::Status::OK,
             (client->RegisterBlackBoxPythonLineageScript("bert\nand\nernie")));
 
   using Tuple = Client::RegisterBlackBoxPythonLineageScriptTuple;
@@ -225,12 +233,14 @@ TEST(MockClient, RegisterBlackBoxPythonLineageScript) {
 
 TEST(MockClient, RegisterBlackBoxPythonLineage) {
   using Client = MockClient<Hash, MockToSql, MockClock>;
-  StatusOr<std::unique_ptr<Client>> client_or =
+  common::StatusOr<std::unique_ptr<Client>> client_or =
       Client::Make("", 42, "", ConnectionConfig());
-  ASSERT_EQ(Status::OK, client_or.status());
+  ASSERT_EQ(common::Status::OK, client_or.status());
   std::unique_ptr<Client> client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, (client->RegisterBlackBoxPythonLineage("foo", "get")));
-  ASSERT_EQ(Status::OK, (client->RegisterBlackBoxPythonLineage("bar", "set")));
+  ASSERT_EQ(common::Status::OK,
+            (client->RegisterBlackBoxPythonLineage("foo", "get")));
+  ASSERT_EQ(common::Status::OK,
+            (client->RegisterBlackBoxPythonLineage("bar", "set")));
 
   using Tuple = Client::RegisterBlackBoxPythonLineageTuple;
   ASSERT_EQ(client->GetRegisterBlackBoxPythonLineage().size(),

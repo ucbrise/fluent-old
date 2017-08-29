@@ -62,7 +62,7 @@ int main() {
   const int num_objects = 25;
   for (int i = 0; i < num_objects; ++i) {
     std::shared_ptr<Aws::IOStream> ss = std::make_shared<std::stringstream>();
-    const std::string content = fluent::RandomAlphanum(1024);
+    const std::string content = fluent::common::RandomAlphanum(1024);
     (*ss) << content;
 
     S3::Model::PutObjectRequest request;

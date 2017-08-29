@@ -7,6 +7,7 @@
 #include "gtest/gtest.h"
 
 namespace fluent {
+namespace common {
 
 TEST(TypeTraits, And) {
   static_assert(And<std::true_type, std::true_type>::value, "");
@@ -180,6 +181,7 @@ TEST(TypeTraits, IsInvocable) {
   static_assert(!IsInvocable<void(), int>::value, "");
 }
 
+}  // namespace common
 }  // namespace fluent
 
 int main(int argc, char** argv) {

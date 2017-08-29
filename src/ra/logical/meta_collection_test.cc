@@ -13,14 +13,15 @@ namespace lra = fluent::ra::logical;
 namespace fluent {
 
 TEST(MetaCollection, SimpleCompileCheck) {
-  Table<int> t("t", {{"x"}});
-  lra::MetaCollection<Table<int>> meta_collection =
+  collections::Table<int> t("t", {{"x"}});
+  lra::MetaCollection<collections::Table<int>> meta_collection =
       lra::make_meta_collection(&t);
   UNUSED(meta_collection);
 
   using actual = decltype(meta_collection)::column_types;
-  using expected = TypeList<std::tuple<int>, LocalTupleId>;
-  static_assert(StaticAssert<std::is_same<actual, expected>>::value, "");
+  using expected = common::TypeList<std::tuple<int>, LocalTupleId>;
+  static_assert(common::StaticAssert<std::is_same<actual, expected>>::value,
+                "");
 }
 
 }  // namespace fluent

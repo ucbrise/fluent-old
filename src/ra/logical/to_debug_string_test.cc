@@ -15,7 +15,7 @@ namespace lra = fluent::ra::logical;
 namespace fluent {
 
 TEST(ToDebugString, Collection) {
-  Table<int> t("t", {{"x"}});
+  collections::Table<int> t("t", {{"x"}});
   const auto collection = lra::make_collection(&t);
   const std::string actual = lra::ToDebugString(collection);
   const std::string expected = "Collection(t)";
@@ -23,7 +23,7 @@ TEST(ToDebugString, Collection) {
 }
 
 TEST(ToDebugString, MetaCollection) {
-  Table<int> t("t", {{"x"}});
+  collections::Table<int> t("t", {{"x"}});
   const auto meta_collection = lra::make_meta_collection(&t);
   const std::string actual = lra::ToDebugString(meta_collection);
   const std::string expected = "MetaCollection(t)";

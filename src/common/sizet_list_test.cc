@@ -11,6 +11,7 @@
 #include "common/type_traits.h"
 
 namespace fluent {
+namespace common {
 namespace detail {
 
 template <std::size_t... Is>
@@ -184,6 +185,7 @@ TEST(SizetList, SizetListRange) {
   static_assert(std::is_same<SizetListRange<4, 3>::type, sl43>::value, "");
 }
 
+}  // namespace common
 }  // namespace fluent
 
 int main(int argc, char** argv) {

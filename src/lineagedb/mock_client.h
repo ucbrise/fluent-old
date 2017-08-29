@@ -40,7 +40,7 @@ class MockClient {
   DISALLOW_MOVE_AND_ASSIGN(MockClient);
 
   // Client Mocks //////////////////////////////////////////////////////////////
-  static WARN_UNUSED StatusOr<std::unique_ptr<MockClient>> Make(
+  static WARN_UNUSED common::StatusOr<std::unique_ptr<MockClient>> Make(
       std::string name, std::size_t id, std::string address,
       const ConnectionConfig& config) {
     return std::unique_ptr<MockClient>(
@@ -48,7 +48,7 @@ class MockClient {
   }
 
   template <typename... Ts>
-  WARN_UNUSED Status AddCollection(
+  WARN_UNUSED common::Status AddCollection(
       const std::string& collection_name, const std::string& collection_type,
       const std::array<std::string, sizeof...(Ts)>& column_names) {
     std::vector<std::string> columns;
@@ -57,91 +57,94 @@ class MockClient {
     }
 
     std::vector<std::string> types;
-    TupleIter(TypeListMapToTuple<TypeList<Ts...>, ToSqlType>()(),
-              [&types](const std::string& s) { types.push_back(s); });
+    common::TupleIter(
+        common::TypeListMapToTuple<common::TypeList<Ts...>, ToSqlType>()(),
+        [&types](const std::string& s) { types.push_back(s); });
 
     add_collection_.push_back(
         std::make_tuple(collection_name, collection_type, columns, types));
 
-    return Status::OK;
+    return common::Status::OK;
   }
 
-  WARN_UNUSED Status AddRule(std::size_t rule_number, bool is_bootstrap,
-                             const std::string& rule_string) {
+  WARN_UNUSED common::Status AddRule(std::size_t rule_number, bool is_bootstrap,
+                                     const std::string& rule_string) {
     add_rule_.push_back(
         std::make_tuple(rule_number, is_bootstrap, rule_string));
-    return Status::OK;
+    return common::Status::OK;
   }
 
   template <typename... Ts>
-  WARN_UNUSED Status
-  InsertTuple(const std::string& collection_name, int time_inserted,
-              const std::chrono::time_point<Clock>& physical_time_inserted,
-              const std::tuple<Ts...>& t) {
-    auto strings_tuple = TupleMap(t, [](const auto& x) {
+  WARN_UNUSED common::Status InsertTuple(
+      const std::string& collection_name, int time_inserted,
+      const std::chrono::time_point<Clock>& physical_time_inserted,
+      const std::tuple<Ts...>& t) {
+    auto strings_tuple = common::TupleMap(t, [](const auto& x) {
       return ToSql<typename std::decay<decltype(x)>::type>().Value(x);
     });
     std::vector<std::string> strings_vec;
-    TupleIter(strings_tuple,
-              [&strings_vec](const auto& s) { strings_vec.push_back(s); });
+    common::TupleIter(strings_tuple, [&strings_vec](const auto& s) {
+      strings_vec.push_back(s);
+    });
     insert_tuple_.push_back(std::make_tuple(
         collection_name, time_inserted, physical_time_inserted, strings_vec));
-    return Status::OK;
+    return common::Status::OK;
   }
 
   template <typename... Ts>
-  WARN_UNUSED Status
-  DeleteTuple(const std::string& collection_name, int time_deleted,
-              const std::chrono::time_point<Clock>& physical_time_deleted,
-              const std::tuple<Ts...>& t) {
-    auto strings_tuple = TupleMap(t, [](const auto& x) {
+  WARN_UNUSED common::Status DeleteTuple(
+      const std::string& collection_name, int time_deleted,
+      const std::chrono::time_point<Clock>& physical_time_deleted,
+      const std::tuple<Ts...>& t) {
+    auto strings_tuple = common::TupleMap(t, [](const auto& x) {
       return ToSql<typename std::decay<decltype(x)>::type>().Value(x);
     });
     std::vector<std::string> strings_vec;
-    TupleIter(strings_tuple,
-              [&strings_vec](const auto& s) { strings_vec.push_back(s); });
+    common::TupleIter(strings_tuple, [&strings_vec](const auto& s) {
+      strings_vec.push_back(s);
+    });
     delete_tuple_.push_back(std::make_tuple(
         collection_name, time_deleted, physical_time_deleted, strings_vec));
-    return Status::OK;
+    return common::Status::OK;
   }
 
-  WARN_UNUSED Status AddNetworkedLineage(std::size_t dep_node_id, int dep_time,
-                                         const std::string& collection_name,
-                                         std::size_t tuple_hash, int time) {
+  WARN_UNUSED common::Status AddNetworkedLineage(
+      std::size_t dep_node_id, int dep_time, const std::string& collection_name,
+      std::size_t tuple_hash, int time) {
     add_networked_lineage_.push_back(std::make_tuple(
         dep_node_id, dep_time, collection_name, tuple_hash, time));
-    return Status::OK;
+    return common::Status::OK;
   }
 
-  WARN_UNUSED Status
-  AddDerivedLineage(const LocalTupleId& dep_id, int rule_number, bool inserted,
-                    const std::chrono::time_point<Clock>& physical_time,
-                    const LocalTupleId& id) {
+  WARN_UNUSED common::Status AddDerivedLineage(
+      const LocalTupleId& dep_id, int rule_number, bool inserted,
+      const std::chrono::time_point<Clock>& physical_time,
+      const LocalTupleId& id) {
     add_derived_lineage_.push_back(
         std::make_tuple(dep_id, rule_number, inserted, physical_time, id));
-    return Status::OK;
+    return common::Status::OK;
   }
 
-  WARN_UNUSED Status
-  RegisterBlackBoxLineage(const std::string& collection_name,
-                          const std::vector<std::string>& lineage_commands) {
+  WARN_UNUSED common::Status RegisterBlackBoxLineage(
+      const std::string& collection_name,
+      const std::vector<std::string>& lineage_commands) {
     register_black_box_lineage_.push_back(
         std::make_tuple(collection_name, lineage_commands));
-    return Status::OK;
+    return common::Status::OK;
   }
 
-  WARN_UNUSED Status
-  RegisterBlackBoxPythonLineageScript(const std::string& script) {
+  WARN_UNUSED common::Status RegisterBlackBoxPythonLineageScript(
+      const std::string& script) {
     register_black_box_python_lineage_script_.push_back(
         std::make_tuple(script));
-    return Status::OK;
+    return common::Status::OK;
   }
 
-  WARN_UNUSED Status RegisterBlackBoxPythonLineage(
+  WARN_UNUSED common::Status RegisterBlackBoxPythonLineage(
       const std::string& collection_name, const std::string& method) {
     register_black_box_python_lineage_.push_back(
         std::make_tuple(collection_name, method));
-    return Status::OK;
+    return common::Status::OK;
   }
 
   // Getters ///////////////////////////////////////////////////////////////////

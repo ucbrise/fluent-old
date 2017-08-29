@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 
 namespace fluent {
+namespace common {
 
 using ::testing::AllOf;
 using ::testing::Ge;
@@ -22,6 +23,7 @@ TEST(RandUtil, RandInt) {
   }
 }
 
+}  // namespace common
 }  // namespace fluent
 
 int main(int argc, char **argv) {

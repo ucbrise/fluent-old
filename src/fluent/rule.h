@@ -12,13 +12,14 @@ namespace fluent {
 
 template <typename Collection_, typename RuleTag, typename LogicalRa>
 struct Rule {
-  using is_collection = std::is_base_of<Collection, Collection_>;
-  static_assert(StaticAssert<is_collection>::value, "");
+  using is_collection = std::is_base_of<collections::Collection, Collection_>;
+  static_assert(common::StaticAssert<is_collection>::value, "");
 
-  using collection_types = typename CollectionTypes<Collection_>::type;
+  using collection_types =
+      typename collections::CollectionTypes<Collection_>::type;
   using logical_ra_types = typename LogicalRa::column_types;
   using equal_types = std::is_same<collection_types, logical_ra_types>;
-  static_assert(StaticAssert<equal_types>::value, "");
+  static_assert(common::StaticAssert<equal_types>::value, "");
 
   Collection_* collection;
   RuleTag rule_tag;

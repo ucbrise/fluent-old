@@ -2,6 +2,7 @@
 #define COMMON_STATIC_ASSERT_H
 
 namespace fluent {
+namespace common {
 
 // Consider the struct template which statically asserts that the type
 // parameters B and E are the same.
@@ -62,6 +63,7 @@ struct StaticAssert {
   static constexpr bool value = Assertion::value;
 };
 
+}  // namespace common
 }  // namespace fluent
 
 #endif  // COMMON_STATIC_ASSERT_H

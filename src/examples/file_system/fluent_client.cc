@@ -40,18 +40,18 @@ int main(int argc, char* argv[]) {
   const std::string db_dbname = argv[3];
   const std::string server_address = argv[4];
   const std::string client_address = argv[5];
-  fluent::RandomIdGenerator id_gen;
+  fluent::common::RandomIdGenerator id_gen;
 
   zmq::context_t context(1);
   ldb::ConnectionConfig config{"localhost", 5432, db_user, db_pass, db_dbname};
   auto fb = fluent::fluent<ldb::PqxxClient>(
-                "file_system_client_" + fluent::RandomAlphanum(10),
+                "file_system_client_" + fluent::common::RandomAlphanum(10),
                 client_address, &context, config)
                 .ConsumeValueOrDie()
                 .stdin()
                 .stdout()
                 .scratch<std::vector<std::string>>("split", {{"parts"}});
-  fluent::Status status =
+  fluent::common::Status status =
       AddFileSystemApi(std::move(fb))
           .RegisterRules([&](auto& stdin, auto& stdout, auto& split,
                              auto& write_req, auto& write_resp, auto& read_req,
@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
                 split <=
                 (lra::make_collection(&stdin) |
                  lra::map([](const std::tuple<std::string>& s) -> split_tuple {
-                   return {fluent::Split(std::get<0>(s))};
+                   return {fluent::common::Split(std::get<0>(s))};
                  }));
 
             auto send_write_req =
@@ -115,5 +115,5 @@ int main(int argc, char* argv[]) {
           })
           .ConsumeValueOrDie()
           .Run();
-  CHECK_EQ(fluent::Status::OK, status);
+  CHECK_EQ(fluent::common::Status::OK, status);
 }

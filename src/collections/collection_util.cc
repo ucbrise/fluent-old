@@ -5,6 +5,7 @@
 #include "glog/logging.h"
 
 namespace fluent {
+namespace collections {
 
 std::string CollectionTypeToString(CollectionType type) {
   switch (type) {
@@ -27,4 +28,5 @@ std::string CollectionTypeToString(CollectionType type) {
   }
 }
 
+}  // namespace collections
 }  // namespace fluent

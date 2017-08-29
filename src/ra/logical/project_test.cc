@@ -21,8 +21,9 @@ TEST(Project, SimpleCompileCheck) {
   UNUSED(project);
 
   using actual = decltype(project)::column_types;
-  using expected = TypeList<bool, int>;
-  static_assert(StaticAssert<std::is_same<actual, expected>>::value, "");
+  using expected = common::TypeList<bool, int>;
+  static_assert(common::StaticAssert<std::is_same<actual, expected>>::value,
+                "");
 }
 
 // This code should NOT compile.

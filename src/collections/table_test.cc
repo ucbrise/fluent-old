@@ -11,6 +11,7 @@
 #include "gtest/gtest.h"
 
 namespace fluent {
+namespace collections {
 
 TEST(Table, TableStartsEmpty) {
   Table<char, char> t("t", {{"x", "y"}});
@@ -111,6 +112,7 @@ TEST(Table, DeferredMergeAndDeferredDelete) {
   EXPECT_EQ(t.Get(), expected);
 }
 
+}  // namespace collections
 }  // namespace fluent
 
 int main(int argc, char** argv) {

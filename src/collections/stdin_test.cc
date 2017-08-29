@@ -11,6 +11,7 @@
 #include "gtest/gtest.h"
 
 namespace fluent {
+namespace collections {
 
 TEST(Stdin, StdinStartsEmpty) {
   Stdin stdin_;
@@ -48,6 +49,7 @@ TEST(Stdin, TickClearsStdin) {
   EXPECT_EQ(stdin_.Get(), expected);
 }
 
+}  // namespace collections
 }  // namespace fluent
 
 int main(int argc, char** argv) {

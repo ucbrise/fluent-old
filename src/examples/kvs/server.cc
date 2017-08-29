@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
             return std::make_tuple(set, get);
           })
           .ConsumeValueOrDie();
-  fluent::Status status = f.RegisterBlackBoxLineage<2, 3>(
+  fluent::common::Status status = f.RegisterBlackBoxLineage<2, 3>(
       [](const std::string& time_inserted, const std::string& key,
          const std::string& value) {
         (void)value;
@@ -75,6 +75,6 @@ int main(int argc, char* argv[]) {
         )",
                            key, time_inserted, time_inserted);
       });
-  CHECK_EQ(fluent::Status::OK, status);
-  CHECK_EQ(fluent::Status::OK, f.Run());
+  CHECK_EQ(fluent::common::Status::OK, status);
+  CHECK_EQ(fluent::common::Status::OK, f.Run());
 }

@@ -30,18 +30,32 @@
 #include "testing/captured_stdout.h"
 #include "testing/mock_clock.h"
 
+namespace fluent {
+
 namespace ldb = fluent::lineagedb;
 namespace lra = fluent::ra::logical;
 
 using ::testing::UnorderedElementsAreArray;
-
-namespace fluent {
+using collections::Channel;
+using collections::CollectionTupleIds;
+using collections::Periodic;
+using collections::Scratch;
+using collections::Stdin;
+using collections::Stdout;
+using collections::Table;
+using common::CrunchWhitespace;
+using common::Hash;
+using common::Join;
+using common::MockPickler;
+using common::Status;
+using testing::CapturedStdout;
+using testing::MockClock;
 
 auto noopfluent(const std::string& name, const std::string& address,
                 zmq::context_t* context,
                 const ldb::ConnectionConfig& connection_config) {
-  return fluent<ldb::NoopClient, Hash, ldb::ToSql, MockPickler, MockClock>(
-      name, address, context, connection_config);
+  return fluent<ldb::NoopClient, common::Hash, ldb::ToSql, MockPickler,
+                MockClock>(name, address, context, connection_config);
 }
 
 TEST(FluentExecutor, SimpleProgram) {

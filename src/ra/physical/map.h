@@ -15,7 +15,8 @@ namespace physical {
 
 template <typename Ra, typename F>
 class Map : public PhysicalRa {
-  static_assert(StaticAssert<std::is_base_of<PhysicalRa, Ra>>::value, "");
+  static_assert(common::StaticAssert<std::is_base_of<PhysicalRa, Ra>>::value,
+                "");
 
  public:
   Map(Ra child, F f) : child_(std::move(child)), f_(std::move(f)) {}

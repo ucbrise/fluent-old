@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 
 namespace fluent {
+namespace testing {
 
 TEST(MockClock, SimpleTest) {
   std::chrono::time_point<MockClock> epoch;
@@ -29,7 +30,8 @@ TEST(MockClock, SimpleTest) {
   EXPECT_EQ(epoch + std::chrono::seconds(2), t5);
 }
 
-}  // namespace example
+}  // namespace testing
+}  // namespace fluent
 
 int main(int argc, char **argv) {
   google::InitGoogleLogging(argv[0]);

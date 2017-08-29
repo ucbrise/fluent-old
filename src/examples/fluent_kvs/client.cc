@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
   const std::string server_addr = argv[4];
   const std::string client_addr = argv[5];
 
-  fluent::RandomIdGenerator id_gen;
+  fluent::common::RandomIdGenerator id_gen;
 
   zmq::context_t context(1);
 
@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
                 split <=
                 (lra::make_collection(&stdin) | lra::map([](const auto& s) {
                    const string& str = get<0>(s);
-                   return make_tuple(fluent::Split(str));
+                   return make_tuple(fluent::common::Split(str));
                  }));
 
             auto send_get =
@@ -118,5 +118,5 @@ int main(int argc, char* argv[]) {
             return make_tuple(buffer_stdin, send_get, send_set, recv_get,
                               recv_set);
           });
-  CHECK_EQ(fluent::Status::OK, f.ConsumeValueOrDie().Run());
+  CHECK_EQ(fluent::common::Status::OK, f.ConsumeValueOrDie().Run());
 }

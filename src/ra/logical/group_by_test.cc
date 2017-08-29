@@ -26,8 +26,9 @@ TEST(Map, SimpleCompileCheck) {
   UNUSED(group_by);
 
   using actual = decltype(group_by)::column_types;
-  using expected = TypeList<int, float>;
-  static_assert(StaticAssert<std::is_same<actual, expected>>::value, "");
+  using expected = common::TypeList<int, float>;
+  static_assert(common::StaticAssert<std::is_same<actual, expected>>::value,
+                "");
 }
 
 // This code should NOT compile.

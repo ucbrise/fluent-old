@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
       WorkloadToDistribution(workload, num_keys);
 
   // Random id generator.
-  fluent::RandomIdGenerator id_gen;
+  fluent::common::RandomIdGenerator id_gen;
 
   // ZeroMQ context.
   zmq::context_t context(1);
@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
   config.dbname = db_dbname;
 
   const std::string name =
-      "cassandra_benchmark_client_setter_" + fluent::RandomAlphanum(10);
+      "cassandra_benchmark_client_setter_" + fluent::common::RandomAlphanum(10);
   auto fb =
       fluent::fluent<ldb::PqxxClient>(name, client_address, &context, config)
           .ConsumeValueOrDie()
@@ -120,8 +120,8 @@ int main(int argc, char* argv[]) {
   time_point<system_clock> stop = start + duration;
 
   while (system_clock::now() < stop) {
-    CHECK_EQ(f.Tick(), fluent::Status::OK);
-    CHECK_EQ(f.Receive(), fluent::Status::OK);
+    CHECK_EQ(f.Tick(), fluent::common::Status::OK);
+    CHECK_EQ(f.Receive(), fluent::common::Status::OK);
   }
 
   std::cout << "Setter complete! Now run 'pg_dump " << db_dbname

@@ -7,6 +7,7 @@
 #include "range/v3/all.hpp"
 
 namespace fluent {
+namespace testing {
 
 // A test to test testing utilities. Woah.
 
@@ -48,7 +49,8 @@ TEST(ExpectRngsUnorderedEqual, SimpleTest) {
   }
 }
 
-}  // namespace example
+}  // namespace testing
+}  // namespace fluent
 
 int main(int argc, char **argv) {
   google::InitGoogleLogging(argv[0]);

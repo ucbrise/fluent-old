@@ -2,6 +2,7 @@
 #define COMMON_MACROS_H
 
 namespace fluent {
+namespace common {
 
 // DISALLOW_COPY_AND_ASSIGN is a macro which you can use to make a class
 // non-copyable and non-copy-assignable. For example, imagine you have a class
@@ -113,6 +114,7 @@ namespace fluent {
 // works with both g++ and clang++.
 #define WARN_UNUSED __attribute__((warn_unused_result))
 
+}  // namespace common
 }  // namespace fluent
 
 #endif  // COMMON_MACROS_H

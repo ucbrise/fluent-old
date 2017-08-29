@@ -12,6 +12,7 @@
 #include "glog/logging.h"
 
 namespace fluent {
+namespace common {
 
 // A pickler (synonymously serializer or marshaller) is a struct which converts
 // C++ objects to and from strings. The CerealPickler is a pickler implemented
@@ -42,6 +43,7 @@ struct CerealPickler {
   }
 };
 
+}  // namespace common
 }  // namespace fluent
 
 #endif  // COMMON_CEREAL_PICKLER_H_

@@ -8,6 +8,7 @@
 #include "gtest/gtest.h"
 
 namespace fluent {
+namespace common {
 namespace {
 
 template <typename Clock>
@@ -27,6 +28,7 @@ TEST(TimeUtil, TimePointToString) {
   EXPECT_EQ("time(3 ns)", ToString(time(ns(3))));
 }
 
+}  // namespace common
 }  // namespace fluent
 
 int main(int argc, char** argv) {

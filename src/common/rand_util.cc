@@ -3,6 +3,7 @@
 #include "glog/logging.h"
 
 namespace fluent {
+namespace common {
 
 int RandInt(int low, int high) {
   std::random_device random_device;
@@ -35,4 +36,5 @@ std::discrete_distribution<int> ZipfDistribution(int n, float alpha) {
   return std::discrete_distribution<int>(weights.begin(), weights.end());
 }
 
+}  // namespace common
 }  // namespace fluent

@@ -23,6 +23,7 @@
 #include "common/status.h"
 
 namespace fluent {
+namespace common {
 
 // A StatusOr holds a Status (in the case of an error), or a value T.
 // TODO(mwhittaker): Write unit tests for StatusOr.
@@ -168,6 +169,7 @@ inline const StatusOr<T>& StatusOr<T>::operator=(StatusOr<U>&& other) {
   return *this;
 }
 
+}  // namespace common
 }  // namespace fluent
 
 #endif  // COMMON_STATUS_OR_H_

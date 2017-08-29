@@ -18,6 +18,7 @@
 #include "common/type_traits.h"
 
 namespace fluent {
+namespace collections {
 
 template <typename... Ts>
 class Table : public Collection {
@@ -96,6 +97,7 @@ class Table : public Collection {
   std::map<std::tuple<Ts...>, CollectionTupleIds> deferred_delete_;
 };
 
+}  // namespace collections
 }  // namespace fluent
 
 #endif  // COLLECTIONS_TABLE_H_

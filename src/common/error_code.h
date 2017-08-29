@@ -20,6 +20,7 @@
 #include <string>
 
 namespace fluent {
+namespace common {
 
 enum class ErrorCode {
   // Not an error; returned on success
@@ -112,6 +113,7 @@ enum class ErrorCode {
 
 std::string ErrorCodeToString(ErrorCode error);
 
+}  // namespace common
 }  // namespace fluent
 
 #endif  // COMMON_ERROR_CODE_H_

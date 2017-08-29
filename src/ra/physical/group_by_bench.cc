@@ -50,8 +50,8 @@ void GroupByBench(benchmark::State& state) {
     auto iter = pra::make_iterable(&ts);
     using keys = ra::Keys<0>;
     using key_cols = std::tuple<std::size_t>;
-    using aggs =
-        std::tuple<ra::agg::SumImpl<SizetList<1>, TypeList<std::size_t>>>;
+    using aggs = std::tuple<
+        ra::agg::SumImpl<common::SizetList<1>, common::TypeList<std::size_t>>>;
     auto group_by = pra::make_group_by<keys, key_cols, aggs>(std::move(iter));
     auto rng = group_by.ToRange();
     ranges::for_each(rng, [](const std::tuple<std::size_t, std::size_t>& t) {

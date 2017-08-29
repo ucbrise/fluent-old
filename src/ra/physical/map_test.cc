@@ -20,7 +20,7 @@ TEST(Map, EmptyMap) {
   auto f = [](const std::tuple<int>& t) { return t; };
   auto map = pra::make_map(std::move(iterable), f);
   std::set<std::tuple<int>> expected;
-  ExpectRngsUnorderedEqual(map.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(map.ToRange(), expected);
 }
 
 TEST(Map, NonEmptyMap) {
@@ -29,7 +29,7 @@ TEST(Map, NonEmptyMap) {
   auto f = [](const std::tuple<int>& t) { return std::tuple_cat(t, t); };
   auto map = pra::make_map(std::move(iterable), f);
   std::set<std::tuple<int, int>> expected = {{0, 0}, {1, 1}, {2, 2}};
-  ExpectRngsUnorderedEqual(map.ToRange(), expected);
+  testing::ExpectRngsUnorderedEqual(map.ToRange(), expected);
 }
 
 }  // namespace fluent

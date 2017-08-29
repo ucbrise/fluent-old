@@ -9,6 +9,7 @@
 #include "glog/logging.h"
 
 namespace fluent {
+namespace common {
 
 // TODO(mwhittaker): Change implementations of float, double, and long double
 // so that we don't lose precision.
@@ -108,6 +109,7 @@ struct MockPickler<long double> {
   long double Load(const std::string& s) { return std::stold(s); }
 };
 
+}  // namespace common
 }  // namespace fluent
 
 #endif  // COMMON_MOCK_PICKLER_H_

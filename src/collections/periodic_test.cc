@@ -14,6 +14,9 @@
 #include "testing/mock_clock.h"
 
 namespace fluent {
+namespace collections {
+
+using testing::MockClock;
 
 TEST(Periodic, PeriodicStartsEmpty) {
   Periodic<MockClock> p("p", std::chrono::milliseconds(1000));
@@ -69,6 +72,7 @@ TEST(Periodic, TickClearsPeriodic) {
   EXPECT_EQ(p.Get(), expected);
 }
 
+}  // namespace collections
 }  // namespace fluent
 
 int main(int argc, char** argv) {

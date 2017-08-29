@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
   const std::string client_address = argv[7];
 
   // Random id generator.
-  fluent::RandomIdGenerator id_gen;
+  fluent::common::RandomIdGenerator id_gen;
 
   // ZeroMQ context.
   zmq::context_t context(1);
@@ -53,14 +53,15 @@ int main(int argc, char* argv[]) {
   config.password = db_password;
   config.dbname = db_dbname;
 
-  const std::string name = "cassandra_client_" + fluent::RandomAlphanum(10);
+  const std::string name =
+      "cassandra_client_" + fluent::common::RandomAlphanum(10);
   auto fb =
       fluent::fluent<ldb::PqxxClient>(name, client_address, &context, config)
           .ConsumeValueOrDie()
           .stdin()
           .stdout()
           .scratch<std::vector<std::string>>("split", {{"parts"}});
-  fluent::Status status =
+  fluent::common::Status status =
       AddKvsApi(std::move(fb))
           .RegisterRules([&](auto& stdin, auto& stdout, auto& split,
                              auto& set_request, auto& set_response,
@@ -72,7 +73,7 @@ int main(int argc, char* argv[]) {
                           lra::map([](const std::tuple<std::string>& s) {
                             const std::string& line = std::get<0>(s);
                             std::vector<std::string> parts =
-                                fluent::Split(line);
+                                fluent::common::Split(line);
                             return std::tuple<std::vector<std::string>>(parts);
                           }));
 
@@ -134,5 +135,5 @@ int main(int argc, char* argv[]) {
           })
           .ConsumeValueOrDie()
           .Run();
-  CHECK_EQ(status, fluent::Status::OK);
+  CHECK_EQ(status, fluent::common::Status::OK);
 }

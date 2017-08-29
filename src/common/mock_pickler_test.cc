@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 
 namespace fluent {
+namespace common {
 
 using ::testing::UnorderedElementsAreArray;
 
@@ -67,6 +68,7 @@ TEST(MockPickler, PickleLongDouble) {
   EXPECT_EQ(42.5, MockPickler<long double>().Load("42.500000"));
 }
 
+}  // namespace common
 }  // namespace fluent
 
 int main(int argc, char** argv) {

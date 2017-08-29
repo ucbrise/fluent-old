@@ -35,7 +35,7 @@ namespace agg {
 //   class AggregateImpl;
 //
 //   template <std::size_t... Is, typename... Ts>
-//   class AggregateImpl<SizetList<Is...>, TypeList<Ts...>> {
+//   class AggregateImpl<common::SizetList<Is...>, common::TypeList<Ts...>> {
 //    public:
 //     void Update(const std::tuple<Ts...>& x) { ... }
 //     U Get() const { ... }
@@ -44,7 +44,7 @@ namespace agg {
 //   template <std::size_t... Is>
 //   struct Aggregate {
 //     template <typename TypeList>
-//     using type = AggregateImpl<SizetList<Is...>, TypeList>;
+//     using type = AggregateImpl<common::SizetList<Is...>, common::TypeList>;
 //
 //     static std::string ToDebugString const { ... }
 //   };
@@ -71,13 +71,16 @@ template <typename SizetList, typename TypeList>
 class SumImpl;
 
 template <std::size_t... Is, typename T, typename... Ts>
-class SumImpl<SizetList<Is...>, TypeList<T, Ts...>> : public AggregateImpl {
-  static_assert(StaticAssert<TypeListAllSame<TypeList<T, Ts...>>>::value, "");
+class SumImpl<common::SizetList<Is...>, common::TypeList<T, Ts...>>
+    : public AggregateImpl {
+  static_assert(common::StaticAssert<
+                    common::TypeListAllSame<common::TypeList<T, Ts...>>>::value,
+                "");
 
  public:
   SumImpl() : sum_() {}
   void Update(const std::tuple<T, Ts...>& t) {
-    TupleIter(t, [this](const T& x) { sum_ += x; });
+    common::TupleIter(t, [this](const T& x) { sum_ += x; });
   }
   T Get() const { return sum_; }
 
@@ -88,7 +91,7 @@ class SumImpl<SizetList<Is...>, TypeList<T, Ts...>> : public AggregateImpl {
 template <std::size_t... Is>
 struct Sum : public Aggregate {
   template <typename TypeList>
-  using type = SumImpl<SizetList<Is...>, TypeList>;
+  using type = SumImpl<common::SizetList<Is...>, TypeList>;
 
   static std::string ToDebugString() {
     return fmt::format("Sum<{}>", Join(Is...));
@@ -100,7 +103,8 @@ template <typename SizetList, typename TypeList>
 class CountImpl;
 
 template <std::size_t... Is, typename... Ts>
-class CountImpl<SizetList<Is...>, TypeList<Ts...>> : public AggregateImpl {
+class CountImpl<common::SizetList<Is...>, common::TypeList<Ts...>>
+    : public AggregateImpl {
  public:
   void Update(const std::tuple<Ts...>&) { count_++; }
   std::size_t Get() const { return count_; }
@@ -112,7 +116,7 @@ class CountImpl<SizetList<Is...>, TypeList<Ts...>> : public AggregateImpl {
 template <std::size_t... Is>
 struct Count : public Aggregate {
   template <typename TypeList>
-  using type = CountImpl<SizetList<Is...>, TypeList>;
+  using type = CountImpl<common::SizetList<Is...>, TypeList>;
 
   static std::string ToDebugString() {
     return fmt::format("Count<{}>", Join(Is...));
@@ -124,12 +128,15 @@ template <typename SizetList, typename TypeList>
 class AvgImpl;
 
 template <std::size_t... Is, typename T, typename... Ts>
-class AvgImpl<SizetList<Is...>, TypeList<T, Ts...>> : public AggregateImpl {
-  static_assert(StaticAssert<TypeListAllSame<TypeList<T, Ts...>>>::value, "");
+class AvgImpl<common::SizetList<Is...>, common::TypeList<T, Ts...>>
+    : public AggregateImpl {
+  static_assert(common::StaticAssert<
+                    common::TypeListAllSame<common::TypeList<T, Ts...>>>::value,
+                "");
 
  public:
   void Update(const std::tuple<T, Ts...>& t) {
-    TupleIter(t, [this](const T& x) {
+    common::TupleIter(t, [this](const T& x) {
       sum_ += x;
       count_++;
     });
@@ -145,7 +152,7 @@ class AvgImpl<SizetList<Is...>, TypeList<T, Ts...>> : public AggregateImpl {
 template <std::size_t... Is>
 struct Avg : public Aggregate {
   template <typename TypeList>
-  using type = AvgImpl<SizetList<Is...>, TypeList>;
+  using type = AvgImpl<common::SizetList<Is...>, TypeList>;
 
   static std::string ToDebugString() {
     return fmt::format("Avg<{}>", Join(Is...));
@@ -157,15 +164,18 @@ template <typename SizetList, typename TypeList>
 class UnionImpl;
 
 template <std::size_t... Is, typename T, typename... Ts>
-class UnionImpl<SizetList<Is...>, TypeList<std::set<T>, std::set<Ts>...>>
+class UnionImpl<common::SizetList<Is...>,
+                common::TypeList<std::set<T>, std::set<Ts>...>>
     : public AggregateImpl {
-  static_assert(StaticAssert<TypeListAllSame<TypeList<T, Ts...>>>::value, "");
+  static_assert(common::StaticAssert<
+                    common::TypeListAllSame<common::TypeList<T, Ts...>>>::value,
+                "");
 
  public:
   UnionImpl() {}
   void Update(const std::tuple<std::set<T>, std::set<Ts>...>& t) {
-    TupleIter(t,
-              [this](const std::set<T>& x) { xs_.insert(x.begin(), x.end()); });
+    common::TupleIter(
+        t, [this](const std::set<T>& x) { xs_.insert(x.begin(), x.end()); });
   }
   std::set<T> Get() const { return xs_; }
 
@@ -176,7 +186,7 @@ class UnionImpl<SizetList<Is...>, TypeList<std::set<T>, std::set<Ts>...>>
 template <std::size_t... Is>
 struct Union : public Aggregate {
   template <typename TypeList>
-  using type = UnionImpl<SizetList<Is...>, TypeList>;
+  using type = UnionImpl<common::SizetList<Is...>, TypeList>;
 
   static std::string ToDebugString() {
     return fmt::format("Union<{}>", Join(Is...));

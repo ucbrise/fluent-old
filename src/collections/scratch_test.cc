@@ -11,6 +11,7 @@
 #include "gtest/gtest.h"
 
 namespace fluent {
+namespace collections {
 
 TEST(Scratch, ScratchStartsEmpty) {
   Scratch<char, char> s("s", {{"x", "y"}});
@@ -48,6 +49,7 @@ TEST(Scratch, TickClearsScratch) {
   EXPECT_EQ(s.Get(), expected);
 }
 
+}  // namespace collections
 }  // namespace fluent
 
 int main(int argc, char** argv) {

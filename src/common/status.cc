@@ -19,6 +19,7 @@
 #include "common/status.h"
 
 namespace fluent {
+namespace common {
 
 namespace {
 
@@ -65,4 +66,5 @@ extern std::ostream &operator<<(std::ostream &os, const Status &other) {
   return os;
 }
 
+}  // namespace common
 }  // namespace fluent

@@ -23,14 +23,14 @@ int main(int argc, char** argv) {
   }
 
   const std::string server_address = argv[1];
-  fluent::RandomIdGenerator idgen;
+  fluent::common::RandomIdGenerator idgen;
 
   KeyValueServiceClient client(
       grpc::CreateChannel(server_address, grpc::InsecureChannelCredentials()));
   std::string line;
   std::cout << "> " << std::flush;
   while (std::getline(std::cin, line)) {
-    const std::vector<std::string> parts = fluent::Split(line);
+    const std::vector<std::string> parts = fluent::common::Split(line);
     if (parts.size() == 2 && parts[0] == "GET") {
       std::tuple<int32, int64> t = client.Get(parts[1]);
       std::cout << "value = " << std::get<0>(t) << std::endl

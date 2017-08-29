@@ -16,8 +16,10 @@ namespace physical {
 
 template <typename Left, typename Right>
 class Cross : public PhysicalRa {
-  static_assert(StaticAssert<std::is_base_of<PhysicalRa, Left>>::value, "");
-  static_assert(StaticAssert<std::is_base_of<PhysicalRa, Right>>::value, "");
+  static_assert(common::StaticAssert<std::is_base_of<PhysicalRa, Left>>::value,
+                "");
+  static_assert(common::StaticAssert<std::is_base_of<PhysicalRa, Right>>::value,
+                "");
 
  public:
   Cross(Left left, Right right)

@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 
 namespace fluent {
+namespace testing {
 
 TEST(CapturedStdout, SimpleTest) {
   std::cout << "fee" << std::endl;
@@ -19,7 +20,8 @@ TEST(CapturedStdout, SimpleTest) {
   std::cout << "fum" << std::endl;
 }
 
-}  // namespace example
+}  // namespace testing
+}  // namespace fluent
 
 int main(int argc, char **argv) {
   google::InitGoogleLogging(argv[0]);

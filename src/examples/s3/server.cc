@@ -266,23 +266,24 @@ int main(int argc, char* argv[]) {
           });
   auto with_rules = with_rules_or.ConsumeValueOrDie();
 
-  const std::string script = fluent::Slurp(lineage_file).ConsumeValueOrDie();
-  CHECK_EQ(fluent::Status::OK,
+  const std::string script =
+      fluent::common::Slurp(lineage_file).ConsumeValueOrDie();
+  CHECK_EQ(fluent::common::Status::OK,
            with_rules.RegisterBlackBoxPythonLineageScript(script));
-  CHECK_EQ(fluent::Status::OK,
+  CHECK_EQ(fluent::common::Status::OK,
            (with_rules.RegisterBlackBoxPythonLineage<2, 3>("rb_lineage")));
-  CHECK_EQ(fluent::Status::OK,
+  CHECK_EQ(fluent::common::Status::OK,
            (with_rules.RegisterBlackBoxPythonLineage<4, 5>("echo_lineage")));
-  CHECK_EQ(fluent::Status::OK,
+  CHECK_EQ(fluent::common::Status::OK,
            (with_rules.RegisterBlackBoxPythonLineage<6, 7>("rm_lineage")));
-  CHECK_EQ(fluent::Status::OK,
+  CHECK_EQ(fluent::common::Status::OK,
            (with_rules.RegisterBlackBoxPythonLineage<8, 9>("ls_lineage")));
-  CHECK_EQ(fluent::Status::OK,
+  CHECK_EQ(fluent::common::Status::OK,
            (with_rules.RegisterBlackBoxPythonLineage<10, 11>("cat_lineage")));
-  CHECK_EQ(fluent::Status::OK,
+  CHECK_EQ(fluent::common::Status::OK,
            (with_rules.RegisterBlackBoxPythonLineage<12, 13>("cp_lineage")));
 
-  CHECK_EQ(with_rules.Run(), fluent::Status::OK);
+  CHECK_EQ(with_rules.Run(), fluent::common::Status::OK);
 
   return 0;
 }

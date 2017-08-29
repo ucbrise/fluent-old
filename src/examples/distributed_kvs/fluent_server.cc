@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
                    std::vector<int> clock = std::get<2>(t);
                    clock[replica_index] = logical_time.Get();
                    const std::string& replica_address =
-                       replica_addresses[fluent::RandInt(0, 2)];
+                       replica_addresses[fluent::common::RandInt(0, 2)];
                    return std::make_tuple(replica_address, clock);
                  }));
 
@@ -173,7 +173,7 @@ int main(int argc, char* argv[]) {
 
   // TODO(mwhittaker): Remove this hack.
   std::this_thread::sleep_for(std::chrono::seconds(1));
-  fluent::Status status = with_rules.RegisterBlackBoxLineage<2, 3>(
+  fluent::common::Status status = with_rules.RegisterBlackBoxLineage<2, 3>(
       [&replica_index](const std::string& time_inserted, const std::string& key,
                        const std::string& value, const std::string& id) {
         UNUSED(value);
@@ -272,8 +272,8 @@ int main(int argc, char* argv[]) {
             fmt::arg("b", backup_b));
       });
 
-  CHECK_EQ(status, fluent::Status::OK);
-  CHECK_EQ(with_rules.Run(), fluent::Status::OK);
+  CHECK_EQ(status, fluent::common::Status::OK);
+  CHECK_EQ(with_rules.Run(), fluent::common::Status::OK);
 
   return 0;
 }

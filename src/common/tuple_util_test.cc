@@ -10,6 +10,7 @@
 #include "common/status_macros.h"
 
 namespace fluent {
+namespace common {
 namespace detail {
 
 template <typename T>
@@ -506,6 +507,7 @@ TEST(TupleUtil, OstreamOperator) {
   EXPECT_EQ(os.str(), "(1, 2, 3)");
 }
 
+}  // namespace common
 }  // namespace fluent
 
 int main(int argc, char** argv) {

@@ -23,8 +23,9 @@ TEST(Map, SimpleCompileCheck) {
   UNUSED(cross);
 
   using actual = decltype(cross)::column_types;
-  using expected = TypeList<int, bool>;
-  static_assert(StaticAssert<std::is_same<actual, expected>>::value, "");
+  using expected = common::TypeList<int, bool>;
+  static_assert(common::StaticAssert<std::is_same<actual, expected>>::value,
+                "");
 }
 
 }  // namespace fluent

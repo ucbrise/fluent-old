@@ -24,13 +24,17 @@
 namespace fluent {
 namespace lineagedb {
 
+using common::Hash;
+using testing::ExpectStringsEqualIgnoreWhiteSpace;
+using testing::MockClock;
+
 TEST(MockPqxxClient, Init) {
   using Client = MockPqxxClient<Hash, ToSql, MockClock>;
 
   ConnectionConfig c;
-  StatusOr<std::unique_ptr<Client>> client_or =
+  common::StatusOr<std::unique_ptr<Client>> client_or =
       Client::Make("name", 9001, "127.0.0.1", c);
-  ASSERT_EQ(Status::OK, client_or.status());
+  ASSERT_EQ(common::Status::OK, client_or.status());
   std::unique_ptr<Client> client = client_or.ConsumeValueOrDie();
 
   std::vector<std::pair<std::string, std::string>> queries = client->Queries();
@@ -59,12 +63,12 @@ TEST(MockPqxxClient, AddCollection) {
   using Client = MockPqxxClient<Hash, ToSql, MockClock>;
 
   ConnectionConfig c;
-  StatusOr<std::unique_ptr<Client>> client_or =
+  common::StatusOr<std::unique_ptr<Client>> client_or =
       Client::Make("name", 9001, "127.0.0.1", c);
-  ASSERT_EQ(Status::OK, client_or.status());
+  ASSERT_EQ(common::Status::OK, client_or.status());
   std::unique_ptr<Client> client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, (client->AddCollection<int, char, bool>(
-                            "t", "Table", {{"x", "c", "b"}})));
+  ASSERT_EQ(common::Status::OK, (client->AddCollection<int, char, bool>(
+                                    "t", "Table", {{"x", "c", "b"}})));
 
   std::vector<std::pair<std::string, std::string>> queries = client->Queries();
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(4));
@@ -92,11 +96,11 @@ TEST(MockPqxxClient, AddRule) {
   using Client = MockPqxxClient<Hash, ToSql, MockClock>;
 
   ConnectionConfig c;
-  StatusOr<std::unique_ptr<Client>> client_or =
+  common::StatusOr<std::unique_ptr<Client>> client_or =
       Client::Make("name", 9001, "127.0.0.1", c);
-  ASSERT_EQ(Status::OK, client_or.status());
+  ASSERT_EQ(common::Status::OK, client_or.status());
   std::unique_ptr<Client> client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, client->AddRule(0, true, "foo"));
+  ASSERT_EQ(common::Status::OK, client->AddRule(0, true, "foo"));
 
   std::vector<std::pair<std::string, std::string>> queries = client->Queries();
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(3));
@@ -114,12 +118,12 @@ TEST(MockPqxxClient, InsertTuple) {
   ConnectionConfig c;
   tuple_t t = {1, true, 'a'};
 
-  StatusOr<std::unique_ptr<Client>> client_or =
+  common::StatusOr<std::unique_ptr<Client>> client_or =
       Client::Make("name", 9001, "127.0.0.1", c);
-  ASSERT_EQ(Status::OK, client_or.status());
+  ASSERT_EQ(common::Status::OK, client_or.status());
   std::unique_ptr<Client> client = client_or.ConsumeValueOrDie();
   ASSERT_EQ(
-      Status::OK,
+      common::Status::OK,
       client->InsertTuple("t", 42, time_point(std::chrono::seconds(43)), t));
 
   std::vector<std::pair<std::string, std::string>> queries = client->Queries();
@@ -141,12 +145,12 @@ TEST(MockPqxxClient, DeleteTuple) {
   ConnectionConfig c;
   tuple_t t = {1, true, 'a'};
 
-  StatusOr<std::unique_ptr<Client>> client_or =
+  common::StatusOr<std::unique_ptr<Client>> client_or =
       Client::Make("name", 9001, "127.0.0.1", c);
-  ASSERT_EQ(Status::OK, client_or.status());
+  ASSERT_EQ(common::Status::OK, client_or.status());
   std::unique_ptr<Client> client = client_or.ConsumeValueOrDie();
   ASSERT_EQ(
-      Status::OK,
+      common::Status::OK,
       client->DeleteTuple("t", 42, time_point(std::chrono::seconds(43)), t));
 
   std::vector<std::pair<std::string, std::string>> queries = client->Queries();
@@ -165,11 +169,11 @@ TEST(MockPqxxClient, AddNetworkedLineage) {
   using Client = MockPqxxClient<Hash, ToSql, MockClock>;
 
   ConnectionConfig c;
-  StatusOr<std::unique_ptr<Client>> client_or =
+  common::StatusOr<std::unique_ptr<Client>> client_or =
       Client::Make("name", 9001, "127.0.0.1", c);
-  ASSERT_EQ(Status::OK, client_or.status());
+  ASSERT_EQ(common::Status::OK, client_or.status());
   std::unique_ptr<Client> client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, client->AddNetworkedLineage(0, 1, "foo", 2, 3));
+  ASSERT_EQ(common::Status::OK, client->AddNetworkedLineage(0, 1, "foo", 2, 3));
 
   std::vector<std::pair<std::string, std::string>> queries = client->Queries();
 
@@ -186,11 +190,11 @@ TEST(MockPqxxClient, AddDerivedLineage) {
   using Client = MockPqxxClient<Hash, MockToSql, MockClock>;
 
   ConnectionConfig c;
-  StatusOr<std::unique_ptr<Client>> client_or =
+  common::StatusOr<std::unique_ptr<Client>> client_or =
       Client::Make("name", 9001, "127.0.0.1", c);
-  ASSERT_EQ(Status::OK, client_or.status());
+  ASSERT_EQ(common::Status::OK, client_or.status());
   std::unique_ptr<Client> client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK,
+  ASSERT_EQ(common::Status::OK,
             client->AddDerivedLineage(LocalTupleId{"foo", 1, 2}, 3, true,
                                       std::chrono::time_point<MockClock>(),
                                       LocalTupleId{"bar", 4, 5}));
@@ -209,16 +213,16 @@ TEST(MockPqxxClient, AddDerivedLineage) {
 TEST(MockPqxxClient, RegisterBlackBoxLineage) {
   using Client = MockPqxxClient<Hash, MockToSql, MockClock>;
   ConnectionConfig c;
-  StatusOr<std::unique_ptr<Client>> client_or =
+  common::StatusOr<std::unique_ptr<Client>> client_or =
       Client::Make("name", 9001, "127.0.0.1", c);
-  ASSERT_EQ(Status::OK, client_or.status());
+  ASSERT_EQ(common::Status::OK, client_or.status());
   std::unique_ptr<Client> client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK,
+  ASSERT_EQ(common::Status::OK,
             client->RegisterBlackBoxLineage("bar", std::vector<std::string>{}));
-  ASSERT_EQ(Status::OK,
+  ASSERT_EQ(common::Status::OK,
             client->RegisterBlackBoxLineage(
                 "baz", std::vector<std::string>{"query1"}));
-  ASSERT_EQ(Status::OK,
+  ASSERT_EQ(common::Status::OK,
             client->RegisterBlackBoxLineage(
                 "zardoz", std::vector<std::string>{"query2", "query3"}));
   std::vector<std::pair<std::string, std::string>> queries = client->Queries();
@@ -247,14 +251,14 @@ TEST(MockPqxxClient, RegisterBlackBoxLineage) {
 TEST(MockPqxxClient, RegisterBlackBoxPythonLineageScript) {
   using Client = MockPqxxClient<Hash, MockToSql, MockClock>;
   ConnectionConfig c;
-  StatusOr<std::unique_ptr<Client>> client_or =
+  common::StatusOr<std::unique_ptr<Client>> client_or =
       Client::Make("name", 9001, "127.0.0.1", c);
-  ASSERT_EQ(Status::OK, client_or.status());
+  ASSERT_EQ(common::Status::OK, client_or.status());
   std::unique_ptr<Client> client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK,
+  ASSERT_EQ(common::Status::OK,
             client->RegisterBlackBoxPythonLineageScript("rick\nand\nmorty"));
   ASSERT_EQ(
-      Status::OK,
+      common::Status::OK,
       client->RegisterBlackBoxPythonLineageScript("beevis\nand\nbutthead"));
   std::vector<std::pair<std::string, std::string>> queries = client->Queries();
 
@@ -278,12 +282,14 @@ TEST(MockPqxxClient, RegisterBlackBoxPythonLineageScript) {
 TEST(MockPqxxClient, RegisterBlackBoxPythonLineage) {
   using Client = MockPqxxClient<Hash, MockToSql, MockClock>;
   ConnectionConfig c;
-  StatusOr<std::unique_ptr<Client>> client_or =
+  common::StatusOr<std::unique_ptr<Client>> client_or =
       Client::Make("name", 9001, "127.0.0.1", c);
-  ASSERT_EQ(Status::OK, client_or.status());
+  ASSERT_EQ(common::Status::OK, client_or.status());
   std::unique_ptr<Client> client = client_or.ConsumeValueOrDie();
-  ASSERT_EQ(Status::OK, client->RegisterBlackBoxPythonLineage("foo", "get"));
-  ASSERT_EQ(Status::OK, client->RegisterBlackBoxPythonLineage("bar", "set"));
+  ASSERT_EQ(common::Status::OK,
+            client->RegisterBlackBoxPythonLineage("foo", "get"));
+  ASSERT_EQ(common::Status::OK,
+            client->RegisterBlackBoxPythonLineage("bar", "set"));
   std::vector<std::pair<std::string, std::string>> queries = client->Queries();
 
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(4));

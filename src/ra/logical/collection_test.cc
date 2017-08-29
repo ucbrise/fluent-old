@@ -13,13 +13,15 @@ namespace lra = fluent::ra::logical;
 namespace fluent {
 
 TEST(Collection, SimpleCompileCheck) {
-  Table<int> t("t", {{"x"}});
-  lra::Collection<Table<int>> collection = lra::make_collection(&t);
+  collections::Table<int> t("t", {{"x"}});
+  lra::Collection<collections::Table<int>> collection =
+      lra::make_collection(&t);
   UNUSED(collection);
 
   using actual = decltype(collection)::column_types;
-  using expected = TypeList<int>;
-  static_assert(StaticAssert<std::is_same<actual, expected>>::value, "");
+  using expected = common::TypeList<int>;
+  static_assert(common::StaticAssert<std::is_same<actual, expected>>::value,
+                "");
 }
 
 }  // namespace fluent

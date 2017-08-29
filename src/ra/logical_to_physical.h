@@ -43,7 +43,7 @@ template <typename Physical>
 auto UnFlatten(Physical p) {
   return pra::make_map(std::move(p), [](const auto& t) {
     const std::set<LocalTupleId>& lineage = std::get<0>(t);
-    const auto t_ = TupleDrop<1>(t);
+    const auto t_ = common::TupleDrop<1>(t);
     return std::make_tuple(t_, lineage);
   });
 }
@@ -54,7 +54,7 @@ struct LogicalToPhysicalImpl<lra::Collection<Collection>> {
     auto iterable = pra::make_iterable(&collection.collection->Get());
     return pra::make_map(std::move(iterable), [&collection](const auto& pair) {
       const auto& t = pair.first;
-      const CollectionTupleIds& ids = pair.second;
+      const collections::CollectionTupleIds& ids = pair.second;
       const std::string& collection_name = collection.collection->Name();
 
       std::set<LocalTupleId> lineage;
@@ -72,7 +72,7 @@ template <typename Collection>
 struct LogicalToPhysicalImpl<lra::MetaCollection<Collection>> {
   auto operator()(const lra::MetaCollection<Collection>& meta_collection) {
     using column_types = typename lra::MetaCollection<Collection>::column_types;
-    using column_tuple = typename TypeListToTuple<column_types>::type;
+    using column_tuple = typename common::TypeListToTuple<column_types>::type;
     using lineage_type = std::set<LocalTupleId>;
     using ret_type = std::vector<std::tuple<column_tuple, lineage_type>>;
 
@@ -80,7 +80,7 @@ struct LogicalToPhysicalImpl<lra::MetaCollection<Collection>> {
     return pra::make_flat_map<ret_type>(
         std::move(iterable), [&meta_collection](const auto& pair) {
           const auto& t = pair.first;
-          const CollectionTupleIds& ids = pair.second;
+          const collections::CollectionTupleIds& ids = pair.second;
           const Collection* collection = meta_collection.collection;
           const std::string& collection_name = collection->Name();
 
@@ -167,16 +167,17 @@ struct LogicalToPhysicalImpl<lra::HashJoin<Left, LeftKeys<LeftKs...>,  //
                           Right, RightKeys<RightKs...>>& hash_join) {
     using left_column_types = typename Left::column_types;
     using left_column_types_lineaged =
-        typename TypeListCons<std::set<LocalTupleId>, left_column_types>::type;
+        typename common::TypeListCons<std::set<LocalTupleId>,
+                                      left_column_types>::type;
     using left_column_tuple_lineaged =
-        typename TypeListToTuple<left_column_types_lineaged>::type;
+        typename common::TypeListToTuple<left_column_types_lineaged>::type;
     static constexpr std::size_t left_num_columns =
-        TypeListLen<left_column_types>::value;
+        common::TypeListLen<left_column_types>::value;
 
     using left_key_column_types =
-        typename TypeListProject<left_column_types, LeftKs...>::type;
+        typename common::TypeListProject<left_column_types, LeftKs...>::type;
     using left_key_column_tuple =
-        typename TypeListToTuple<left_key_column_types>::type;
+        typename common::TypeListToTuple<left_key_column_types>::type;
 
     auto left = Flatten(LogicalToPhysical(hash_join.left));
     auto right = Flatten(LogicalToPhysical(hash_join.right));
@@ -196,9 +197,9 @@ struct LogicalToPhysicalImpl<lra::HashJoin<Left, LeftKeys<LeftKs...>,  //
       lineage.insert(right_lineage.begin(), right_lineage.end());
 
       using left_indexes =
-          typename SizetListRange<1, 1 + left_num_columns>::type;
-      auto left_t = TupleProjectBySizetList<left_indexes>(t);
-      auto right_t = TupleDrop<1 + left_num_columns + 1>(t);
+          typename common::SizetListRange<1, 1 + left_num_columns>::type;
+      auto left_t = common::TupleProjectBySizetList<left_indexes>(t);
+      auto right_t = common::TupleDrop<1 + left_num_columns + 1>(t);
       return std::make_tuple(std::tuple_cat(left_t, right_t), lineage);
     });
   }
@@ -209,19 +210,21 @@ struct IncrementAggregateImpl;
 
 template <template <typename, typename> class A,  //
           std::size_t... Is, typename... Ts>
-struct IncrementAggregateImpl<A<SizetList<Is...>, TypeList<Ts...>>> {
-  using aggregate_impl = A<SizetList<Is...>, TypeList<Ts...>>;
+struct IncrementAggregateImpl<
+    A<common::SizetList<Is...>, common::TypeList<Ts...>>> {
+  using aggregate_impl = A<common::SizetList<Is...>, common::TypeList<Ts...>>;
   using is_aggregate_impl = std::is_base_of<agg::AggregateImpl, aggregate_impl>;
-  static_assert(StaticAssert<is_aggregate_impl>::value, "");
-  using type = A<SizetList<1 + Is...>, TypeList<Ts...>>;
+  static_assert(common::StaticAssert<is_aggregate_impl>::value, "");
+  using type = A<common::SizetList<1 + Is...>, common::TypeList<Ts...>>;
 };
 
 template <typename AggregateImpls>
 struct IncrementAggregateImpls;
 
 template <typename... AggImpls>
-struct IncrementAggregateImpls<TypeList<AggImpls...>> {
-  using type = TypeList<typename IncrementAggregateImpl<AggImpls>::type...>;
+struct IncrementAggregateImpls<common::TypeList<AggImpls...>> {
+  using type =
+      common::TypeList<typename IncrementAggregateImpl<AggImpls>::type...>;
 };
 
 template <typename Logical, std::size_t... Ks, typename... Aggregates>
@@ -233,24 +236,25 @@ struct LogicalToPhysicalImpl<
 
     using keys = Keys<1 + Ks...>;
     using key_types = typename group::key_types;
-    using key_tuple = typename TypeListToTuple<key_types>::type;
+    using key_tuple = typename common::TypeListToTuple<key_types>::type;
 
     using agg_impl_types = typename group::aggregate_impl_types;
     using incr_agg_impl_types =
         typename IncrementAggregateImpls<agg_impl_types>::type;
-    using union_ =
-        agg::UnionImpl<SizetList<0>, TypeList<std::set<LocalTupleId>>>;
+    using union_ = agg::UnionImpl<common::SizetList<0>,
+                                  common::TypeList<std::set<LocalTupleId>>>;
     using union_agg_impl_types =
-        typename TypeListCons<union_, incr_agg_impl_types>::type;
-    using agg_impl_tuple = typename TypeListToTuple<union_agg_impl_types>::type;
+        typename common::TypeListCons<union_, incr_agg_impl_types>::type;
+    using agg_impl_tuple =
+        typename common::TypeListToTuple<union_agg_impl_types>::type;
 
     auto child = Flatten(LogicalToPhysical(group_by.child));
     auto grouped =
         pra::make_group_by<keys, key_tuple, agg_impl_tuple>(std::move(child));
     return pra::make_map(std::move(grouped), [](const auto& t) {
-      auto keys = TupleTake<sizeof...(Ks)>(t);
+      auto keys = common::TupleTake<sizeof...(Ks)>(t);
       auto lineage = std::get<sizeof...(Ks)>(t);
-      auto aggs = TupleDrop<1 + sizeof...(Ks)>(t);
+      auto aggs = common::TupleDrop<1 + sizeof...(Ks)>(t);
       return std::make_tuple(std::tuple_cat(keys, aggs), lineage);
     });
   }
@@ -260,13 +264,13 @@ template <typename Logical>
 auto LogicalToPhysical(const Logical& l) {
   using logical_decayed = typename std::decay<Logical>::type;
   using is_logical = std::is_base_of<lra::LogicalRa, logical_decayed>;
-  static_assert(StaticAssert<is_logical>::value, "");
+  static_assert(common::StaticAssert<is_logical>::value, "");
 
   auto p = LogicalToPhysicalImpl<logical_decayed>()(l);
 
   using physical = decltype(p);
   using is_physical = std::is_base_of<pra::PhysicalRa, physical>;
-  static_assert(StaticAssert<is_physical>::value, "");
+  static_assert(common::StaticAssert<is_physical>::value, "");
 
   return std::move(p);
 }

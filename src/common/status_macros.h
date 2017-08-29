@@ -38,6 +38,7 @@
 #include "common/status_or.h"
 
 namespace fluent {
+namespace common {
 
 // Run a command that returns a util::Status.  If the called code returns an
 // error status, return that status up out of this method too.
@@ -47,7 +48,7 @@ namespace fluent {
 #define RETURN_IF_ERROR(expr)                                                \
   do {                                                                       \
     /* Using _status below to avoid capture problems if expr is "status". */ \
-    const ::fluent::Status _status = (expr);                                 \
+    const ::fluent::common::Status _status = (expr);                         \
     if (!_status.ok()) return _status;                                       \
   } while (0)
 
@@ -63,8 +64,8 @@ Status DoAssignOrReturn(T& lhs, StatusOr<T> result) {
   return result.status();
 }
 
-#define ASSIGN_OR_RETURN_IMPL(status, lhs, rexpr) \
-  Status status = DoAssignOrReturn(lhs, (rexpr)); \
+#define ASSIGN_OR_RETURN_IMPL(status, lhs, rexpr)                   \
+  ::fluent::common::Status status = DoAssignOrReturn(lhs, (rexpr)); \
   if (!status.ok()) return status;
 
 // Executes an expression that returns a util::StatusOr, extracting its value
@@ -80,6 +81,7 @@ Status DoAssignOrReturn(T& lhs, StatusOr<T> result) {
   ASSIGN_OR_RETURN_IMPL(             \
       STATUS_MACROS_CONCAT_NAME(_status_or_value, __COUNTER__), lhs, rexpr);
 
+}  // namespace common
 }  // namespace fluent
 
 #endif  // COMMON_STATUS_MACROS_H_

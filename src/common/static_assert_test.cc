@@ -6,11 +6,13 @@
 #include "gtest/gtest.h"
 
 namespace fluent {
+namespace common {
 
 TEST(StaticAssert, Fail) {
   static_assert(StaticAssert<std::is_same<int, int>>::value, "");
 }
 
+}  // namespace common
 }  // namespace fluent
 
 int main(int argc, char **argv) {

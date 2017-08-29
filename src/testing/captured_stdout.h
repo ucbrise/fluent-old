@@ -6,6 +6,7 @@
 #include <string>
 
 namespace fluent {
+namespace testing {
 // CapturedStdout can be used to capture contents written to stdout.
 //
 //   {
@@ -30,6 +31,8 @@ class CapturedStdout {
   std::stringstream buffer_;
   std::streambuf* cout_sbuf_;
 };
-}
+
+}  // namespace testing
+}  // namespace fluent
 
 #endif  // TESTING_CAPTURED_STDOUT_H_

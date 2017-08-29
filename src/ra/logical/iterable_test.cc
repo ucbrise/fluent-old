@@ -21,8 +21,9 @@ TEST(Iterable, SimpleCompileCheckSet) {
   UNUSED(iterable);
 
   using actual = decltype(iterable)::column_types;
-  using expected = TypeList<int>;
-  static_assert(StaticAssert<std::is_same<actual, expected>>::value, "");
+  using expected = common::TypeList<int>;
+  static_assert(common::StaticAssert<std::is_same<actual, expected>>::value,
+                "");
 }
 
 TEST(Iterable, SimpleCompileCheckVector) {
@@ -32,8 +33,8 @@ TEST(Iterable, SimpleCompileCheckVector) {
   UNUSED(iterable);
 
   using column_types = decltype(iterable)::column_types;
-  using is_same = std::is_same<column_types, TypeList<int>>;
-  static_assert(StaticAssert<is_same>::value, "");
+  using is_same = std::is_same<column_types, common::TypeList<int>>;
+  static_assert(common::StaticAssert<is_same>::value, "");
 }
 
 }  // namespace fluent

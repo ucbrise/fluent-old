@@ -10,6 +10,7 @@
 #include "common/status_or.h"
 
 namespace fluent {
+namespace common {
 
 // https://stackoverflow.com/a/2602258/3187068
 StatusOr<std::string> Slurp(const std::string& filename) {
@@ -23,4 +24,5 @@ StatusOr<std::string> Slurp(const std::string& filename) {
   return buffer.str();
 }
 
+}  // namespace common
 }  // namespace fluent

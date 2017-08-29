@@ -16,6 +16,9 @@
 #include "zmq_util/zmq_util.h"
 
 namespace fluent {
+namespace collections {
+
+using common::MockPickler;
 
 TEST(Channel, ChannelStartsEmpty) {
   zmq::context_t context(1);
@@ -95,6 +98,7 @@ TEST(Channel, TickClearsChannel) {
   EXPECT_EQ(c.Get(), expected);
 }
 
+}  // namespace collections
 }  // namespace fluent
 
 int main(int argc, char** argv) {

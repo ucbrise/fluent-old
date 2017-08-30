@@ -18,6 +18,7 @@ install:
     ./scripts/install_dependencies.sh;
   fi
 before_script:
+- pg_ctl stop
 - export PATH="/usr/bin:$PATH"
 - ./scripts/print_diagnostics.sh
 script:

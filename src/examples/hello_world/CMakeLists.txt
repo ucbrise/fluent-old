@@ -1,0 +1,14 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
+
+MACRO(CREATE_HELLO_WORLD_EXECUTABLE NAME)
+    ADD_EXECUTABLE(examples_hello_world_${NAME} ${NAME})
+    TARGET_LINK_LIBRARIES(examples_hello_world_${NAME}
+        fluent
+        glog)
+    ADD_DEPENDENCIES(examples_hello_world_${NAME}
+        ${GOOGLELOG_PROJECT}
+        fluent)
+ENDMACRO(CREATE_HELLO_WORLD_EXECUTABLE)
+
+CREATE_HELLO_WORLD_EXECUTABLE(hello_world)
+CREATE_HELLO_WORLD_EXECUTABLE(hello_world_lineage)

@@ -1,0 +1,13 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 3.0)
+
+MACRO(CREATE_META_EXECUTABLE NAME)
+    ADD_EXECUTABLE(examples_meta_${NAME} ${NAME})
+    TARGET_LINK_LIBRARIES(examples_meta_${NAME}
+        fluent
+        glog)
+    ADD_DEPENDENCIES(examples_meta_${NAME}
+        ${GOOGLELOG_PROJECT}
+        fluent)
+ENDMACRO(CREATE_META_EXECUTABLE)
+
+CREATE_META_EXECUTABLE(meta_example)

@@ -75,7 +75,8 @@ TEST(MockPqxxClient, AddCollection) {
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, R"(
     INSERT INTO Collections (node_id, collection_name, collection_type,
                              column_names, lineage_type, python_lineage_method)
-    VALUES (9001, 't', 'Table', ARRAY['x', 'c', 'b'], 'regular', NULL);
+    VALUES (9001, 't', 'Table', CAST(ARRAY['x', 'c', 'b'] AS text[]),
+            'regular', NULL);
   )");
   ExpectStringsEqualIgnoreWhiteSpace(queries[3].second, R"(
     CREATE TABLE name_t (

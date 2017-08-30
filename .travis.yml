@@ -12,13 +12,13 @@ env:
 - TEST_TYPE=Debug
 - TEST_TYPE=Release
 install:
+- pg_ctl stop
 - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     ./scripts/install_dependencies_osx.sh;
   else
     ./scripts/install_dependencies.sh;
   fi
 before_script:
-- pg_ctl stop
 - export PATH="/usr/bin:$PATH"
 - ./scripts/print_diagnostics.sh
 script:

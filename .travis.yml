@@ -12,7 +12,7 @@ env:
 - TEST_TYPE=Debug
 - TEST_TYPE=Release
 install:
-- pg_ctl stop
+- sudo /etc/init.d/postgresql stop
 - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     ./scripts/install_dependencies_osx.sh;
   else

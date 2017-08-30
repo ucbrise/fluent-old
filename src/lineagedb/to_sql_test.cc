@@ -64,9 +64,10 @@ TEST(ToSql, ToSqlValue) {
   EXPECT_EQ(ToSql<std::int64_t>().Value(5), "5");
   EXPECT_EQ(ToSql<float>().Value(6.0), "6.000000");
   EXPECT_EQ(ToSql<double>().Value(7.0), "7.000000");
-  EXPECT_EQ((ToSql<std::array<int, 0>>().Value({{}})), "ARRAY[]::integer[]");
+  EXPECT_EQ((ToSql<std::array<int, 0>>().Value({{}})),
+            "CAST(ARRAY[] AS integer[])");
   EXPECT_EQ((ToSql<std::array<bool, 2>>().Value({{true, false}})),
-            "ARRAY[]::boolean[true, false]");
+            "CAST(ARRAY[true, false] AS boolean[])");
 
   EXPECT_EQ(Value<bool>()(true), "true");
   EXPECT_EQ(Value<char>()('a'), "'a'");
@@ -78,12 +79,12 @@ TEST(ToSql, ToSqlValue) {
   EXPECT_EQ(Value<std::int64_t>()(5), "5");
   EXPECT_EQ(Value<float>()(6.0), "6.000000");
   EXPECT_EQ(Value<double>()(7.0), "7.000000");
-  EXPECT_EQ((Value<std::vector<int>>()({})), "ARRAY[]::integer[]");
+  EXPECT_EQ((Value<std::vector<int>>()({})), "CAST(ARRAY[] AS integer[])");
   EXPECT_EQ((Value<std::vector<bool>>()({true, false})),
-            "ARRAY[]::boolean[true, false]");
-  EXPECT_EQ((Value<std::array<int, 0>>()({{}})), "ARRAY[]::integer[]");
+            "CAST(ARRAY[true, false] AS boolean[])");
+  EXPECT_EQ((Value<std::array<int, 0>>()({{}})), "CAST(ARRAY[] AS integer[])");
   EXPECT_EQ((Value<std::array<bool, 2>>()({{true, false}})),
-            "ARRAY[]::boolean[true, false]");
+            "CAST(ARRAY[true, false] AS boolean[])");
   // TODO(mwhittaker): Test ToSqlValue<std::chrono::time_point<Clock>>.
 }
 

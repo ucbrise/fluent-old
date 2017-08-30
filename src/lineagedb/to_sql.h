@@ -142,8 +142,8 @@ struct ToSql<std::vector<T>> {
     for (const T& x : xs) {
       values.push_back(ToSql<T>().Value(x));
     }
-    return fmt::format("ARRAY[]::{}[{}]", ToSql<T>().Type(),
-                       common::Join(values));
+    return fmt::format("CAST(ARRAY[{}] AS {}[])", common::Join(values),
+                       ToSql<T>().Type());
   }
 };
 
@@ -156,8 +156,8 @@ struct ToSql<std::array<T, N>> {
     for (const T& x : xs) {
       values.push_back(ToSql<T>().Value(x));
     }
-    return fmt::format("ARRAY[]::{}[{}]", ToSql<T>().Type(),
-                       common::Join(values));
+    return fmt::format("CAST(ARRAY[{}] AS {}[])", common::Join(values),
+                       ToSql<T>().Type());
   }
 };
 

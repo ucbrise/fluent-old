@@ -47,13 +47,13 @@ TEST(MockPqxxClient, Init) {
     CREATE TABLE name_lineage (
       dep_node_id          bigint                    NOT NULL,
       dep_collection_name  text                      NOT NULL,
-      dep_tuple_hash       bigint                    NOT NULL,
-      dep_time             bigint                    NOT NULL,
+      dep_tuple_hash       numeric(20)               NOT NULL,
+      dep_time             integer                   NOT NULL,
       rule_number          integer,
       inserted             boolean                   NOT NULL,
       physical_time        timestamp with time zone,
       collection_name      text                      NOT NULL,
-      tuple_hash           bigint                    NOT NULL,
+      tuple_hash           numeric(20)               NOT NULL,
       time                 integer                   NOT NULL
     );
   )");
@@ -80,7 +80,7 @@ TEST(MockPqxxClient, AddCollection) {
   )");
   ExpectStringsEqualIgnoreWhiteSpace(queries[3].second, R"(
     CREATE TABLE name_t (
-      hash bigint  NOT NULL,
+      hash numeric(20)  NOT NULL,
       time_inserted integer NOT NULL,
       time_deleted integer,
       physical_time_inserted timestamp with time zone NOT NULL,
@@ -128,7 +128,7 @@ TEST(MockPqxxClient, InsertTuple) {
       client->InsertTuple("t", 42, time_point(std::chrono::seconds(43)), t));
 
   std::vector<std::pair<std::string, std::string>> queries = client->Queries();
-  std::int64_t hash = detail::size_t_to_int64(Hash<tuple_t>()(t));
+  std::size_t hash = Hash<tuple_t>()(t);
 
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(3));
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, fmt::format(R"(
@@ -155,7 +155,7 @@ TEST(MockPqxxClient, DeleteTuple) {
       client->DeleteTuple("t", 42, time_point(std::chrono::seconds(43)), t));
 
   std::vector<std::pair<std::string, std::string>> queries = client->Queries();
-  std::int64_t hash = detail::size_t_to_int64(Hash<tuple_t>()(t));
+  std::size_t hash = Hash<tuple_t>()(t);
 
   ASSERT_EQ(queries.size(), static_cast<std::size_t>(3));
   ExpectStringsEqualIgnoreWhiteSpace(queries[2].second, fmt::format(R"(

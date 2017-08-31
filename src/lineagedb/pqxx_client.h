@@ -23,13 +23,6 @@
 
 namespace fluent {
 namespace lineagedb {
-namespace detail {
-
-inline std::int64_t size_t_to_int64(std::size_t hash) {
-  return static_cast<std::int64_t>(hash);
-}
-
-}  // namespace detail
 
 // # Overview
 // Ignore the Connection and Work template arguments for now and pretend the
@@ -62,19 +55,20 @@ inline std::int64_t size_t_to_int64(std::size_t hash) {
 //   std::string name = "seanconnery";
 //   std::size_t id = 42;
 //   std::string address = "inproc://zardoz";
-//   common::StatusOr<Client> client_or = Client::Make(name, id, address,
-//   config);
+//   StatusOr<Client> client_or = Client::Make(name, id, address, config);
 //   Client client = client_or.ConsumeValueOrDie();
 //
-//   // Add the types of our collections.
-//   client.AddCollection<int, float>("t", "Table")   // Table t[int, float].
-//   client.AddCollection<int, float>("c", "Channel") // Channel c[int, float].
+//   // Add the types of our collections:
+//   //   1. Table t[int, float].
+//   //   2. Channel c[int, float].
+//   client.AddCollection<int, float>("t", "Table", {{"x", "y"}})
+//   client.AddCollection<int, float>("c", "Channel", {{"x", "y"}})
 //
 //   // Add all our rules.
-//   client.AddRule(0, true, t += c.Iterable());
-//   client.AddRule(1, true, t -= (c.Iterable() | ra::filter(f)));
-//   client.AddRule(0, false, t += c.Iterable());
-//   client.AddRule(1, false, t -= (c.Iterable() | ra::filter(f)));
+//   client.AddRule(0, true, "t += c.Iterable()");
+//   client.AddRule(1, true, "t -= (c.Iterable() | ra::filter(f))");
+//   client.AddRule(0, false, "t += c.Iterable()");
+//   client.AddRule(1, false, "t -= (c.Iterable() | ra::filter(f))");
 //
 //   // Add and delete some tuples.
 //   client.InsertTuple("t", 0, system_clock::now(), make_tuple("hi",  42.0));
@@ -102,6 +96,8 @@ template <typename Connection, typename Work, template <typename> class Hash,
           template <typename> class ToSql, typename Clock>
 class InjectablePqxxClient {
  public:
+  using time_point = std::chrono::time_point<Clock>;
+
   DISALLOW_COPY_AND_ASSIGN(InjectablePqxxClient);
   DISALLOW_MOVE_AND_ASSIGN(InjectablePqxxClient);
   virtual ~InjectablePqxxClient() = default;
@@ -134,17 +130,22 @@ class InjectablePqxxClient {
                             "Lineage is a reserved collection name.");
     }
 
+    const std::string q1 = R"(
+      INSERT INTO Collections (node_id,
+                               collection_name,
+                               collection_type,
+                               column_names,
+                               lineage_type,
+                               python_lineage_method)
+      VALUES ({id}, {collection}, {type}, {cols}, 'regular', NULL);
+    )";
     RETURN_IF_ERROR(ExecuteQuery(
         "AddCollection",
-        fmt::format(
-            R"(
-      INSERT INTO Collections (node_id, collection_name, collection_type,
-                               column_names, lineage_type,
-                               python_lineage_method)
-      VALUES ({}, 'regular', NULL);
-    )",
-            common::Join(SqlValues(std::make_tuple(
-                id_, collection_name, collection_type, column_names))))));
+        fmt::format(q1,  //
+                    fmt::arg("id", SqlValue(id_)),
+                    fmt::arg("collection", SqlValue(collection_name)),
+                    fmt::arg("type", SqlValue(collection_type)),
+                    fmt::arg("cols", SqlValue(column_names)))));
 
     std::vector<std::string> types = SqlTypes<Ts...>();
     std::vector<std::string> columns;
@@ -152,109 +153,138 @@ class InjectablePqxxClient {
       columns.push_back(
           fmt::format("{} {} NOT NULL", column_names[i], types[i]));
     }
-    return ExecuteQuery(
-        "AddCollectionTable",
-        fmt::format(R"(
-      CREATE TABLE {}_{} (
-        hash                   bigint                   NOT NULL,
-        time_inserted          integer                  NOT NULL,
-        time_deleted           integer,
-        physical_time_inserted timestamp with time zone NOT NULL,
-        physical_time_deleted  timestamp with time zone,
-        {},
+    const std::string q2 = R"(
+      CREATE TABLE {name}_{collection} (
+        hash                   {sizet_type} NOT NULL,
+        time_inserted          {int_type}   NOT NULL,
+        time_deleted           {int_type},
+        physical_time_inserted {time_type}  NOT NULL,
+        physical_time_deleted  {time_type},
+        {columns},
         PRIMARY KEY (hash, time_inserted)
       );
-    )",
-                    name_, collection_name, common::Join(columns)));
+    )";
+    return ExecuteQuery(
+        "AddCollectionTable",
+        fmt::format(q2,  //
+                    fmt::arg("name", name_),
+                    fmt::arg("collection", collection_name),
+                    fmt::arg("sizet_type", ToSql<std::size_t>().Type()),
+                    fmt::arg("int_type", ToSql<int>().Type()),
+                    fmt::arg("time_type", ToSql<time_point>().Type()),
+                    fmt::arg("columns", common::Join(columns))));
   }
 
   WARN_UNUSED common::Status AddRule(std::size_t rule_number, bool is_bootstrap,
                                      const std::string& rule_string) {
-    return ExecuteQuery(
-        "AddRule",
-        fmt::format(R"(
+    const std::string q = R"(
       INSERT INTO Rules (node_id, rule_number, is_bootstrap, rule)
-      VALUES ({});
-    )",
-                    common::Join(SqlValues(std::make_tuple(
-                        id_, rule_number, is_bootstrap, rule_string)))));
+      VALUES ({id}, {num}, {bootstrap}, {rule});
+    )";
+    return ExecuteQuery(
+        "AddRule", fmt::format(q,  //
+                               fmt::arg("id", SqlValue(id_)),
+                               fmt::arg("num", SqlValue(rule_number)),
+                               fmt::arg("bootstrap", SqlValue(is_bootstrap)),
+                               fmt::arg("rule", SqlValue(rule_string))));
   }
 
   template <typename... Ts>
   WARN_UNUSED common::Status InsertTuple(
       const std::string& collection_name, int time_inserted,
-      const std::chrono::time_point<Clock>& physical_time_inserted,
-      const std::tuple<Ts...>& t) {
+      const time_point& physical_time_inserted, const std::tuple<Ts...>& t) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >=1 column.");
-    std::int64_t hash = detail::size_t_to_int64(Hash<std::tuple<Ts...>>()(t));
+    std::size_t hash = Hash<std::tuple<Ts...>>()(t);
+    const std::string q = R"(
+      INSERT INTO {name}_{collection}
+      VALUES ({hash}, {ltime}, NULL, {ptime}, NULL, {t});
+    )";
     return ExecuteQuery(
         "InsertTuple",
-        fmt::format(R"(
-      INSERT INTO {}_{}
-      VALUES ({}, {}, NULL, {}, NULL, {});
-    )",
-                    name_, collection_name, SqlValue(hash),
-                    SqlValue(time_inserted), SqlValue(physical_time_inserted),
-                    common::Join(SqlValues(t))));
+        fmt::format(q,  //
+                    fmt::arg("name", name_),
+                    fmt::arg("collection", collection_name),
+                    fmt::arg("hash", SqlValue(hash)),
+                    fmt::arg("ltime", SqlValue(time_inserted)),
+                    fmt::arg("ptime", SqlValue(physical_time_inserted)),
+                    fmt::arg("t", common::Join(SqlValues(t)))));
   }
 
   template <typename... Ts>
   WARN_UNUSED common::Status DeleteTuple(
       const std::string& collection_name, int time_deleted,
-      const std::chrono::time_point<Clock>& physical_time_deleted,
-      const std::tuple<Ts...>& t) {
+      const time_point& physical_time_deleted, const std::tuple<Ts...>& t) {
     static_assert(sizeof...(Ts) > 0, "Collections should have >=1 column.");
-    std::int64_t hash = detail::size_t_to_int64(Hash<std::tuple<Ts...>>()(t));
+    std::size_t hash = Hash<std::tuple<Ts...>>()(t);
+    const std::string q = R"(
+      UPDATE {name}_{collection}
+      SET time_deleted = {ltime}, physical_time_deleted = {ptime}
+      WHERE hash = {hash} AND time_deleted IS NULL;
+    )";
     return ExecuteQuery(
         "DeleteTuple",
-        fmt::format(R"(
-      UPDATE {}_{}
-      SET time_deleted = {}, physical_time_deleted = {}
-      WHERE hash = {} AND time_deleted IS NULL;
-    )",
-                    name_, collection_name, SqlValue(time_deleted),
-                    SqlValue(physical_time_deleted), SqlValue(hash)));
+        fmt::format(q,  //
+                    fmt::arg("name", name_),
+                    fmt::arg("collection", collection_name),
+                    fmt::arg("ltime", SqlValue(time_deleted)),
+                    fmt::arg("ptime", SqlValue(physical_time_deleted)),
+                    fmt::arg("hash", SqlValue(hash))));
   }
 
   // TODO(mwhittaker): Add physical time to network lineage.
   WARN_UNUSED common::Status AddNetworkedLineage(
       std::size_t dep_node_id, int dep_time, const std::string& collection_name,
       std::size_t tuple_hash, int time) {
+    const std::string q = R"(
+      INSERT INTO {name}_lineage (dep_node_id, dep_collection_name,
+                                  dep_tuple_hash, dep_time, rule_number,
+                                  inserted, collection_name, tuple_hash, time)
+      VALUES ({dep_id}, {dep_c}, {dep_hash}, {dep_time},
+              NULL,
+              {inserted}, {c}, {hash}, {time});
+    )";
+    return ExecuteQuery(
+        "AddLineage",
+        fmt::format(q,  //
+                    fmt::arg("name", name_),
+                    fmt::arg("dep_id", SqlValue(dep_node_id)),
+                    fmt::arg("dep_c", SqlValue(collection_name)),
+                    fmt::arg("dep_hash", SqlValue(tuple_hash)),
+                    fmt::arg("dep_time", SqlValue(dep_time)),
+                    fmt::arg("inserted", SqlValue(true)),
+                    fmt::arg("c", SqlValue(collection_name)),
+                    fmt::arg("hash", SqlValue(tuple_hash)),
+                    fmt::arg("time", SqlValue(time))));
+  }
+
+  WARN_UNUSED common::Status AddDerivedLineage(const LocalTupleId& dep_id,
+                                               int rule_number, bool inserted,
+                                               const time_point& physical_time,
+                                               const LocalTupleId& id) {
+    const std::string q = R"(
+      INSERT INTO {name}_lineage (dep_node_id, dep_collection_name,
+                                  dep_tuple_hash, dep_time, rule_number,
+                                  inserted, physical_time, collection_name,
+                                  tuple_hash, time)
+      VALUES ({dep_id}, {dep_c}, {dep_hash}, {dep_time},
+              {rule}, {inserted}, {ptime},
+              {c}, {hash}, {time});
+    )";
     return ExecuteQuery(
         "AddLineage",
         fmt::format(
-            R"(
-      INSERT INTO {}_lineage (dep_node_id, dep_collection_name, dep_tuple_hash,
-                              dep_time, rule_number, inserted, collection_name,
-                              tuple_hash, time)
-      VALUES ({}, NULL, {});
-    )",
-            name_, common::Join(SqlValues(std::make_tuple(
-                       detail::size_t_to_int64(dep_node_id), collection_name,
-                       detail::size_t_to_int64(tuple_hash), dep_time))),
-            common::Join(SqlValues(
-                std::make_tuple(true /*inserted*/, collection_name,
-                                detail::size_t_to_int64(tuple_hash), time)))));
-  }
-
-  WARN_UNUSED common::Status AddDerivedLineage(
-      const LocalTupleId& dep_id, int rule_number, bool inserted,
-      const std::chrono::time_point<Clock>& physical_time,
-      const LocalTupleId& id) {
-    auto values = std::make_tuple(
-        detail::size_t_to_int64(id_), dep_id.collection_name,
-        detail::size_t_to_int64(dep_id.hash), dep_id.logical_time_inserted,
-        rule_number, inserted, physical_time, id.collection_name,
-        detail::size_t_to_int64(id.hash), id.logical_time_inserted);
-    return ExecuteQuery(
-        "AddLineage",
-        fmt::format(R"(
-      INSERT INTO {}_lineage (dep_node_id, dep_collection_name, dep_tuple_hash,
-                              dep_time, rule_number, inserted, physical_time,
-                              collection_name, tuple_hash, time)
-      VALUES ({});
-    )",
-                    name_, common::Join(SqlValues(std::move(values)))));
+            q,                        //
+            fmt::arg("name", name_),  //
+            fmt::arg("dep_id", SqlValue(id_)),
+            fmt::arg("dep_c", SqlValue(dep_id.collection_name)),
+            fmt::arg("dep_hash", SqlValue(dep_id.hash)),
+            fmt::arg("dep_time", SqlValue(dep_id.logical_time_inserted)),
+            fmt::arg("rule", SqlValue(rule_number)),
+            fmt::arg("inserted", SqlValue(inserted)),
+            fmt::arg("ptime", SqlValue(physical_time)),
+            fmt::arg("c", SqlValue(id.collection_name)),
+            fmt::arg("hash", SqlValue(id.hash)),
+            fmt::arg("time", SqlValue(id.logical_time_inserted))));
   }
 
   WARN_UNUSED common::Status RegisterBlackBoxLineage(
@@ -263,11 +293,12 @@ class InjectablePqxxClient {
     const std::string query_template = R"(
       UPDATE Collections
       SET lineage_type = 'sql'
-      WHERE node_id = {} AND collection_name = {};
+      WHERE node_id = {id} AND collection_name = {collection};
     )";
     const std::string query =
-        fmt::format(query_template, SqlValue(detail::size_t_to_int64(id_)),
-                    SqlValue(collection_name));
+        fmt::format(query_template,       //
+                    fmt::arg("id", id_),  //
+                    fmt::arg("collection", collection_name));
     RETURN_IF_ERROR(ExecuteQuery("SetBlackBoxLineageTrue", query));
 
     for (const std::string& lineage_command : lineage_commands) {
@@ -284,12 +315,12 @@ class InjectablePqxxClient {
     // https://stackoverflow.com/a/26638775/3187068 for details.
     const std::string query_template = R"(
       UPDATE Nodes
-      SET python_lineage_script = E{}
-      WHERE id = {};
+      SET python_lineage_script = E{script}
+      WHERE id = {id};
     )";
-    const std::string query =
-        fmt::format(query_template, SqlValue(script),
-                    SqlValue(detail::size_t_to_int64(id_)));
+    const std::string query = fmt::format(query_template,  //
+                                          fmt::arg("script", SqlValue(script)),
+                                          fmt::arg("id", SqlValue(id_)));
     RETURN_IF_ERROR(ExecuteQuery("SetBlackBoxPythonLineageScript", query));
     return common::Status::OK;
   }
@@ -298,12 +329,14 @@ class InjectablePqxxClient {
       const std::string& collection_name, const std::string& method) {
     const std::string query_template = R"(
       UPDATE Collections
-      SET lineage_type = 'python', python_lineage_method = {}
-      WHERE node_id = {} AND collection_name = {};
+      SET lineage_type = 'python', python_lineage_method = {method}
+      WHERE node_id = {id} AND collection_name = {collection};
     )";
-    const std::string query = fmt::format(
-        query_template, SqlValue(method),
-        SqlValue(detail::size_t_to_int64(id_)), SqlValue(collection_name));
+    const std::string query =
+        fmt::format(query_template,                        //
+                    fmt::arg("method", SqlValue(method)),  //
+                    fmt::arg("id", SqlValue(id_)),
+                    fmt::arg("collection", SqlValue(collection_name)));
     RETURN_IF_ERROR(ExecuteQuery("SetBlackBoxPythonLineage", query));
     return common::Status::OK;
   }
@@ -322,29 +355,40 @@ class InjectablePqxxClient {
 
   // TODO(mwhittaker): Handle hash collisions.
   WARN_UNUSED common::Status Init() {
-    RETURN_IF_ERROR(
-        ExecuteQuery("Init", fmt::format(R"(
+    const std::string q0_template = R"(
       INSERT INTO Nodes (id, name, address, python_lineage_script)
-      VALUES ({}, NULL);
-    )",
-                                         common::Join(SqlValues(std::make_tuple(
-                                             id_, name_, address_))))));
+      VALUES ({id}, {name}, {address}, NULL);
+    )";
+    const std::string q0 = fmt::format(q0_template,  //
+                                       fmt::arg("id", SqlValue(id_)),
+                                       fmt::arg("name", SqlValue(name_)),
+                                       fmt::arg("address", SqlValue(address_)));
+    RETURN_IF_ERROR(ExecuteQuery("Init", q0));
 
-    return ExecuteQuery("CreateLineageTable", fmt::format(R"(
-      CREATE TABLE {}_lineage (
-        dep_node_id          bigint                    NOT NULL,
-        dep_collection_name  text                      NOT NULL,
-        dep_tuple_hash       bigint                    NOT NULL,
-        dep_time             bigint                    NOT NULL,
-        rule_number          integer,
-        inserted             boolean                   NOT NULL,
-        physical_time        timestamp with time zone,
-        collection_name      text                      NOT NULL,
-        tuple_hash           bigint                    NOT NULL,
-        time                 integer                   NOT NULL
+    const std::string q1_template = R"(
+      CREATE TABLE {name}_lineage (
+        dep_node_id          {int64_type}   NOT NULL,
+        dep_collection_name  {string_type}  NOT NULL,
+        dep_tuple_hash       {sizet_type}   NOT NULL,
+        dep_time             {int_type}     NOT NULL,
+        rule_number          {int_type},
+        inserted             {boolean_type} NOT NULL,
+        physical_time        {time_type},
+        collection_name      {string_type}  NOT NULL,
+        tuple_hash           {sizet_type}   NOT NULL,
+        time                 {int_type}     NOT NULL
       );
-    )",
-                                                          name_));
+    )";
+    const std::string q1 =
+        fmt::format(q1_template,  //
+                    fmt::arg("name", name_),
+                    fmt::arg("int64_type", ToSql<std::int64_t>().Type()),
+                    fmt::arg("string_type", ToSql<std::string>().Type()),
+                    fmt::arg("sizet_type", ToSql<std::size_t>().Type()),
+                    fmt::arg("int_type", ToSql<int>().Type()),
+                    fmt::arg("boolean_type", ToSql<bool>().Type()),
+                    fmt::arg("time_type", ToSql<time_point>().Type()));
+    return ExecuteQuery("CreateLineageTable", q1);
   }
 
   // Transactionally execute the query `query` named `name`.

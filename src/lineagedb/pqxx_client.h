@@ -298,7 +298,7 @@ class InjectablePqxxClient {
     const std::string query =
         fmt::format(query_template,       //
                     fmt::arg("id", id_),  //
-                    fmt::arg("collection", collection_name));
+                    fmt::arg("collection", SqlValue(collection_name)));
     RETURN_IF_ERROR(ExecuteQuery("SetBlackBoxLineageTrue", query));
 
     for (const std::string& lineage_command : lineage_commands) {

@@ -742,24 +742,29 @@ class FluentExecutor<common::TypeList<Collections...>,
     auto seq = std::make_index_sequence<1 + num_args + num_rets>();
     const std::string lineage_impl_command = fmt::format(
         R"(
-      CREATE FUNCTION {}_{}_lineage_impl(integer, {})
-      RETURNS TABLE(node_name text,
-                    collection_name text,
-                    hash bigint,
-                    time_inserted integer,
-                    physical_time_inserted timestamp with time zone)
-      AS $${}$$ LANGUAGE SQL;
+      CREATE FUNCTION {name}_{resp}_lineage_impl(integer, {types})
+      RETURNS TABLE(node_name {string_type},
+                    collection_name {string_type},
+                    hash {sizet_type},
+                    time_inserted {int_type},
+                    physical_time_inserted {time_type})
+      AS $${query}$$ LANGUAGE SQL;
     )",
-        name_, response.Name(), common::Join(types),
-        CallBlackBoxLineageFunction(f, seq));
+        fmt::arg("name", name_), fmt::arg("resp", response.Name()),
+        fmt::arg("int_type", ToSql<int>().Type()),
+        fmt::arg("sizet_type", ToSql<std::size_t>().Type()),
+        fmt::arg("string_type", ToSql<std::string>().Type()),
+        fmt::arg("time_type", ToSql<Time>().Type()),
+        fmt::arg("types", common::Join(types)),
+        fmt::arg("query", CallBlackBoxLineageFunction(f, seq)));
 
     const std::string lineage_command = fmt::format(
         R"(
-      CREATE FUNCTION {0}_{2}_lineage(bigint)
-      RETURNS TABLE(node_name text,
-                    collection_name text,
-                    hash bigint,
-                    time_inserted integer)
+      CREATE FUNCTION {node_name}_{response_table}_lineage({int64_type})
+      RETURNS TABLE(node_name {string_type},
+                    collection_name {string_type},
+                    hash {sizet_type},
+                    time_inserted {int_type})
       AS $$
         WITH
         user_specified_lineage(node_name,
@@ -799,6 +804,11 @@ class FluentExecutor<common::TypeList<Collections...>,
         ORDER BY physical_time_inserted DESC
       $$ LANGUAGE SQL;
     )",
+        fmt::arg("int_type", ToSql<int>().Type()),
+        fmt::arg("sizet_type", ToSql<std::size_t>().Type()),
+        fmt::arg("string_type", ToSql<std::string>().Type()),
+        fmt::arg("int64_type", ToSql<std::int64_t>().Type()),
+        fmt::arg("time_type", ToSql<Time>().Type()),
         fmt::arg("node_name", name_), fmt::arg("request_table", request.Name()),
         fmt::arg("response_table", response.Name()),
         fmt::arg("column_names", common::Join(column_names)));

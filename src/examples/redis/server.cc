@@ -21,6 +21,8 @@ namespace lra = fluent::ra::logical;
 
 using fluent::lineagedb::ConnectionConfig;
 using fluent::lineagedb::PqxxClient;
+using fluent::LocalTupleId;
+using fluent::common::Status;
 
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
@@ -60,7 +62,10 @@ int main(int argc, char* argv[]) {
   auto fb_or = fluent::fluent<PqxxClient>(name, address, &context, config);
   auto fb = fb_or.ConsumeValueOrDie();
 
-  auto with_collections = AddRedisApi(std::move(fb));
+  auto with_collections =
+      AddRedisApi(std::move(fb))
+          .table<std::string, std::size_t, int, std::string>(
+              "meta", {{"c", "h", "t", "key"}});
 
   auto f_or =
       std::move(with_collections)
@@ -72,28 +77,11 @@ int main(int argc, char* argv[]) {
                              auto& incrby_req, auto& incrby_resp,  //
                              auto& decrby_req, auto& decrby_resp,  //
                              auto& get_req, auto& get_resp,        //
-                             auto& strlen_req, auto& strlen_resp) {
+                             auto& strlen_req, auto& strlen_resp,  //
+                             auto& meta) {
             using namespace fluent::infix;
 
-            // UNUSED(set_req);
-            // UNUSED(set_resp);
-            // UNUSED(del_req);
-            // UNUSED(del_resp);
-            // UNUSED(append_req);
-            // UNUSED(append_resp);
-            // UNUSED(incr_req);
-            // UNUSED(incr_resp);
-            // UNUSED(decr_req);
-            // UNUSED(decr_resp);
-            // UNUSED(incrby_req);
-            // UNUSED(incrby_resp);
-            // UNUSED(decrby_req);
-            // UNUSED(decrby_resp);
-            // UNUSED(get_req);
-            // UNUSED(get_resp);
-            // UNUSED(strlen_req);
-            // UNUSED(strlen_resp);
-
+            // Regular rules.
             auto set =
                 set_resp <=
                 (lra::make_collection(&set_req) |
@@ -233,47 +221,64 @@ int main(int argc, char* argv[]) {
                    return std::make_tuple(src_addr, id, cmd.reply());
                  }));
 
+            // Meta rules.
+            auto make_meta_rule = [&](const auto& c) {
+              return meta <=
+                     (lra::make_meta_collection(&c) |
+                      lra::map([](const auto& p) {
+                        const auto& t = std::get<0>(p);
+                        const std::string& key = std::get<3>(t);
+                        const LocalTupleId& ltid = std::get<1>(p);
+                        return std::make_tuple(ltid.collection_name, ltid.hash,
+                                               ltid.logical_time_inserted, key);
+                      }));
+            };
+            auto set_meta = make_meta_rule(set_req);
+            auto del_meta = make_meta_rule(del_req);
+            auto append_meta = make_meta_rule(append_req);
+            auto incr_meta = make_meta_rule(incr_req);
+            auto decr_meta = make_meta_rule(decr_req);
+            auto incrby_meta = make_meta_rule(incrby_req);
+            auto decrby_meta = make_meta_rule(decrby_req);
+
             return std::make_tuple(set, del, append, incr, decr, incrby, decrby,
-                                   get, strlen);
+                                   get, strlen, set_meta, del_meta, append_meta,
+                                   incr_meta, decr_meta, incrby_meta,
+                                   decrby_meta);
           });
   auto f = f_or.ConsumeValueOrDie();
 
-#if 0
-  fluent::common::Status status = f.RegisterBlackBoxLineage<4, 5>(
-      [](const std::string& time_inserted, const std::string& key,
-         const std::string& value) {
-        (void)value;
-        return fmt::format(R"(
-          -- Most recent SET time.
-          WITH max_set_time AS (
-            SELECT MAX(time_inserted) as max_set_time
-            FROM redis_server_set_request
-            WHERE key = {} AND time_inserted <= {}
-          )
+  // Register lineage for get and strlen.
+  auto get_and_strlen_lineage = [](const std::string& time_inserted,
+                                   const std::string& key,
+                                   const std::string& ret) {
+    UNUSED(ret);
 
-          -- Most recent SET.
-          SELECT CAST('redis_server' as TEXT),
-                 CAST('set_request' as TEXT),
-                 hash,
-                 time_inserted,
-                 physical_time_inserted
-          FROM redis_server_set_request, max_set_time
-          WHERE key = {} AND time_inserted = max_set_time.max_set_time
-          UNION
+    const std::string q = R"(
+      -- Most recent SET time.
+      WITH max_set_time AS (
+        SELECT MAX(time_inserted) as max_set_time
+        FROM redis_server_set_request
+        WHERE key = {key} AND time_inserted <= {time_inserted}
+      )
 
-          -- All subsequent APPENDs.
-          SELECT CAST('redis_server' as TEXT),
-                 CAST('append_request' as TEXT),
-                 hash,
-                 time_inserted,
-                 physical_time_inserted
-          FROM redis_server_append_request, max_set_time
-          WHERE key={} AND time_inserted >= max_set_time.max_set_time;
-        )",
-                           key, time_inserted, key, key);
-      });
-#endif
+      -- All modifying operations since then.
+      SELECT CAST('redis_server' as TEXT),
+             c,
+             h,
+             t,
+             physical_time_inserted
+      FROM redis_server_meta, max_set_time
+      WHERE key={key} AND t >= max_set_time.max_set_time;
+    )";
+    return fmt::format(q, fmt::arg("key", key),
+                       fmt::arg("time_inserted", time_inserted));
+  };
+  Status status = f.RegisterBlackBoxLineage<14, 15>(get_and_strlen_lineage);
+  CHECK_EQ(fluent::common::Status::OK, status);
+  status = f.RegisterBlackBoxLineage<16, 17>(get_and_strlen_lineage);
+  CHECK_EQ(fluent::common::Status::OK, status);
 
-  // CHECK_EQ(fluent::common::Status::OK, status);
+  // Run the server.
   CHECK_EQ(fluent::common::Status::OK, f.Run());
 }

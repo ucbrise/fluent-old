@@ -79,9 +79,7 @@ auto AddRedisApi(FluentBuilder f) {
       .template channel<addr, addr, id, std::string>(  //
           "strlen_request", {{"dst_addr", "src_addr", "id", "key"}})
       .template channel<addr, id, int>(  //
-          "strlen_response", {{"addr", "id", "ret"}})
-
-      ;
+          "strlen_response", {{"addr", "id", "ret"}});
 }
 
 #endif  // EXAMPLES_REDIS_REDIS_H_

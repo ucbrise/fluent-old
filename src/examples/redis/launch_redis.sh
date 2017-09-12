@@ -32,10 +32,8 @@ main() {
     client="$bindir/examples_redis_client"
 
     tmux send-keys -t 2 "psql -f scripts/reset_database.sql" C-m
-
     tmux send-keys -t 0 "sleep 0.5" C-m
     tmux send-keys -t 0 "$glog $server $db_config $redis_config $server_addr" C-m
-
     tmux send-keys -t 1 "sleep 1" C-m
     tmux send-keys -t 1 "$glog $client $db_config $server_addr $client_addr joe" C-m
 }
